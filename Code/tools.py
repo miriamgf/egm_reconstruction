@@ -7,7 +7,6 @@
 
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import os
 from scipy.io import loadmat
 import numpy as np
 from random import randint
@@ -124,8 +123,19 @@ def load_data(data_type, n_classes = 2,  SR = True, subsampling=True, fs_sub=50,
             continue
         
         # 1.2)  EGMs filtering.
-        x= ECG_filtering(egms, fs)        
+        x= ECG_filtering(egms, fs)   
         
+        #1.3 Normalize models
+        if norm == True:
+            high = 1
+            low = -1
+
+            mins = np.min(x, axis=0)
+            maxs = np.max(x, axis=0)
+            rng = maxs - mins
+
+            bsps_64_n = high - (((high - low) * (maxs - x)) / rng)
+                
         # 2) Compute the Forward problem with each of the transfer matrices
         for matrix in transfer_matrices:
             y = forward_problem(x,matrix[0])
@@ -139,23 +149,10 @@ def load_data(data_type, n_classes = 2,  SR = True, subsampling=True, fs_sub=50,
             # 5) Filter AFTER adding noise
             bsps_64= ECG_filtering(bsps_64, fs)
             
-           
-            #Normalizar
-            if norm == True:
-                high = 1
-                low = -1
-
-                mins = np.min(bsps_64, axis=0)
-                maxs = np.max(bsps_64, axis=0)
-                rng = maxs - mins
-
-                bsps_64_n = high - (((high - low) * (maxs - bsps_64)) / rng)
-            else:
-                bsps_64_n = bsps_64
             
             # RESAMPLING signal to fs= fs_sub
             if subsampling: 
-                bsps_64_n = signal.resample_poly(bsps_64_n,fs_sub,500, axis=1)
+                bsps_64 = signal.resample_poly(bsps_64,fs_sub,500, axis=1)
                 x_sub = signal.resample_poly(x,fs_sub,500, axis=1)
 
             y_labels = get_labels(n_classes, model_name)
@@ -163,7 +160,7 @@ def load_data(data_type, n_classes = 2,  SR = True, subsampling=True, fs_sub=50,
            
             # RESAMPLING labels to fs= fs_sub
             if subsampling: 
-                y_labels = sample(y_labels,len(bsps_64_n[1]))
+                y_labels = sample(y_labels,len(bsps_64[1]))
          
             y_model = np.full(len(y_labels), n_model)
             n_model += 1
@@ -173,13 +170,13 @@ def load_data(data_type, n_classes = 2,  SR = True, subsampling=True, fs_sub=50,
             egm_tensor.extend(x_sub.T)
             
             if data_type == '3channelTensor':
-                tensors_model = get_tensor_model(bsps_64_n, tensor_type='3channel')
+                tensors_model = get_tensor_model(bsps_64, tensor_type='3channel')
                 X.extend(tensors_model)
             elif data_type == '1channelTensor':
-                tensors_model = get_tensor_model(bsps_64_n, tensor_type='1channel')
+                tensors_model = get_tensor_model(bsps_64, tensor_type='1channel')
                 X.extend(tensors_model)
             else:
-                X.extend(bsps_64_n.T)
+                X.extend(bsps_64.T)
                 
                
     return np.array(X),np.array(Y),np.array(Y_model),np.array(egm_tensor)
