@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<!-- saved from url=(0038)http://alexlenail.me/NN-SVG/LeNet.html -->
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script type="text/javascript" async="" src="./NN SVG_files/analytics.js"></script><script async="" src="./NN SVG_files/js"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'UA-119008715-1');
+    </script>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+
+    <link rel="stylesheet" href="./NN SVG_files/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link href="./NN SVG_files/font-awesome.min.css" rel="stylesheet">
+
+    <style type="text/css">
+        * { font-weight: 100; }
+        h1 { font-weight: 100; }
+        #graph-container {
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            position: fixed;
+        }
+
+        .nn-picker {
+            width: 410px;
+            margin: 30px;
+            z-index: 1000;
+        }
+
+        [data-toggle="collapse"] .fa:before {
+            font-size: 2rem;
+            color: black;
+            content: "\f106";
+            position: relative;
+            top: 5px;
+        }
+        .fa {
+          transition: 0.3s transform ease-in-out;
+        }
+        .collapsed .fa {
+          transform: rotate(-180deg);
+        }
+        .tab-content {
+            padding: 20px;
+        }
+        input[type="range"] {
+            margin-left: 10px;
+        }
+        #count {
+            position: fixed;
+            bottom: 0;
+            right: 1rem;
+            opacity: 0.4;
+            font-weight: 100;
+        }
+        .text {
+            font-weight: 300;
+        }
+    </style>
+
+    <title>NN SVG</title>
+
+</head>
+<body>
+
+
+    <div id="graph-container"><svg xmlns="http://www.w3.org/2000/svg" width="1920" height="849" style="cursor: move;"><g transform="translate(-366.9544119478401,-321.5464101953056) scale(1.6294522294601785)"><rect class="rect" id="0_0" width="32" height="32" x="617" y="406" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="0_1" width="32" height="32" x="623" y="412" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="0_2" width="32" height="32" x="629" y="418" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="0_3" width="32" height="32" x="635" y="424" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="0_4" width="32" height="32" x="641" y="430" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="0_5" width="32" height="32" x="647" y="436" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="0_6" width="32" height="32" x="653" y="442" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="0_7" width="32" height="32" x="659" y="448" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="0_8" width="32" height="32" x="665" y="454" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="0_9" width="32" height="32" x="671" y="460" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="0_10" width="32" height="32" x="677" y="466" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="0_11" width="32" height="32" x="683" y="472" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="1_0" width="32" height="16" x="721" y="424" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="1_1" width="32" height="16" x="727" y="430" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="1_2" width="32" height="16" x="733" y="436" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="1_3" width="32" height="16" x="739" y="442" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="1_4" width="32" height="16" x="745" y="448" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="1_5" width="32" height="16" x="751" y="454" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="2_0" width="12" height="8" x="793" y="443" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="2_1" width="12" height="8" x="799" y="449" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="2_2" width="12" height="8" x="805" y="455" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="3_0" width="12" height="4" x="823" y="443" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="3_1" width="12" height="4" x="829" y="449" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="3_2" width="12" height="4" x="835" y="455" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="4_0" width="12" height="8" x="853" y="443" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="4_1" width="12" height="8" x="859" y="449" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="4_2" width="12" height="8" x="865" y="455" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="5_0" width="32" height="16" x="880" y="424" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="5_1" width="32" height="16" x="886" y="430" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="5_2" width="32" height="16" x="892" y="436" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="5_3" width="32" height="16" x="898" y="442" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="5_4" width="32" height="16" x="904" y="448" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="5_5" width="32" height="16" x="910" y="454" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="6_0" width="32" height="32" x="954" y="406" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="6_1" width="32" height="32" x="960" y="412" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="6_2" width="32" height="32" x="966" y="418" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="6_3" width="32" height="32" x="972" y="424" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="6_4" width="32" height="32" x="978" y="430" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="6_5" width="32" height="32" x="984" y="436" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="6_6" width="32" height="32" x="990" y="442" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="6_7" width="32" height="32" x="996" y="448" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="6_8" width="32" height="32" x="1002" y="454" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="6_9" width="32" height="32" x="1008" y="460" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="6_10" width="32" height="32" x="1014" y="466" style="fill: rgb(79, 36, 249); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="rect" id="6_11" width="32" height="32" x="1020" y="472" style="fill: rgb(92, 192, 255); stroke: black; stroke-width: 0.07; opacity: 0.8;"></rect><rect class="conv" id="conv_0" width="8" height="8" x="697.8104521777273" y="474.586998855672" style="fill-opacity: 0; stroke: black; stroke-width: 0.07; stroke-opacity: 0.8;"></rect><rect class="conv" id="conv_1" width="16" height="16" x="763.7436561217677" y="454" style="fill-opacity: 0; stroke: black; stroke-width: 0.07; stroke-opacity: 0.8;"></rect><rect class="conv" id="conv_2" width="8" height="8" x="807.560907672963" y="455" style="fill-opacity: 0; stroke: black; stroke-width: 0.07; stroke-opacity: 0.8;"></rect><rect class="conv" id="conv_3" width="8" height="8" x="837.9030136159338" y="453.8166459782084" style="fill-opacity: 0; stroke: black; stroke-width: 0.07; stroke-opacity: 0.8;"></rect><rect class="conv" id="conv_4" width="8" height="8" x="867.8324051678267" y="455" style="fill-opacity: 0; stroke: black; stroke-width: 0.07; stroke-opacity: 0.8;"></rect><rect class="conv" id="conv_5" width="8" height="8" x="912.9175533996763" y="459.72386284388904" style="fill-opacity: 0; stroke: black; stroke-width: 0.07; stroke-opacity: 0.8;"></rect><line class="link" id="conv_0" x1="705.8104521777273" y1="482.586998855672" x2="770.747269570303" y2="455.72466590378133" style="stroke: black; stroke-width: 0.035; stroke-opacity: 0.8;"></line><line class="link" id="conv_0" x1="705.8104521777273" y1="474.586998855672" x2="770.747269570303" y2="455.72466590378133" style="stroke: black; stroke-width: 0.035; stroke-opacity: 0.8;"></line><line class="link" id="conv_1" x1="779.7436561217677" y1="470" x2="814.5577420913257" y2="460.5354266220167" style="stroke: black; stroke-width: 0.035; stroke-opacity: 0.8;"></line><line class="link" id="conv_1" x1="779.7436561217677" y1="454" x2="814.5577420913257" y2="460.5354266220167" style="stroke: black; stroke-width: 0.035; stroke-opacity: 0.8;"></line><line class="link" id="conv_2" x1="815.560907672963" y1="463" x2="842.6827230188892" y2="456.6942197654175" style="stroke: black; stroke-width: 0.035; stroke-opacity: 0.8;"></line><line class="link" id="conv_2" x1="815.560907672963" y1="455" x2="842.6827230188892" y2="456.6942197654175" style="stroke: black; stroke-width: 0.035; stroke-opacity: 0.8;"></line><line class="link" id="conv_3" x1="845.9030136159338" y1="461.8166459782084" x2="873.7090408478012" y2="457.3667080435832" style="stroke: black; stroke-width: 0.035; stroke-opacity: 0.8;"></line><line class="link" id="conv_3" x1="845.9030136159338" y1="453.8166459782084" x2="873.7090408478012" y2="457.3667080435832" style="stroke: black; stroke-width: 0.035; stroke-opacity: 0.8;"></line><line class="link" id="conv_4" x1="875.8324051678267" y1="463" x2="932.6592413426137" y2="458.9834407782173" style="stroke: black; stroke-width: 0.035; stroke-opacity: 0.8;"></line><line class="link" id="conv_4" x1="875.8324051678267" y1="455" x2="932.6592413426137" y2="458.9834407782173" style="stroke: black; stroke-width: 0.035; stroke-opacity: 0.8;"></line><line class="link" id="conv_5" x1="920.9175533996763" y1="467.72386284388904" x2="1023.8900711995685" y2="494.89545137555615" style="stroke: black; stroke-width: 0.035; stroke-opacity: 0.8;"></line><line class="link" id="conv_5" x1="920.9175533996763" y1="459.72386284388904" x2="1023.8900711995685" y2="494.89545137555615" style="stroke: black; stroke-width: 0.035; stroke-opacity: 0.8;"></line><text class="text" dy=".35em" font-family="sans-serif" x="718.5" y="504" style="font-size: 16px; opacity: 1;"></text><text class="text" dy=".35em" font-family="sans-serif" x="779" y="504" style="font-size: 16px; opacity: 1;"></text><text class="text" dy=".35em" font-family="sans-serif" x="811" y="504" style="font-size: 16px; opacity: 1;"></text><text class="text" dy=".35em" font-family="sans-serif" x="841" y="504" style="font-size: 16px; opacity: 1;"></text><text class="text" dy=".35em" font-family="sans-serif" x="879" y="504" style="font-size: 16px; opacity: 1;"></text><text class="text" dy=".35em" font-family="sans-serif" x="957.5" y="504" style="font-size: 16px; opacity: 1;"></text><text class="text" dy=".35em" font-family="sans-serif" x="1043" y="504" style="font-size: 16px; opacity: 0;"></text><text class="info" dy="-0.3em" font-family="sans-serif" x="617" y="391" style="font-size: 16px;"></text><text class="info" dy="-0.3em" font-family="sans-serif" x="721" y="409" style="font-size: 16px;"></text><text class="info" dy="-0.3em" font-family="sans-serif" x="793" y="428" style="font-size: 16px;"></text><text class="info" dy="-0.3em" font-family="sans-serif" x="823" y="428" style="font-size: 16px;"></text><text class="info" dy="-0.3em" font-family="sans-serif" x="853" y="428" style="font-size: 16px;"></text><text class="info" dy="-0.3em" font-family="sans-serif" x="880" y="409" style="font-size: 16px;"></text><text class="info" dy="-0.3em" font-family="sans-serif" x="954" y="391" style="font-size: 16px;"></text></g></svg></div>
+
+    <div class="container-fluid">
+
+        <div class="row">
+            <div class="nn-picker">
+                <div class="card">
+                    <div class="card-header">
+                        <a class="pull-right" data-toggle="collapse" href="http://alexlenail.me/NN-SVG/LeNet.html#collapsable" role="button"><i class="fa"></i></a>
+                        <h1>NN-SVG</h1>
+                        <p>Publication-ready NN-architecture schematics. <a id="download" href="http://alexlenail.me/NN-SVG/LeNet.html#">Download SVG</a></p>
+
+                        <nav>
+                            <div class="nav nav-tabs card-header-tabs" role="tablist">
+                                <a class="nav-item nav-link" href="http://alexlenail.me/NN-SVG/index.html">FCNN style</a>
+                                <a class="nav-item nav-link active">LeNet style</a>
+                                <a class="nav-item nav-link" href="http://alexlenail.me/NN-SVG/AlexNet.html">AlexNet style</a>
+                            </div>
+                        </nav>
+
+                    </div>
+                    <div class="tab-content collapse show" id="collapsable">
+
+                        <div class="tab-pane fade show active" id="LeNet" role="tabpanel">
+                            <h4>Style:</h4>
+
+                            <div>
+                                <input type="color" value="#e0e0e0" id="color1">
+                                <label for="color1">Color 1</label>
+                            </div>
+                            <div>
+                                <input type="color" value="#a0a0a0" id="color2">
+                                <label for="color2">Color 2</label>
+                            </div>
+                            <div>
+                                <label for="rectOpacity">Filter Opacity</label>
+                                <input type="range" id="rectOpacity" name="" min="0.2" max="1" step="0.01" value="0.9" style="position: relative; top: 3px;">
+                            </div>
+                            <div>
+                                <label for="borderWidth">Border Width</label>
+                                <input type="range" id="borderWidth" name="" min="0.01" max="3" step="0.01" value="1" style="position: relative; top: 3px;">
+                            </div>
+                            <div>
+                                <label for="betweenSquares">Spacing Between Filters</label>
+                                <input type="range" id="betweenSquares" name="" min="1" max="40" step="1" value="10" style="position: relative; top: 3px;">
+                            </div>
+                            <div>
+                                <input type="checkbox" id="showLabels" name="showLabels" value="showLabels" checked="">
+                                <label for="showLabels">Show Layer Labels</label>
+                            </div>
+
+                            <hr>
+                            <h4>Architecture:</h4>
+                            <div id="architecture">
+                                <p>Depth | Height | Width | filter Height | filter Width</p>
+                                <div class="row entry">
+                                    <div class="input-group mb-2 mr-sm-2 col-12">
+                                        <button class="btn btn-secondary btn-remove input-group-prepend"><span class="fa fa-minus"></span></button>
+                                        <input type="number" class="form-control" name="numberOfSquares" step="1" value="8">
+                                        <input type="number" class="form-control" name="squareHeight" step="1" value="128">
+                                        <input type="number" class="form-control" name="squareWidth" step="1" value="128">
+                                        <input type="number" class="form-control" name="filterHeight" step="1" value="8">
+                                        <input type="number" class="form-control" name="filterWidth" step="1" value="8">
+                                    </div>
+                                    <div class="input-group mb-2 mr-sm-2 col-12">
+                                        <label for="Op" style="width: 36px;padding: 4px;">Op: </label>
+                                        <input type="text" class="form-control" name="Op" step="1" value="Max-Pool">
+                                        <input type="range" class="form-control" name="spacing" min="-100" max="100" step="1" value="40" style="margin-left: 10px !important;">
+                                    </div>
+                                </div>
+                                <div class="row entry">
+                                    <div class="input-group mb-2 mr-sm-2 col-12">
+                                        <button class="btn btn-secondary btn-remove input-group-prepend"><span class="fa fa-minus"></span></button>
+                                        <input type="number" class="form-control" name="numberOfSquares" step="1" value="8">
+                                        <input type="number" class="form-control" name="squareHeight" step="1" value="64">
+                                        <input type="number" class="form-control" name="squareWidth" step="1" value="64">
+                                        <input type="number" class="form-control" name="filterHeight" step="1" value="16">
+                                        <input type="number" class="form-control" name="filterWidth" step="1" value="16">
+                                    </div>
+                                    <div class="input-group mb-2 mr-sm-2 col-12">
+                                      <label for="Op" style="width: 36px;padding: 4px;">Op: </label>
+                                      <input type="text" class="form-control" name="Op" step="1" value="Convolution">
+                                      <input type="range" class="form-control" name="spacing" min="-100" max="100" step="1" value="10" style="margin-left: 10px !important;">
+                                    </div>
+                                </div>
+                                <div class="row entry">
+                                    <div class="input-group mb-2 mr-sm-2 col-12">
+                                        <button class="btn btn-secondary btn-remove input-group-prepend"><span class="fa fa-minus"></span></button>
+                                        <input type="number" class="form-control" name="numberOfSquares" step="1" value="24">
+                                        <input type="number" class="form-control" name="squareHeight" step="1" value="48">
+                                        <input type="number" class="form-control" name="squareWidth" step="1" value="48">
+                                        <input type="number" class="form-control" name="filterHeight" step="1" value="8">
+                                        <input type="number" class="form-control" name="filterWidth" step="1" value="8">
+                                    </div>
+                                    <div class="input-group mb-2 mr-sm-2 col-12">
+                                      <label for="Op" style="width: 36px;padding: 4px;">Op: </label>
+                                      <input type="text" class="form-control" name="Op" step="1" value="Max-Pool">
+                                      <input type="range" class="form-control" name="spacing" min="-100" max="100" step="1" value="-20" style="margin-left: 10px !important;">
+                                    </div>
+                                </div>
+                                <div class="row entry">
+                                    <div class="input-group mb-2 mr-sm-2 col-12">
+                                        <button class="btn btn-secondary btn-remove input-group-prepend"><span class="fa fa-minus"></span></button>
+                                        <input type="number" class="form-control" name="numberOfSquares" step="1" value="24">
+                                        <input type="number" class="form-control" name="squareHeight" step="1" value="16">
+                                        <input type="number" class="form-control" name="squareWidth" step="1" value="16">
+                                        <input type="number" class="form-control" name="filterHeight" step="1" value="8">
+                                        <input type="number" class="form-control" name="filterWidth" step="1" value="8">
+                                    </div>
+                                    <div class="input-group mb-2 mr-sm-2 col-12">
+                                      <label for="Op" style="width: 36px;padding: 4px;">Op: </label>
+                                      <input type="text" class="form-control" name="Op" step="1" value="Dense">
+                                      <input type="range" class="form-control" name="spacing" min="-100" max="100" step="1" value="-20" style="margin-left: 10px !important;">
+                                    </div>
+                                </div>
+                                <div class="row entry">
+                                    <div class="input-group mb-2 mr-sm-2 col-12">
+                                        <button class="btn input-group-prepend btn-remove btn-secondary"><span class="fa fa-minus"></span></button>
+                                        <input type="number" class="form-control" name="numberOfSquares" step="1">
+                                        <input type="number" class="form-control" name="squareHeight" step="1">
+                                        <input type="number" class="form-control" name="squareWidth" step="1">
+                                        <input type="number" class="form-control" name="filterHeight" step="1">
+                                        <input type="number" class="form-control" name="filterWidth" step="1">
+                                    </div>
+                                    <div class="input-group mb-2 mr-sm-2 col-12">
+                                      <label for="Op" style="width: 36px;padding: 4px;">Op: </label>
+                                      <input type="text" class="form-control" name="Op" step="1" value="">
+                                      <input type="range" class="form-control" name="spacing" min="-100" max="100" step="1" value="10" style="margin-left: 10px !important;">
+                                    </div>
+                                </div>
+
+                            <div class="row entry">
+                                    <div class="input-group mb-2 mr-sm-2 col-12">
+                                        <button class="btn input-group-prepend btn-remove btn-secondary"><span class="fa fa-minus"></span></button>
+                                        <input type="number" class="form-control" name="numberOfSquares" step="1">
+                                        <input type="number" class="form-control" name="squareHeight" step="1">
+                                        <input type="number" class="form-control" name="squareWidth" step="1">
+                                        <input type="number" class="form-control" name="filterHeight" step="1">
+                                        <input type="number" class="form-control" name="filterWidth" step="1">
+                                    </div>
+                                    <div class="input-group mb-2 mr-sm-2 col-12">
+                                      <label for="Op" style="width: 36px;padding: 4px;">Op: </label>
+                                      <input type="text" class="form-control" name="Op" step="1" value="">
+                                      <input type="range" class="form-control" name="spacing" min="-100" max="100" step="1" value="10" style="margin-left: 10px !important;">
+                                    </div>
+                                </div><div class="row entry">
+                                    <div class="input-group mb-2 mr-sm-2 col-12">
+                                        <button class="btn btn-primary btn-add input-group-prepend"><span class="fa fa-plus"></span></button>
+                                        <input type="number" class="form-control" name="numberOfSquares" step="1">
+                                        <input type="number" class="form-control" name="squareHeight" step="1">
+                                        <input type="number" class="form-control" name="squareWidth" step="1">
+                                        <input type="number" class="form-control" name="filterHeight" step="1">
+                                        <input type="number" class="form-control" name="filterWidth" step="1">
+                                    </div>
+                                    <div class="input-group mb-2 mr-sm-2 col-12">
+                                      <label for="Op" style="width: 36px;padding: 4px;">Op: </label>
+                                      <input type="text" class="form-control" name="Op" step="1" value="">
+                                      <input type="range" class="form-control" name="spacing" min="-100" max="100" step="1" value="10" style="margin-left: 10px !important;">
+                                    </div>
+                                </div></div>
+
+                            <hr>
+                            <div id="architecture2">
+                                <p>Vector Length</p>
+                                
+                                
+                                <div class="row entry">
+                                    <div class="input-group mb-2 mr-sm-2 col-5">
+                                        <button class="btn btn-primary btn-add input-group-prepend"><span class="fa fa-plus"></span></button>
+                                        <input type="number" class="form-control" name="vectorLength" step="1">
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="count"><a style="font-size: 1rem" href="http://alexlenail.me/NN-SVG/about.html">About</a></div>
+
+
+    <script src="./NN SVG_files/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="./NN SVG_files/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="./NN SVG_files/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+
+    <script type="text/javascript" src="./NN SVG_files/d3.v5.min.js"></script>
+    <script type="text/javascript" src="./NN SVG_files/underscore-umd-min.js"></script>
+
+    <script type="text/javascript" src="./NN SVG_files/util.js"></script>
+    <script type="text/javascript" src="./NN SVG_files/LeNet.js"></script>
+
+    <script type="text/javascript">
+
+lenet = LeNet();
+
+function restart() {
+
+    architecture = $('#architecture').find('.entry').map((i,el) =>
+        _.object(['numberOfSquares','squareHeight','squareWidth','filterHeight','filterWidth', 'op', 'layer'],
+                 $(el).find('input[type="number"]').map((j,input) => parseFloat($(input).val())).get().concat([$(el).find('input[type="text"]').val(), i]))
+        ).get()
+         .filter(layer => Object.values(layer).every(val => !_.isNaN(val)));
+
+    betweenLayers = $('#architecture').find('input[type="range"]').map((i,el) => $(el).val()).get().filter(input => $.isNumeric(input)).map(s => parseInt(s)); betweenLayers.pop();
+
+    architecture2 = $('#architecture2').find('input').map((i,el) => $(el).val()).get().filter(input => $.isNumeric(input)).map(s => parseInt(s));
+
+    lenet.redraw({'architecture_':architecture, 'architecture2_':architecture2});
+    lenet.redistribute({'betweenLayers_':betweenLayers});
+
+}
+
+restart();
+
+/////////////////////////////////////////////////////////////////////////////
+                ///////    Select Styling    ///////
+/////////////////////////////////////////////////////////////////////////////
+
+$("#color1").change(         function () { lenet.style({'color1_': this.value}); });
+$("#color2").change(         function () { lenet.style({'color2_': this.value}); });
+$("#borderWidth").change(    function () { lenet.style({'borderWidth_': parseFloat(this.value)}); });
+$("#rectOpacity").change(    function () { lenet.style({'rectOpacity_': parseFloat(this.value)}); });
+$("#betweenSquares").change( function () { lenet.redistribute({'betweenSquares_': parseFloat(this.value)}); });
+$("#showLabels").change(     function () { lenet.style({'showLabels_': this.checked}); });
+
+$("input[name='spacing']").change(function() {
+    betweenLayers = $('#architecture').find('input[type="range"]').map((i,el) => $(el).val()).get().filter(input => $.isNumeric(input)).map(s => parseInt(s)); betweenLayers.pop();
+    lenet.redistribute({'betweenLayers_':betweenLayers});
+});
+
+
+/////////////////////////////////////////////////////////////////////////////
+                 ///////    Select Architecture    ///////
+/////////////////////////////////////////////////////////////////////////////
+
+
+$(document).on('click', '#architecture .btn-add', function(e) {
+    e.preventDefault();
+
+    var controlForm = $('#architecture');
+    var currentEntry = $(this).parents('.entry:first');
+    var newEntry = $(currentEntry.clone()).appendTo(controlForm);
+
+    newEntry.find('input').val('');
+    controlForm.find('.entry:not(:last) .btn-add')
+        .removeClass('btn-add').addClass('btn-remove')
+        .removeClass('btn-primary').addClass('btn-secondary')
+        .html('<span class="fa fa-minus"></span>');
+
+    restart();
+
+});
+
+$(document).on('click', '#architecture .btn-remove', function(e) {
+    e.preventDefault();
+
+    $(this).parents('.entry:first').remove();
+
+    restart();
+
+    return false;
+
+});
+
+$(document).on('click', '#architecture2 .btn-add', function(e) {
+    e.preventDefault();
+
+    var controlForm = $('#architecture2');
+    var currentEntry = $(this).parents('.entry:first');
+    var newEntry = $(currentEntry.clone()).appendTo(controlForm);
+
+    newEntry.find('input').val('');
+    controlForm.find('.entry:not(:last) .btn-add')
+        .removeClass('btn-add').addClass('btn-remove')
+        .removeClass('btn-primary').addClass('btn-secondary')
+        .html('<span class="fa fa-minus"></span>');
+
+    restart();
+
+});
+
+$(document).on('click', '#architecture2 .btn-remove', function(e) {
+    e.preventDefault();
+
+    $(this).parents('.entry:first').remove();
+
+    restart();
+
+    return false;
+
+});
+
+$(document).on('change', 'input[type="number"]', function(e) {
+    e.preventDefault();
+
+    restart();  // TODO only fire if the whole row is filled.
+
+});
+
+$(document).on('change', 'input[type="text"]', function(e) {
+    e.preventDefault();
+
+    restart();
+});
+
+
+d3.select("#download").on("click", function() {
+    // ga('send', 'event', 'downloadSVG', 'LeNet');
+
+    d3.select(this)
+      .attr("href", 'data:application/octet-stream;base64,' + btoa(unescape(encodeURIComponent(d3.select("#graph-container").html()))))
+      .attr("download", "nn.svg")
+});
+
+    </script>
+
+
+
+
+</div></body></html>
