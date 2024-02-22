@@ -128,6 +128,85 @@ def train_test_val_split(Y_model,split_type='Time',test_size=0.2,validation_size
         
     return t_train,t_val,t_test
 
+def generator_Autoencoder(x_train, x_test, x_val):
+    '''Miriam Gutierrez 2023'''
+
+    def train_gen(x_train  ):
+        while True:      
+            for i in range(0, len(x_train)):
+                sig=np.expand_dims(x_train[i], axis=0)
+                sig_list=[sig, sig]
+                yield sig_list
+    def test_gen(x_test):
+        while True:      
+            for i in range(0, len(x_test)):
+                sig=np.expand_dims(x_test[i], axis=0)
+                sig_list=[sig, sig]
+                yield sig_list
+    def val_gen(x_val ):
+        while True:      
+            for i in range(0, len(x_val)):
+                sig=np.expand_dims(x_test[i], axis=0)
+                sig_list=[sig, sig]
+                yield sig_list
+                
+    return train_gen, test_gen, val_gen, len(x_train), len(x_test), len(x_val)
+
+def generator_reconstruction(y_train, latent_vector_train, y_test,latent_vector_test, y_val,latent_vector_val):
+    '''Miriam GUtierrez 2023'''
+    def train_gen(latent_vector_train, y_train  ):
+        while True:      
+            for i in range(1, len(latent_vector_train)):
+                #add 1 dimension at the beggining
+                sig1=np.expand_dims(latent_vector_train[i], axis=0)
+                sig2=np.expand_dims(y_train[i], axis=0)
+                sig_list=[sig1, y_train[i]]
+                yield sig_list
+
+    def test_gen(latent_vector_test, y_test):
+        while True:      
+            for i in range(1, len(latent_vector_test)):
+                sig1=np.expand_dims(latent_vector_test[i], axis=0)
+                sig2=np.expand_dims(y_test[i], axis=0)
+                sig_list=[sig1, y_test[i]]
+                yield sig_list
+
+
+    def val_gen(latent_vector_val, y_val ):
+        while True:      
+            for i in range(1, len(latent_vector_val)):
+                sig1=np.expand_dims(latent_vector_val[i], axis=0)
+                sig2=np.expand_dims(y_val[i], axis=0)
+                sig_list=[sig1, y_val[i]]
+                yield sig_list
+
+                
+    return train_gen, test_gen, val_gen, len(latent_vector_train), len(latent_vector_test), len(latent_vector_val)
+
+from keras.utils import Sequence
+
+class DataGen(Sequence):
+    def __init__(self, inputs, targets, batch_size):
+        self.inputs = inputs
+        self.targets = targets
+        self.batch_size = batch_size
+
+    def __len__(self):
+        # Return the number of batches in the dataset
+        return len(self.inputs) // self.batch_size
+
+    def __getitem__(self, index):
+        # Generate one batch of data
+        batch_inputs = self.inputs[index * self.batch_size : (index + 1) * self.batch_size]
+        batch_targets = self.targets[index * self.batch_size : (index + 1) * self.batch_size]
+
+        # Preprocess the batch if needed
+        # ...
+
+        return batch_inputs, batch_targets
+
+
+
 
 #%% Add noise to signals
 def add_noise(X,SNR=20):
