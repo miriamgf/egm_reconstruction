@@ -47,8 +47,8 @@ from scipy.stats import spearmanr
 #%% Path Models
 #%% Path Models
 current = os.path.dirname(os.path.realpath(__file__))
-directory = str(os.path.dirname(current))+'/Data2/'
-torsos_dir = str(os.path.dirname(current))+'/Labeled_torsos/' 
+directory = '../../../Data/'
+torsos_dir = '../../../Labeled_torsos/'
 
 fs=500
 
