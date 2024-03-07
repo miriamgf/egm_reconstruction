@@ -2,7 +2,7 @@ import tensorflow as tf
 from keras import models, layers
 from tensorflow.keras import layers, models
 
-def reconstruction_model(x_train_ls, y_train):
+def reconstruction(x_train_ls, y_train):
     '''
     Reconstruction model with Conv3D
     '''

@@ -1,35 +1,7 @@
-import os
-import time
-import tensorflow as tf
-import keras
-from keras import models, layers
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split, StratifiedKFold
-from sklearn.utils import class_weight
-from sklearn.metrics import confusion_matrix, f1_score
-from sklearn.utils import shuffle
-from itertools import product
+import sys,os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from tools import *
-from tensorflow.keras import datasets, layers, models, losses, Model
-import pickle
 from generators import *
-import sys 
-from numpy import reshape
-from sklearn import preprocessing
-from sklearn.preprocessing import StandardScaler
-import cv2
-import glob
-from PIL import Image
-import matplotlib.image
-import time
-import random
-import pandas as pd
-from fastdtw import fastdtw
-from scipy.spatial.distance import euclidean
-from scipy.io import savemat
-from Plots import *
 from scipy import *
 
 

@@ -42,13 +42,14 @@ from scipy.io import savemat
 from Plots import *
 from scipy.stats import pearsonr
 from scipy.stats import spearmanr
+from datetime import time
 
 
 #%% Path Models
 #%% Path Models
 current = os.path.dirname(os.path.realpath(__file__))
-directory = '../../../Data/'
-torsos_dir = '../../../Labeled_torsos/'
+directory = '../../../../Data/'
+torsos_dir = '../../../../Labeled_torsos/'
 
 fs=500
 
@@ -138,13 +139,11 @@ def load_data(data_type, n_classes = 2,  SR = True, subsampling=True, fs_sub=50,
                 continue
             else:
                 all_model_names.append(model_name)
-                
-    all_model_names=sorted(all_model_names)
+
 
     if sinusoid:
         n = 80 #NUmber of sinusoid models generated
         all_model_names= ["Model {}".format(m) for m in range(n+1)]
-    print (all_model_names)
     print(len(all_model_names), 'Models')
     
     
@@ -795,22 +794,22 @@ def train_test_val_split_Autoencoder(X_1channel, AF_models, BSPM_Models, all_mod
 
         
         train_models = random.sample(list(AF_models_unique), int(np.floor(AF_models[-1]*train_percentage)))
-        train_models = [56, 11, 31, 72, 14, 35, 10, 34, 68, 62, 73, 46, 30, 29, 52, 71, 32, 28, 55, 41, 54, 6, 70, 0, 12, 43, 4, 47, 17, 67, 15, 21, 25, 75, 23, 39, 44, 20, 1, 65, 27, 24, 8, 51, 60]
+        #train_models = [56, 11, 31, 72, 14, 35, 10, 34, 68, 62, 73, 46, 30, 29, 52, 71, 32, 28, 55, 41, 54, 6, 70, 0, 12, 43, 4, 47, 17, 67, 15, 21, 25, 75, 23, 39, 44, 20, 1, 65, 27, 24, 8, 51, 60]
 
         aux_models = [x for x in AF_models_unique if x not in train_models]
         test_models = random.sample(list(aux_models), int(np.floor(AF_models[-1]*test_percentage)))
-        test_models = [49, 2, 61, 5, 64, 57, 63, 26, 58, 69, 13, 16, 22, 45, 50]
+        #test_models = [49, 2, 61, 5, 64, 57, 63, 26, 58, 69, 13, 16, 22, 45, 50]
         val_models =[x for x in aux_models if x not in test_models]
-        val_models = [3, 7, 9, 18, 19, 33, 36, 37, 38, 40, 42, 48, 53, 59, 66, 74]
+        #val_models = [3, 7, 9, 18, 19, 33, 36, 37, 38, 40, 42, 48, 53, 59, 66, 74]
         x_train=X_1channel[np.in1d(AF_models, train_models)]
         x_test=X_1channel[np.in1d(AF_models, test_models)]
         x_val=X_1channel[np.in1d(AF_models, val_models)]
 
-        print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+
         print('TRAIN MODELS:', train_models)
         print('TEST MODELS:', test_models)
         print('VAL MODELS:', val_models)
-        print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+
 
 
 
@@ -828,6 +827,11 @@ def train_test_val_split_Autoencoder(X_1channel, AF_models, BSPM_Models, all_mod
         x_train=X_1channel[np.where((Y_model>=1) & (Y_model<=200))]
         x_test=X_1channel[np.where((Y_model>180) & (Y_model<=244))]
         x_val=X_1channel[np.where((Y_model>244) & (Y_model<=286))]
+
+    # Save the model names in train, test and val
+    test_model_name = [all_model_names[index] for index in AF_models_test]
+    val_model_name = [all_model_names[index] for index in AF_models_val]
+    train_model_name = [all_model_names[index] for index in AF_models_train]
 
     return x_train, x_test, x_val, train_models, test_models, val_models,AF_models_train, AF_models_test, AF_models_val, BSPM_train, BSPM_test, BSPM_val
 
@@ -1065,7 +1069,9 @@ def interpolate_fun(array, n_models, final_nodes, sig = False ):
     return array_interpol
 
 
-def preprocess_latent_space(latent_vector_train, latent_vector_test, latent_vector_val, Y_model, egm_tensor, dimension = 5):
+def preprocess_latent_space(latent_vector_train, latent_vector_test, latent_vector_val,
+                                                           train_models, test_models, val_models,
+                                                           Y_model, egm_tensor, dimension):
     '''
     This function preprocess the latent space, following the scheme: 
     1) Center data at 0
@@ -1119,7 +1125,11 @@ def preprocess_latent_space(latent_vector_train, latent_vector_test, latent_vect
     return latent_space_n, egm_tensor_n
 
 
+def get_run_logdir():
+    # Tensorboard logs name generator
 
+    run_id = time.strftime("run_%Y_%m_%d-%H_%M_%S")
+    return os.path.join(root_logdir, run_id)
 
 
 

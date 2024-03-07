@@ -10,6 +10,7 @@ from tensorflow.keras import datasets, layers, models, losses, Model
 def autoencoder(x_train):
     '''
     Autoencoder model with Conv3D
+    input_shape=(depth, height, width, channels)
     '''
 
     initializer = tf.keras.initializers.HeNormal()

@@ -1,28 +1,30 @@
-import sys
-import os
-import datetime
-from ..models import autoencoder_model
-
-from fastdtw import fastdtw
+from models.autoencoder_model import autoencoder
+from models.reconstruction_model import reconstruction
+from config import TrainConfig_1
+from config import TrainConfig_2
+from config import DataConfig
 from sklearn.metrics import mean_absolute_error
-from sklearn.metrics import mean_squared_error
 from tensorflow.keras.optimizers import Adam
-from ..tools_ import freq_phase_analysis as freq_pha
-from ..Plots import *
+from tools_ import freq_phase_analysis as freq_pha
+from tools_ import Plots
+from tools_.preprocessing_network import *
+from tools_.tools import *
 import tensorflow as tf
-from ..tools_ import tools as tools
-from tools import *
+import os
+import scipy
+import datetime
+import time
+from evaluate_function import *
+from numpy import *
+tf.random.set_seed(42)
 
+root_logdir = '../output/logs/'
+log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+data_dir = '../../../../Data/'
+torsos_dir = '../../../../Labeled_torsos/'
+figs_dir = '../output/figures/'
+models_dir = '../output/model/'
 
-root_logdir = '../Logs/'
-data_dir = '../../../Data/'
-figs_dir = 'Figs/'
-models_dir = '../Models/'
-
-# Tensorboard logs name generator
-def get_run_logdir():
-    run_id = time.strftime("run_%Y_%m_%d-%H_%M_%S")
-    return os.path.join(root_logdir, run_id)
 
 # GPU Configuration
 physical_devices = tf.config.list_physical_devices('GPU')
@@ -38,9 +40,6 @@ for subdir, dirs, files in os.walk(torsos_dir):
         if file.endswith('.mat'):
             all_torsos_names.append(file)
 
-transfer_matrices = []
-for torso in all_torsos_names:
-    BSP_pos = scipy.io.loadmat(torsos_dir + torso).get('torso')
 
 all_model_names = []
 directory = data_dir
@@ -52,37 +51,20 @@ for subdir, dirs, files in os.walk(directory):
         all_model_names.append(model_name)
 
 all_model_names = sorted(all_model_names)
-print(all_model_names)
-print(len(all_model_names), 'Models')
+print(len(all_model_names))
 
 # Load data
-n_classes = 3  # 1: Rotor/no rotor ; 2: RA/LA/No rotor (2 classes) ; 3: 7 regions (3 classes) + no rotor (8 classes)
-n_batch = 50  # Batch size
-fs_sub = 50
-fs = fs_sub
+
+if DataConfig.fs == DataConfig.fs_sub:
+    DataConfig.fs = DataConfig.fs_sub
+
 Transfer_model = False  # Transfer learning from sinusoids
 sinusoids = False
-n_epoch = 2
-# Folders ECGI Summit
-# Folders ECGI Summit
-try:
-    os.mkdir('output/figures/'+ str(fs_sub))
-except:
-    pass
-
-try:
-    os.mkdir('output/figures/'+ str(fs_sub))
-except:
-    pass
-
-try:
-    os.mkdir('output/figures/'+ str(fs_sub))
-except:
-    pass
 
 
+#Load data
 X_1channel, Y, Y_model, egm_tensor, length_list, AF_models, all_model_names, transfer_matrices = load_data(
-    data_type='1channelTensor', n_classes=n_classes, subsampling=True, fs_sub=fs_sub, norm=False, SR=True, SNR=20,
+    data_type='1channelTensor', n_classes=DataConfig.n_classes, subsampling=True, fs_sub=DataConfig.fs_sub, norm=False, SR=True, SNR=DataConfig.SNR,
     n_batch=n_batch, sinusoid=sinusoids)  # , n_batch=n_batch)
 
 # Normalize BSPS
@@ -99,10 +81,6 @@ print('TRAIN SHAPE:', x_train.shape, 'models:', train_models)
 print('TEST SHAPE:', x_test.shape, 'models:', test_models)
 print('VAL SHAPE:', x_val.shape, 'models:', val_models)
 
-# Save the model names in train, test and val
-test_model_name = [all_model_names[index] for index in AF_models_test]
-val_model_name = [all_model_names[index] for index in AF_models_val]
-train_model_name = [all_model_names[index] for index in AF_models_train]
 
 '''
 # PLOT:  Batch generation
@@ -138,82 +116,39 @@ for i in range(0, n_batch):
 plt.suptitle('Test Batch'+str(a))
 plt.savefig('output/figures/'+ str(fs_sub) + '/Batch2.png')
 plt.show()
-'''
+'
 plotting_before_AE(X_1channel, x_train, x_test, x_val, Y_model, AF_models)
+'''
 
-# Reshape and batch_generation to fit Conv (Add 1 dimension)
-print(x_train.shape, x_test.shape, x_val.shape)
-x_train = reshape(x_train, (int(len(x_train) / n_batch), n_batch, x_train.shape[1], x_train.shape[2], 1))
-x_test = reshape(x_test, (int(len(x_test) / n_batch), n_batch, x_test.shape[1], x_test.shape[2], 1))
-x_val = reshape(x_val, (int(len(x_val) / n_batch), n_batch, x_val.shape[1], x_val.shape[2], 1))
-print(x_train.shape, x_test.shape, x_val.shape)
+
+
+x_train, x_test, x_val = preprocessing_autoencoder_input(x_train, x_test, x_val, n_batch)
 
 # 1. AUTOENCODER
 print('Training Autoencoder...')
-
-
 encoder, decoder = autoencoder(x_train)
-
-optimizer = Adam(lr=0.00001)
-log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+optimizer = Adam(learning_rate=TrainConfig_1.learning_rate_1)
 tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
+cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=models_dir + 'regressor' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
+                                                 save_weights_only=True,
+                                                 verbose=1)
+early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
 
 conv_autoencoder = Model(inputs=encoder.input, outputs=decoder(encoder.outputs))
-conv_autoencoder.compile(optimizer='adam', loss=losses.mean_squared_error,
+conv_autoencoder.compile(optimizer=optimizer, loss=losses.mean_squared_error,
                          metrics=[losses.mean_squared_error, losses.mean_absolute_error])
-history = conv_autoencoder.fit(x_train, x_train, batch_size=1, epochs=n_epoch, validation_data=(x_val, x_val),
-                               callbacks=[callback, tensorboard_callback])
-
-decoded_imgs = conv_autoencoder.predict(x_test, batch_size=1)
-decoded_imgs_train = conv_autoencoder.predict(x_train, batch_size=1)
-
-# Reshape to remove the 1 at the end
-print(decoded_imgs.shape, x_test.shape)
-
-decoded_imgs = reshape(decoded_imgs,
-                       (len(decoded_imgs), decoded_imgs.shape[1], decoded_imgs.shape[2], decoded_imgs.shape[3]))
-decoded_imgs_train = reshape(decoded_imgs_train, (
-len(decoded_imgs_train), decoded_imgs_train.shape[1], decoded_imgs_train.shape[2], decoded_imgs_train.shape[3]))
+history = conv_autoencoder.fit(x_train, x_train, batch_size=TrainConfig_1.batch_size_1, epochs=n_epoch,
+                               validation_data=(x_val, x_val),
+                               callbacks=[early_stopping_callback, cp_callback])
 
 # Evaluate
-results_test = conv_autoencoder.evaluate(x_test, batch_size=50)
-results_train = conv_autoencoder.evaluate(x_train, batch_size=1)
 
-# Save
-mse_autoencoder_test, mae_autoencoder_test = results_test[0], results_test[2]
-mse_autoencoder_train, mae_autoencoder_train = results_train[0], results_train[2]
+pred_test = conv_autoencoder.predict(x_test, batch_size=TrainConfig_1.batch_size_1) # x_test=[# batches, batch_size, 12, 32, 1]
+pred_train = conv_autoencoder.predict(x_train, batch_size=TrainConfig_1.batch_size_1) #(44, 50, 12, 32, 1)
 
-print(results_test)
+results_autoencoder = evaluate_function(x_train, x_train, x_test, x_test, conv_autoencoder, batch_size=1)
 
-# Reshape for dtw
-decoded_flat = reshape(decoded_imgs,
-                       (decoded_imgs.shape[0] * decoded_imgs.shape[1], decoded_imgs.shape[2] * decoded_imgs.shape[3]))
-decoded_flat_train = reshape(decoded_imgs_train, (
-decoded_imgs_train.shape[0] * decoded_imgs_train.shape[1], decoded_imgs_train.shape[2] * decoded_imgs_train.shape[3]))
-x_test_flat = reshape(x_test, (x_test.shape[0] * x_test.shape[1], x_test.shape[2] * x_test.shape[3]))
-x_train_flat = reshape(x_train, (x_train.shape[0] * x_train.shape[1], x_train.shape[2] * x_train.shape[3]))
-
-# MAE and MSE
-#mse_autoencoder_test = mean_squared_error(x_test_flat, decoded_flat)
-#mse_autoencoder_train = mean_squared_error(x_train_flat, decoded_flat_train)
-
-
-# DTW !
-
-dtw_test, path = fastdtw(decoded_flat, x_test_flat)
-dtw_train, path = fastdtw(decoded_flat_train, x_train_flat)
-
-x_test = reshape(x_test, (len(x_test), x_test.shape[1], x_test.shape[2], x_test.shape[3]))
-x_train = reshape(x_train, (len(x_train), x_train.shape[1], x_train.shape[2], x_train.shape[3]))
-
-# %%
-results_autoencoder = {'mse test': mse_autoencoder_test, 'mse train': mse_autoencoder_train,
-                       'mae test': mae_autoencoder_test, 'mae train': mae_autoencoder_train,
-                       'dtw_test': dtw_test, 'dtw_train': dtw_train}
-
-print('results autoencoder: ', results_autoencoder)
-
+'''
 # summarize history for loss
 plt.figure()
 plt.plot(history.history['loss'])
@@ -223,7 +158,7 @@ plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'val'], loc='upper left')
 plt.title('Training and validation curves ')
-plt.savefig('output/figures/' + str(fs_sub) + 'Learning_curves_AE.png')
+plt.savefig(figs_dir + str(fs_sub) + 'Learning_curves_AE.png')
 plt.show()
 
 #
@@ -250,12 +185,12 @@ plt.subplot(3, 1, 3)
 plt.imshow(image2 - image1, vmin=min_val, vmax=max_val)
 plt.title('Error (Reconstructed-Original)')
 plt.colorbar()
-plt.savefig('output/figures/' + str(fs_sub) + '/AE_reconstruction.png')
+plt.savefig(figs_dir + str(fs_sub) + '/AE_reconstruction.png')
 plt.show()
 
 # PLOTS 50 samples --> 1 second
 batch = random.randint(0, x_test.shape[0])
-'''
+
 # Random signal visualizer: in each execution plots the first second of the BSPS in random nodes
 plt.figure(figsize=(10, 3))
 a = randint(0, decoded_imgs.shape[2] - 1)
@@ -270,10 +205,10 @@ plt.ylabel('Amplitude')
 plt.xlabel('Samples')
 plt.legend()
 plt.title(title)
-plt.savefig('output/figures/' + str(fs_sub) + '/AE_Recontruction2.png')
+plt.savefig(figs_dir + str(fs_sub) + '/AE_Recontruction2.png')
 
 plt.show()
-'''
+
 # %%
 latent_vector = encoder.predict(x_test, batch_size=1)
 
@@ -298,7 +233,7 @@ for i in range(0, 12):
     plt.imshow(latent_vector[batch, time_instant, :, :, i])  # , cmap='jet')
     plt.colorbar()
 plt.suptitle(title)
-plt.savefig('output/figures/' + str(fs_sub) + '/Latentspace1.png')
+plt.savefig(figs_dir + str(fs_sub) + '/Latentspace1.png')
 
 plt.show()
 
@@ -313,7 +248,7 @@ for i in range(0, 12):
 plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 plt.xlabel('Samples')
 plt.ylabel('Amplitude')
-plt.savefig('output/figures/' + str(fs_sub) + '/Latentspace2.png')
+plt.savefig(figs_dir + str(fs_sub) + '/Latentspace2.png')
 
 plt.show()
 
@@ -357,73 +292,37 @@ plt.plot(t_vector, decoded_imgs_cut, label=('Reconstruction'))
 plt.xlabel('Time(s)')
 plt.ylabel('mV')
 plt.title('14 seconds of Test BSPS. Over it, 2 seconds of BSPS reconstruction')
-plt.savefig('output/figures/' + str(fs_sub) + '/BSPS_AE.png')
+plt.savefig(figs_dir + str(fs_sub) + '/BSPS_AE.png')
 plt.show()
 
 # PSD Welch of input, output and Latent Space
 
-plot_Welch_periodogram(x_test_fl, latent_vector, decoded_imgs_fl, fs=fs)
-plt.savefig('output/figures/' + str(fs_sub) + '/Periodogram_AE.png')
-
+#plot_Welch_periodogram(x_test_fl, latent_vector, decoded_imgs_fl, fs=fs)
+#plt.savefig(figs_dir + str(fs_sub) + '/Periodogram_AE.png')
+'''
 # Input --> Latent space
 # %%
-latent_vector_train = encoder.predict(x_train, batch_size=1)
-latent_vector_test = encoder.predict(x_test, batch_size=1)
-latent_vector_val = encoder.predict(x_val, batch_size=1)
 
-latent_space_n, egm_tensor_n = preprocess_latent_space(latent_vector_train, latent_vector_test, latent_vector_val,
-                                                       Y_model, egm_tensor, dimension=5)
+latent_vector_train = encoder.predict(x_train, batch_size=TrainConfig_1.learning_rate_1)
+latent_vector_test = encoder.predict(x_test, batch_size=TrainConfig_1.learning_rate_1)
+latent_vector_val = encoder.predict(x_val, batch_size=TrainConfig_1.learning_rate_1)
 
-# Split egm_tensor
-if random_split:
-    x_train = latent_space_n[np.in1d(AF_models, train_models)]
-    x_test = latent_space_n[np.in1d(AF_models, test_models)]
-    x_val = latent_space_n[np.in1d(AF_models, val_models)]
-else:
-    x_train = latent_space_n[np.where((Y_model >= 1) & (Y_model <= 200))]
-    x_test = latent_space_n[np.where((Y_model > 180) & (Y_model <= 244))]
-    x_val = latent_space_n[np.where((Y_model > 244) & (Y_model <= 286))]
-
-# Split EGM (Label)
-if random_split:
-    y_train = egm_tensor_n[np.in1d(AF_models, train_models)]
-    y_test = egm_tensor_n[np.in1d(AF_models, test_models)]
-    y_val = egm_tensor_n[np.in1d(AF_models, val_models)]
-
-else:
-
-    y_train = egm_tensor_n[np.where((Y_model >= 1) & (Y_model <= 200))]
-    y_test = egm_tensor_n[np.where((Y_model > 180) & (Y_model <= 244))]
-    y_val = egm_tensor_n[np.where((Y_model > 244) & (Y_model <= 286))]
-
-# %% Subsample EGM nodes
-
-y_train_subsample = y_train[:, 0:2048:4]
-y_test_subsample = y_test[:, 0:2048:4]
-y_val_subsample = y_val[:, 0:2048:4]
-
-n_nodes = y_train_subsample.shape[1]
-
-# Batch generation
-x_train_ls = reshape(x_train,
-                     (int(len(x_train) / n_batch), n_batch, x_train.shape[1], x_train.shape[2], x_train.shape[3]))
-x_test_ls = reshape(x_test, (int(len(x_test) / n_batch), n_batch, x_test.shape[1], x_test.shape[2], x_test.shape[3]))
-x_val_ls = reshape(x_val, (int(len(x_val) / n_batch), n_batch, x_val.shape[1], x_val.shape[2], x_val.shape[3]))
-
-y_train = reshape(y_train_subsample, (int(len(y_train_subsample) / n_batch), n_batch, y_train_subsample.shape[1]))
-y_test = reshape(y_test_subsample, (int(len(y_test_subsample) / n_batch), n_batch, y_test_subsample.shape[1]))
-y_val = reshape(y_val_subsample, (int(len(y_val_subsample) / n_batch), n_batch, y_val_subsample.shape[1]))
+y_train, y_test, y_val, x_train_ls, x_test_ls, x_val_ls = preprocessing_regression_input(latent_vector_train, latent_vector_test, latent_vector_val,
+                                   Y_model, egm_tensor, AF_models,
+                                   train_models, test_models, val_models,
+                                   n_batch)
 
 print('Training Recontruction...')
-estimator = reconstruction_model(x_train_ls, y_train)
+regressor = reconstruction(x_train_ls, y_train)
 
-optimizer = Adam(learning_rate=0.00001)
-callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
-estimator.compile(optimizer=optimizer, loss=losses.mean_squared_error,
+cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=models_dir + 'autoencoder' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
+                                                 save_weights_only=True,
+                                                 verbose=1)
+regressor.compile(optimizer=optimizer, loss=losses.mean_squared_error,
                   metrics=[losses.mean_squared_error, losses.mean_absolute_error,
                            tf.keras.metrics.RootMeanSquaredError()])
-history = estimator.fit(x_train_ls, y_train, batch_size=1, epochs=n_epoch, validation_data=(x_val_ls, y_val),
-                        callbacks=[callback])
+history = regressor.fit(x_train_ls, y_train, batch_size=TrainConfig_2.batch_size_2, epochs=TrainConfig_2.n_epoch_2, validation_data=(x_val_ls, y_val),
+                        callbacks=[early_stopping_callback, cp_callback])
 
 # %%
 # summarize history for loss
@@ -434,54 +333,21 @@ plt.title('model loss')
 plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
-plt.savefig('output/figures/' + str(fs_sub) + '/Reconstruction_loss.png')
+plt.savefig(figs_dir + str(fs_sub) + '/Reconstruction_loss.png')
 plt.show()
 
-estimate_egms_test = estimator.predict(x_test_ls, batch_size=1)
-estimate_egms_train = estimator.predict(x_train_ls, batch_size=1)
 
-results_test = estimator.evaluate(x_test_ls, batch_size=50)
-results_train = estimator.evaluate(x_train_ls, batch_size=50)
+pred_test_egm = regressor.predict(x_test_ls, batch_size=TrainConfig_2.batch_size_2)
+pred_train_egm = regressor.predict(x_train_ls, batch_size=TrainConfig_2.batch_size_2)
 
-# Flatten y
-y_test_flat = reshape(y_test, (y_test.shape[0] * y_test.shape[1], y_test.shape[2]))
-y_train_flat = reshape(y_train, (y_train.shape[0] * y_train.shape[1], y_train.shape[2]))
+results_reconstruction = evaluate_function(x_train_ls, y_train, x_test_ls, y_test, regressor, batch_size=TrainConfig_2.batch_size_2)
 
-# Flatten x for MSE nad MAE
-reconstruction_flat_test = reshape(estimate_egms_test, (
-estimate_egms_test.shape[0] * estimate_egms_test.shape[1], estimate_egms_test.shape[2]))
+print('results reconstruction: ', results_reconstruction)
 
-reconstruction_flat_train = reshape(estimate_egms_train, (
-estimate_egms_train.shape[0] * estimate_egms_train.shape[1], estimate_egms_train.shape[2]))
-
-# Save
-mse_reconstruction_test, mae_reconstruction_test, rmse_reconstruction_test = results_test[0], results_test[2], \
-results_test[3]
-mse_reconstruction_train, mae_reconstruction_train, rmse_reconstruction_train = results_train[0], results_train[2], \
-results_test[3]
-
-# MAE and MSE
-mae_reconstruction_test = mean_absolute_error(y_test_flat, reconstruction_flat_test)
-mae_reconstruction_train = mean_absolute_error(y_train_flat, reconstruction_flat_train)
-
-mse_reconstruction_test = mean_squared_error(y_test_flat, reconstruction_flat_test)
-mse_reconstruction_train = mean_squared_error(y_train_flat, reconstruction_flat_train)
-
-# DTW
-dtw_test, path = fastdtw(reconstruction_flat_test, y_test_flat)
-dtw_train, path = fastdtw(reconstruction_flat_train, y_train_flat)
-
-results_reconstruction = {'mse test': mse_reconstruction_test, 'mse train': mse_reconstruction_train,
-                          'mae test': mae_reconstruction_test, 'mae train': mae_reconstruction_train,
-                          'rmse test': rmse_reconstruction_test, 'rmse train': rmse_reconstruction_train,
-                          'dtw_test': dtw_test, 'dtw_train': dtw_train}
 
 y_test_subsample = y_test_flat
 estimate_egms_test = reconstruction_flat_test
-
 estimate_egms_n = normalize_by_models(reconstruction_flat_test,BSPM_test)
-
-
 
 norm = True
 # Normalize (por muestras)
@@ -500,6 +366,7 @@ if norm:
         estimate_egms_n.extend(estimate_egms_norm)  # Add to new norm array
     estimate_egms_n = np.array(estimate_egms_n)
 
+'''
 # Plots
 
 for i in range(0, 20):
@@ -514,6 +381,7 @@ for i in range(0, 20):
     # estimate_egms_norm_represent = normalize_array(estimate_signal, 1, -1, 0)
     estimate_egms_norm_represent = estimate_signal
 
+
     plt.figure(figsize=(15, 3))
 
     plt.plot(estimate_egms_norm_represent[:, node], label='Estimation Test')
@@ -525,7 +393,7 @@ for i in range(0, 20):
     plt.xlabel('Samples')
     plt.ylabel('Amplitude')
     plt.title(text)
-    plt.savefig('output/figures/' + str(fs_sub) + '/Reconstruction' + str(i))
+    plt.savefig(figs_dir + str(fs_sub) + '/Reconstruction' + str(i))
     plt.show()
 
 plt.figure(layout='tight', figsize=(15, 10))
@@ -549,7 +417,7 @@ plt.title('y_test - reconstruction')
 plt.xlabel('time')
 plt.ylabel('nodes')
 plt.colorbar(orientation="horizontal", pad=0.2)
-plt.savefig('output/figures/' + str(fs_sub) + '/2D_Rec.png')
+plt.savefig(figs_dir + str(fs_sub) + '/2D_Rec.png')
 plt.show()
 
 # Correlation and RMSE
@@ -559,7 +427,7 @@ plt.show()
 # correlation_spearman_time=corr_spearman_cols(estimate_egms_n.T, y_test_subsample.T)
 # correlation_spearman_nodes=corr_spearman_cols(estimate_egms_n, y_test_subsample)
 
-
+'''
 # DF Mapping
 DF_Mapping = False
 
@@ -599,7 +467,7 @@ plt.subplot(2, 1, 2)
 plt.plot(correlation_spearman_nodes, label='spearman')
 plt.plot(correlation_pearson_nodes, alpha=0.5, label='pearson')
 plt.title('Nodes')
-plt.savefig('output/figures/'+ str(fs_sub) + '/Correlation.png')
+plt.savefig(figs_dir+ str(fs_sub) + '/Correlation.png')
 plt.show()
 
 '''
@@ -617,6 +485,7 @@ for model in unique_AF_test_models:
     correlation_list.extend([correlation_pearson_nodes])
 correlation_array = np.array(correlation_list)
 
+'''
 plt.figure(figsize=(15, 7), layout='tight')
 
 for i in range(0, len(correlation_list) - 1):
@@ -626,9 +495,9 @@ for i in range(0, len(correlation_list) - 1):
     plt.xlabel('Nodes')
 plt.ylabel('Coefficient of correlation')
 plt.suptitle('Spearson correlation')
-plt.savefig('output/figures/' + str(fs_sub) + '/Correlation_2.png')
+plt.savefig(figs_dir + str(fs_sub) + '/Correlation_2.png')
 plt.show()
-
+'''
 # %%
 
 dtw_array, dtw_array_random = DTW_by_AFModels(AF_models_test, estimate_egms_n, y_test_subsample)
@@ -655,6 +524,7 @@ for i in range(0, len(corr_mean)):
 x_pos = np.arange(len(labels))
 x = np.linspace(0, len(labels), len(labels))
 
+'''
 # Corr
 plt.figure(figsize=(7, 2))
 # fig, ax = plt.subplots()
@@ -668,7 +538,7 @@ plt.errorbar(x, corr_mean,
 plt.tight_layout()
 plt.xlabel('AF Model')
 plt.title('Spearman Correlation in test models')
-plt.savefig('output/figures/' + str(fs_sub) + '/Corr3.png')
+plt.savefig(figs_dir + str(fs_sub) + '/Corr3.png')
 
 plt.show()
 
@@ -687,7 +557,7 @@ plt.tight_layout()
 plt.xlabel('AF Model')
 plt.title('DTW in test models')
 plt.legend()
-plt.savefig('output/figures/' + str(fs_sub) + '/DTW.png')
+plt.savefig(figs_dir + str(fs_sub) + '/DTW.png')
 
 plt.show()
 
@@ -702,7 +572,7 @@ plt.errorbar(x, rmse_mean,
 plt.tight_layout()
 plt.xlabel('AF Model')
 plt.title('RMSE in test models')
-plt.savefig('output/figures/' + str(fs_sub) + '/RMSE.png')
+plt.savefig(figs_dir + str(fs_sub) + '/RMSE.png')
 plt.show()
 
 # plot_Welch_reconstruction(latent_vector_test, estimate_egms_n, fs, n_nodes,y_test_subsample, nperseg_value=100)
@@ -756,10 +626,10 @@ for height in range(0, 511, 5):
     plt.title('EGM signals Real')
     # plt.ylim([0,0.2])
 
-plt.savefig('output/figures/' + str(fs_sub) + '/Periodogram_rec.png')
+plt.savefig(figs_dir + str(fs_sub) + '/Periodogram_rec.png')
 plt.show()
 
-
+'''
 # %%
 results = pd.DataFrame(columns=['MSE AE', 'DTW AE', 'MSE Reconstruction', 'TWD Reconstruction'])
 
@@ -780,6 +650,11 @@ new_correlation_array = interpolate_fun(correlation_array, len(correlation_array
 new_rmse_array = interpolate_fun(rmse_array, len(rmse_array), 2048)
 
 # %%
+# Save the model names in train, test and val
+test_model_name= [all_model_names[index] for index in AF_models_test]
+val_model_name= [all_model_names[index] for index in AF_models_val]
+train_model_name= [all_model_names[index] for index in AF_models_train]
+
 mdic = {"reconstruction": Test_estimation, "label": Label}
 variables = {"RMSEmean": rmse_mean, "RMSEstd": rmse_std, 'Corrmean': corr_mean, "corrstd": corr_std,
              'dtwmean': dtw_mean, 'dtwstd': dtw_std,
@@ -792,14 +667,14 @@ savemat("output/variables/" + str(fs_sub) + "/variables23_04.mat", variables)
 
 # Save models
 if sinusoids:
-    estimator.save('sin_pretrained/model_reconstruction.h5')
-    conv_autoencoder.save('sin_pretrained/model_autoencoder.h5')
+    estimator.save(models_dir + 'sinusoid_pretrained/model_reconstruction.h5'+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+    conv_autoencoder.save(models_dir +'sinusoid_pretrained/model_autoencoder.h5'+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 else:
-    estimator.save('output/model/model_reconstruction.h5')
-    conv_autoencoder.save('output/model/model_autoencoder.h5')
+    estimator.save(models_dir +'output/model/model_reconstruction.h5')
+    conv_autoencoder.save(models_dir +'output/model/model_autoencoder.h5')
 
-estimator.save('output/model/model_reconstruction.h5')
-conv_autoencoder.save('output/model/model_autoencoder.h5')
+estimator.save('output/model/model_reconstruction.h5'+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+conv_autoencoder.save('output/model/model_autoencoder.h5'+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 
 # Save results to csv and export
 results_Autoencoder = pd.DataFrame.from_dict(results_autoencoder, orient='index', columns=['Autoencoder'])
