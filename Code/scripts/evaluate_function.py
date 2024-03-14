@@ -1,8 +1,8 @@
 from numpy import *
 from fastdtw import fastdtw
+from tools_.tools import reshape_tensor
 
-
-def evaluate_function(x_train, y_train, x_test, y_test, model, batch_size=1):
+def evaluate_function(x_train, y_train, x_test, y_test,pred_train, pred_test, model, batch_size=1):
     '''
     This function evaluates the model on the specified metrics
     Parameters
@@ -26,7 +26,7 @@ def evaluate_function(x_train, y_train, x_test, y_test, model, batch_size=1):
     mse_train, mae_train = results_train[0], results_train[2]
     mse_test, mae_test = results_test[0], results_test[2]
 
-    dtw_test, dtw_train = DynamicTimeWarping(x_train, y_train, x_test, y_test, model)
+    dtw_test, dtw_train = DynamicTimeWarping(y_train, pred_train, y_test, pred_test, model)
 
     results = {'mse test': mse_test, 'mse train': mse_train,
                'mae test': mae_test, 'mae train': mae_train,
@@ -62,39 +62,3 @@ def DynamicTimeWarping(pred_train, y_train, pred_test, y_test, model):
 
     return dtw_test, dtw_train
 
-
-def reshape_tensor(tensor, n_dim_input, n_dim_output):
-    '''
-    Reshapes the tensors used during pipeline, considering that the first two dimensions are (#n batches, batch size).
-    In the case of n_dim_input = 5, the last dimension is the number of channels.
-
-    Parameters
-    ----------
-    tensor: tensor to reshape
-    n_dim_input: input shape
-    n_dim_output: desired output shape
-
-    Returns
-    -------
-
-    '''
-
-    try:
-
-        # case of autoencoder output: first two dimensions
-        if n_dim_input == 5 and n_dim_output == 2:
-            reshaped_tensor = reshape(tensor, (
-                tensor.shape[0] * tensor.shape[1],
-                tensor.shape[2] * tensor.shape[3]))
-            return reshaped_tensor
-
-        # case of regression output
-        elif n_dim_input == 3 and n_dim_output == 2:
-            reshaped_tensor = reshape(tensor, (
-                tensor.shape[0] * tensor.shape[1],
-                tensor.shape[2]))
-            return reshaped_tensor
-
-    except:
-        raise (
-            ValueError("Input shape - Output shape combination is not implemented: check reshape_tensor documentation"))

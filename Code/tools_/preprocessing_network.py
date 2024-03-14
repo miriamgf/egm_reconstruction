@@ -1,5 +1,5 @@
 from numpy import reshape
-from tools import *
+from tools_.tools import *
 import tensorflow as tf
 
 tf.random.set_seed(1)
@@ -37,8 +37,8 @@ def preprocessing_autoencoder_input(x_train, x_test, x_val, n_batch):
     return x_train_reshaped, x_test_reshaped, x_val_reshaped
 
 def preprocessing_regression_input(latent_vector_train, latent_vector_test, latent_vector_val,
-                                   Y_model, egm_tensor, AF_models,
                                    train_models, test_models, val_models,
+                                   Y_model, egm_tensor, AF_models,
                                    n_batch, random_split= True):
     '''
     Regression Input shape: [# batches, batch_size, 3, 4, 12]
@@ -54,6 +54,7 @@ def preprocessing_regression_input(latent_vector_train, latent_vector_test, late
 
     Returns
     y_train, y_test, y_val, x_train_ls, x_test_ls, x_val_ls: x and x
+    n_nodes: number of nodes are predicted (original geometry: 2048 nodes in heart geom)
 
     '''
 
@@ -109,4 +110,4 @@ def preprocessing_regression_input(latent_vector_train, latent_vector_test, late
     y_val = reshape(y_val_subsample, (int(len(y_val_subsample) / n_batch), n_batch, y_val_subsample.shape[1]))
 
 
-    return y_train, y_test, y_val, x_train_ls, x_test_ls, x_val_ls
+    return y_train, y_test, y_val, x_train_ls, x_test_ls, x_val_ls, n_nodes

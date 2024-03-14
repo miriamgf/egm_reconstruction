@@ -39,7 +39,7 @@ from generators import *
 from numpy import reshape
 import matplotlib.image
 from scipy.io import savemat
-from Plots import *
+from plots import *
 from scipy.stats import pearsonr
 from scipy.stats import spearmanr
 from datetime import time
@@ -1020,7 +1020,7 @@ def RMSE_by_AFModels(AF_models_test, estimate_egms_n, y_test_subsample):
 def normalize_by_models(data,Y_model, norm_input=True ):
 
     '''
-    This function normalizes the input tensor, but applies normalization in each node separately
+    This function normalizes the input tensor between -1 and 1 in each model separately
     
     '''
     # Normalize by models of BSPM
@@ -1030,7 +1030,7 @@ def normalize_by_models(data,Y_model, norm_input=True ):
 
     for model in np.unique(Y_model):
 
-        #1. Normalize Latent space
+
         arr_to_norm = data[np.where((Y_model== model))]     #select window of signal belonging to model i
         norm_model = normalize_array (arr_to_norm, 1, -1) 
         data_n.extend(norm_model) #Add to new norm array
@@ -1070,8 +1070,8 @@ def interpolate_fun(array, n_models, final_nodes, sig = False ):
 
 
 def preprocess_latent_space(latent_vector_train, latent_vector_test, latent_vector_val,
-                                                           train_models, test_models, val_models,
-                                                           Y_model, egm_tensor, dimension):
+                            train_models, test_models, val_models,
+                            Y_model, egm_tensor, dimension):
     '''
     This function preprocess the latent space, following the scheme: 
     1) Center data at 0
@@ -1130,6 +1130,54 @@ def get_run_logdir():
 
     run_id = time.strftime("run_%Y_%m_%d-%H_%M_%S")
     return os.path.join(root_logdir, run_id)
+
+def reshape_tensor(tensor, n_dim_input, n_dim_output):
+    '''
+    Reshapes the tensors used during pipeline, considering that the first two dimensions are (#n batches, batch size).
+    In the case of n_dim_input = 5, the last dimension is the number of channels.
+
+    Parameters
+    ----------
+    tensor: tensor to reshape
+    n_dim_input: input shape
+    n_dim_output: desired output shape
+
+    Returns
+    -------
+
+    '''
+
+    try:
+
+        # case of autoencoder output: first two dimensions
+        if n_dim_input == 5 and n_dim_output == 2:
+            reshaped_tensor = reshape(tensor, (
+                tensor.shape[0] * tensor.shape[1],
+                tensor.shape[2] * tensor.shape[3] * tensor.shape[4]))
+            return reshaped_tensor
+
+        # case of regression output
+        elif n_dim_input == 3 and n_dim_output == 2:
+            reshaped_tensor = reshape(tensor, (
+                tensor.shape[0] * tensor.shape[1],
+                tensor.shape[2]))
+            return reshaped_tensor
+
+        elif n_dim_input == 5 and n_dim_output == 4:
+            reshaped_tensor = reshape(tensor, (
+                tensor.shape[0] * tensor.shape[1],
+                tensor.shape[2], tensor.shape[3], tensor.shape[4] ))
+            return reshaped_tensor
+        elif n_dim_input == 4 and n_dim_output == 5:
+            reshaped_tensor = reshape(tensor, (
+                tensor.shape[0], tensor.shape[1],
+                tensor.shape[2], tensor.shape[3], 1))
+
+            return reshaped_tensor
+
+    except:
+        raise (
+            ValueError("Input shape - Output shape combination is not implemented: check reshape_tensor documentation"))
 
 
 

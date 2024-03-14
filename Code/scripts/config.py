@@ -14,3 +14,4 @@ class DataConfig(object):
     fs_sub = 50
     SNR = 20
     n_classes = 3 #this is specific for classification. # 1: Rotor/no rotor ; 2: RA/LA/No rotor (2 classes) ; 3: 7 regions (3 classes) + no rotor (8 classes)
+    DF_Mapping = False
