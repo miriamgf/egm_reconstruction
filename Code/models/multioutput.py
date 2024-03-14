@@ -17,7 +17,7 @@ class MultiOutput():
 
         initializer = tf.keras.initializers.HeNormal()
         encoder = layers.Conv3D(64, (2, 2, 2), strides=1, padding='same', activation='leaky_relu',
-                                input_shape=input_shape, kernel_initializer=initializer,
+                                input_shape=input_shape[2:], kernel_initializer=initializer,
                                 kernel_regularizer=tf.keras.regularizers.l2(l=0.01))(inputs)
         encoder = layers.Conv3D(64, (2, 2, 2), strides=1, padding='same', activation='leaky_relu')(encoder)
         encoder = layers.Conv3D(32, (2, 2, 2), strides=1, padding='same', activation='leaky_relu')(encoder)
@@ -47,7 +47,6 @@ class MultiOutput():
         decoder = self.build_decoder_module(inputs, input_shape, encoder)
         return decoder
 
-
     def build_reconstruction_branch(self, inputs, input_shape):
         """
         Used to directly obtain EGMs from BSPS
@@ -56,12 +55,11 @@ class MultiOutput():
         encoder = self.build_encoder_module(inputs, input_shape)
 
         x = layers.Conv2D(64, (2, 2), strides=1, padding='same', activation='leaky_relu',
-                          input_shape=input_shape, kernel_regularizer=tf.keras.regularizers.l2(l=0.001),
+                          input_shape=input_shape[2:], kernel_regularizer=tf.keras.regularizers.l2(l=0.001),
                           kernel_initializer=initializer)(encoder)
         x = layers.Conv2D(32, (3, 3), strides=1, padding='same', activation='leaky_relu')(x)
         x = BatchNormalization()(x)
         x = layers.Flatten()(x)
-
         x = layers.Reshape((50, -1))(x)
         x = layers.TimeDistributed(layers.Flatten())(x)
         x = layers.LSTM(15, return_sequences=True)(x)

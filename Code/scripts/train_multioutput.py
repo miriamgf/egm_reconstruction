@@ -18,6 +18,8 @@ import time
 from evaluate_function import *
 from numpy import *
 import pickle
+from models.multioutput import MultiOutput
+import mlflow
 
 tf.random.set_seed(42)
 
@@ -51,19 +53,19 @@ for subdir, dirs, files in os.walk(torsos_dir):
 all_model_names = []
 directory = data_dir
 for subdir, dirs, files in os.walk(directory):
-    print(subdir, directory, files)
+    #print(subdir, directory, files)
 
     if (subdir != directory):
         model_name = subdir.split("/")[-1]
         all_model_names.append(model_name)
 
 all_model_names = sorted(all_model_names)
-print(len(all_model_names))
+print(all_model_names)
+
 
 mlflow.set_tracking_uri(uri="http://127.0.0.1:5000")
+
 mlflow.autolog()
-
-
 
 # Load data
 
@@ -109,21 +111,26 @@ x_train, x_test, x_val = preprocessing_autoencoder_input(x_train, x_test, x_val,
 new_items = {'x_train': x_train, 'x_test': x_test, 'x_val': x_val}
 dic_vars.update(new_items)
 
+y_train, y_test, y_val = preprocessing_y(egm_tensor,Y_model, AF_models, train_models,test_models, val_models, TrainConfig_1.batch_size_1)
+
 # 1. AUTOENCODER
-print('Training Autoencoder...')
-encoder, decoder = autoencoder(x_train)
+print('Training model...')
+
+model = MultiOutput().assemble_full_model(input_shape=x_train.shape[1:])
+
 optimizer = Adam(learning_rate=TrainConfig_1.learning_rate_1)
+
 tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=models_dir + 'regressor' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
                                                  save_weights_only=True,
                                                  verbose=1)
 early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
 
-conv_autoencoder = Model(inputs=encoder.input, outputs=decoder(encoder.outputs))
-conv_autoencoder.compile(optimizer=optimizer, loss=losses.mean_squared_error,
+model.compile(optimizer=optimizer, loss=losses.mean_squared_error,
                          metrics=[losses.mean_squared_error, losses.mean_absolute_error])
-history = conv_autoencoder.fit(x_train, x_train, batch_size=TrainConfig_1.batch_size_1, epochs=TrainConfig_1.n_epoch_1,
-                               validation_data=(x_val, x_val),
+print(model.summary())
+history = model.fit(x=x_train, y=y_train, batch_size=TrainConfig_1.batch_size_1, epochs=TrainConfig_1.n_epoch_1,
+                               validation_data=(x_val, y_val),
                                callbacks=[early_stopping_callback, cp_callback])
 
 # summarize history for loss

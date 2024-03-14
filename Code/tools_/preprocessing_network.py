@@ -111,3 +111,49 @@ def preprocessing_regression_input(latent_vector_train, latent_vector_test, late
 
 
     return y_train, y_test, y_val, x_train_ls, x_test_ls, x_val_ls, n_nodes
+
+def preprocessing_y(egm_tensor,Y_model, AF_models, train_models,test_models, val_models, n_batch, norm = True, random_split = True):
+    # Normalize
+    if norm:
+        egm_tensor_n = []
+        for model in np.unique(Y_model):
+
+            # 2. Normalize egm (output)
+            arr_to_norm_egm = egm_tensor[np.where((Y_model == model))]  # select window of signal belonging to model i
+            egm_tensor_norm = normalize_array(arr_to_norm_egm, 1, -1)
+            egm_tensor_n.extend(egm_tensor_norm)  # Add to new norm array
+
+        egm_tensor_n = np.array(egm_tensor_n)
+
+    else:
+
+        latent_space_n = latent_space
+        egm_tensor_n = egm_tensor
+
+    # Split EGM (Label)
+    if random_split:
+        y_train = egm_tensor_n[np.in1d(AF_models, train_models)]
+        y_test = egm_tensor_n[np.in1d(AF_models, test_models)]
+        y_val = egm_tensor_n[np.in1d(AF_models, val_models)]
+
+    else:
+
+        y_train = egm_tensor_n[np.where((Y_model >= 1) & (Y_model <= 200))]
+        y_test = egm_tensor_n[np.where((Y_model > 180) & (Y_model <= 244))]
+        y_val = egm_tensor_n[np.where((Y_model > 244) & (Y_model <= 286))]
+
+    # %% Subsample EGM nodes
+
+    y_train_subsample = y_train[:, 0:2048:4]
+    y_test_subsample = y_test[:, 0:2048:4]
+    y_val_subsample = y_val[:, 0:2048:4]
+
+    n_nodes = y_train_subsample.shape[1]
+
+
+    y_train = reshape(y_train_subsample, (int(len(y_train_subsample) / n_batch), n_batch, y_train_subsample.shape[1]))
+    y_test = reshape(y_test_subsample, (int(len(y_test_subsample) / n_batch), n_batch, y_test_subsample.shape[1]))
+    y_val = reshape(y_val_subsample, (int(len(y_val_subsample) / n_batch), n_batch, y_val_subsample.shape[1]))
+
+    return y_train, y_test, y_val
+
