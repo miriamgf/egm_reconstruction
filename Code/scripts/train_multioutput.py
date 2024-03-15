@@ -126,11 +126,12 @@ cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=models_dir + 'regresso
                                                  verbose=1)
 early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
 
-model.compile(optimizer=optimizer, loss=losses.mean_squared_error,
-                         metrics=[losses.mean_squared_error, losses.mean_absolute_error])
+# Compilar el modelo
+model.compile(optimizer='adam', loss=['mean_squared_error', 'mean_squared_error'], metrics=['accuracy'])
+
 print(model.summary())
-history = model.fit(x=x_train, y=y_train, batch_size=TrainConfig_1.batch_size_1, epochs=TrainConfig_1.n_epoch_1,
-                               validation_data=(x_val, y_val),
+history = model.fit(x=x_train, y=[x_train, y_train], batch_size=TrainConfig_1.batch_size_1, epochs=TrainConfig_1.n_epoch_1,
+                               validation_data=(x_val, [x_val, y_val]),
                                callbacks=[early_stopping_callback, cp_callback])
 
 # summarize history for loss
