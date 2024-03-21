@@ -147,11 +147,11 @@ plt.savefig(figs_dir + str(DataConfig.fs_sub) + 'Learning_curves_AE.png')
 plt.show()
 
 # Evaluate
-pred_test = conv_autoencoder.predict(x_test, batch_size=TrainConfig_1.batch_size_1) # x_test=[# batches, batch_size, 12, 32, 1]
-pred_train = conv_autoencoder.predict(x_train, batch_size=TrainConfig_1.batch_size_1) #(44, 50, 12, 32, 1)
+pred_test = model.predict(x_test, batch_size=TrainConfig_1.batch_size_1) # x_test=[# batches, batch_size, 12, 32, 1]
+pred_train = model.predict(x_train, batch_size=TrainConfig_1.batch_size_1) #(44, 50, 12, 32, 1)
 
-dict_results_autoencoder = evaluate_function(x_train, x_train, x_test, x_test,pred_train, pred_test,
-                                        conv_autoencoder, batch_size=TrainConfig_1.batch_size_1)
+dict_results_autoencoder = evaluate_function_multioutput(x_train, y_train, x_test, y_test,
+                                                         pred_train, pred_test, model, batch_size=TrainConfig_1.batch_size_1)
 print('Results autoencoder:')
 print(dict_results_autoencoder)
 
