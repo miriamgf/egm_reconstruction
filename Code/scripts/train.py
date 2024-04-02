@@ -1,3 +1,6 @@
+import sys
+sys.path.append('../Code')
+from models.autoencoder_model import autoencoder
 from models.autoencoder_model import autoencoder
 from models.reconstruction_model import reconstruction
 from config import TrainConfig_1
@@ -18,7 +21,11 @@ import time
 from evaluate_function import *
 from numpy import *
 import pickle
+import sys
 import mlflow
+sys.path.append('/code')
+
+
 
 tf.random.set_seed(42)
 
