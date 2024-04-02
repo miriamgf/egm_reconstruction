@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 from models.autoencoder_model import autoencoder
 from models.reconstruction_model import reconstruction
 from config import TrainConfig_1
@@ -127,7 +129,7 @@ cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=models_dir + 'regresso
 early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
 
 # Compilar el modelo
-model.compile(optimizer='adam', loss=['mean_squared_error', 'mean_squared_error'], metrics=['accuracy'])
+model.compile(optimizer='adam', loss=['mean_squared_error', 'mean_squared_error'], metrics=['mean_absolute_error'])
 
 print(model.summary())
 history = model.fit(x=x_train, y=[x_train, y_train], batch_size=TrainConfig_1.batch_size_1, epochs=TrainConfig_1.n_epoch_1,
@@ -136,106 +138,77 @@ history = model.fit(x=x_train, y=[x_train, y_train], batch_size=TrainConfig_1.ba
 
 # summarize history for loss
 plt.figure()
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
+
+plt.plot(history.history['val_loss'], label = 'Global loss (Validation)')
+plt.plot(history.history['val_Autoencoder_output_loss'], label = 'Autoencoder loss (Validation)' )
+plt.plot(history.history['val_Regressor_output_loss'], label = 'Regressor loss (Validation)')
+plt.legend( loc='upper left')
 plt.title('model loss')
-plt.ylabel('loss')
+plt.ylabel('MSE')
 plt.xlabel('epoch')
-plt.legend(['train', 'val'], loc='upper left')
 plt.title('Training and validation curves ')
 plt.savefig(figs_dir + str(DataConfig.fs_sub) + 'Learning_curves_AE.png')
 plt.show()
 
 # Evaluate
-pred_test = model.predict(x_test, batch_size=TrainConfig_1.batch_size_1) # x_test=[# batches, batch_size, 12, 32, 1]
-pred_train = model.predict(x_train, batch_size=TrainConfig_1.batch_size_1) #(44, 50, 12, 32, 1)
+pred_test  = model.predict(x_test, batch_size=TrainConfig_1.batch_size_1) # x_test=[# batches, batch_size, 12, 32, 1]
+pred_train  = model.predict(x_train, batch_size=TrainConfig_1.batch_size_1) #(44, 50, 12, 32, 1)
 
-dict_results_autoencoder = evaluate_function_multioutput(x_train, y_train, x_test, y_test,
+results_autoencoder, results_regressor = evaluate_function_multioutput(x_train, y_train, x_test, y_test,
                                                          pred_train, pred_test, model, batch_size=TrainConfig_1.batch_size_1)
+
+pred_test_autoencoder, pred_test_egm = pred_test[0], pred_test[1]
+pred_train_autoencoder, pred_train_egm = pred_train[0], pred_train[1]
+
 print('Results autoencoder:')
-print(dict_results_autoencoder)
+print(results_autoencoder)
 
-new_items = {'pred_test': pred_test, 'pred_train': pred_train, 'conv_autoencoder': conv_autoencoder}
-dic_vars.update(new_items)
+print('Results regressor:')
+print(results_regressor)
 
-
-
-#!!!!!!!! PLOT[2]!!!!!!!!!!!!!!!
-
-# Input --> Latent space
-
-latent_vector_train = encoder.predict(x_train, batch_size=TrainConfig_1.batch_size_1)
-latent_vector_test = encoder.predict(x_test, batch_size=TrainConfig_1.batch_size_1)
-latent_vector_val = encoder.predict(x_val, batch_size=TrainConfig_1.batch_size_1)
-
-y_train, y_test, y_val, x_train_ls, x_test_ls, x_val_ls, n_nodes = preprocessing_regression_input(latent_vector_train, latent_vector_test, latent_vector_val,
-                                                                                         train_models, test_models, val_models,
-                                                                                         Y_model, egm_tensor, AF_models, TrainConfig_2.batch_size_2)
-
-new_items = {'x_train_ls': x_train, 'x_test_ls': x_test, 'x_val_ls': x_val, 'y_train_ls':y_train, 'y_test_ls':y_test, 'y_val_ls':y_val,
-             'latent_vector_train':latent_vector_train,  'latent_vector_test': latent_vector_test, 'latent_vector_val':latent_vector_val }
-dic_vars.update(new_items)
-
-print('Training Recontruction...')
-regressor = reconstruction(x_train_ls, y_train)
-
-cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=models_dir + 'autoencoder' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
-                                                 save_weights_only=True,
-                                                 verbose=1)
-optimizer = Adam(lr=TrainConfig_2.learning_rate_2)
-regressor.compile(optimizer=optimizer, loss=losses.mean_squared_error,
-                  metrics=[losses.mean_squared_error, losses.mean_absolute_error,
-                           tf.keras.metrics.RootMeanSquaredError()])
-history = regressor.fit(x_train_ls, y_train, batch_size=TrainConfig_2.batch_size_2, epochs=TrainConfig_2.n_epoch_2, validation_data=(x_val_ls, y_val),
-                        callbacks=[early_stopping_callback, cp_callback])
-
-# %%
-# summarize history for loss
-plt.figure()
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('model loss')
-plt.ylabel('loss')
-plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-plt.savefig(figs_dir + str(DataConfig.fs_sub) + '/Reconstruction_loss.png')
-plt.show()
-
-
-pred_test_egm = regressor.predict(x_test_ls, batch_size=TrainConfig_2.batch_size_2)
-pred_train_egm = regressor.predict(x_train_ls, batch_size=TrainConfig_2.batch_size_2)
-
-dict_results_reconstruction = evaluate_function(x_train_ls, y_train, x_test_ls, y_test, pred_train_egm, pred_test_egm,
-                                           regressor, batch_size=TrainConfig_2.batch_size_2)
-
-print('dict_results_reconstruction: ')
-print(dict_results_reconstruction)
-
-new_items = {'pred_test_egm': pred_test_egm, 'pred_train_egm': pred_train_egm, 'regressor': regressor}
+new_items = {'pred_test': pred_test, 'pred_train': pred_train, 'conv_autoencoder': model}
 dic_vars.update(new_items)
 
 
 y_test_flat = reshape_tensor(y_test, n_dim_input=y_test.ndim, n_dim_output=2)
 reconstruction_flat_test = reshape_tensor(pred_test_egm, n_dim_input=pred_test_egm.ndim, n_dim_output=2)
 
-y_test_subsample = y_test_flat
+x_test_flat = reshape_tensor(x_test, n_dim_input=x_test.ndim, n_dim_output=2)
+autoencoder_flat_test = reshape_tensor(pred_test_autoencoder, n_dim_input=pred_test_autoencoder.ndim, n_dim_output=2)
+
+
 estimate_egms_test = reconstruction_flat_test
 
-#TODO: Arreglar normalize_by_models para regression
-
+# normalize
 estimate_egm_test_r=estimate_egms_test
 #estimate_egms_n = normalize_by_models(reconstruction_flat_test,BSPM_test)
 # Normalize (por muestras)
 norm = True
 if norm:
     estimate_egms_n = []
-    for model in np.unique(BSPM_test):
+    for window in np.unique(BSPM_test):
         # 1. Normalize Reconstruction
         arr_to_norm_estimate = estimate_egm_test_r[
-            np.where((BSPM_test == model))]  # select window of signal belonging to model i
+            np.where((BSPM_test == window))]  # select window of signal belonging to window i
         estimate_egms_norm = normalize_array(arr_to_norm_estimate, 1, -1, 0)  # 0: por muestas
         estimate_egms_n.extend(estimate_egms_norm)  # Add to new norm array
     estimate_egms_n = np.array(estimate_egms_n)
+
+#PLOT
+plt.figure(figsize=(15,7), tight_layout =True)
+plt.subplot(2, 1, 1)
+plt.plot(y_test_flat[0:500, 0], label = 'pred')
+plt.plot(estimate_egms_n[0:500, 0], label= 'real' )
+plt.legend()
+plt.title('Autoencoder predictions')
+plt.subplot(2, 1, 2)
+plt.plot(y_test_flat[0:500, 0], label = 'pred')
+plt.plot(estimate_egms_n[0:500, 0], label= 'real' )
+plt.title('EGM Reconstruction predictions')
+plt.legend()
+plt.show()
+
+
 
 # DF mapping: Calculate DF Maps and Phase maps from reconstruction and labels --> Plot 3D in Matlab
 if DataConfig.DF_Mapping:
@@ -248,12 +221,13 @@ if DataConfig.DF_Mapping:
 
 #TODO: Arreglar DTW
 dtw_array, dtw_array_random = [0,0]#DTW_by_AFModels(AF_models_test, estimate_egms_n, y_test_subsample)
-rmse_array = RMSE_by_AFModels(AF_models_test, estimate_egms_n, y_test_subsample)
-correlation_array = correlation_by_AFModels(AF_models_test, estimate_egms_n, y_test_subsample)
+rmse_array = RMSE_by_AFModels(AF_models_test, estimate_egms_n, y_test_flat)
+correlation_array = correlation_by_AFModels(AF_models_test, estimate_egms_n, y_test_flat)
 
 # Mean and STD of Spearman Correlation, DTW and RMSE
 corr_mean = np.mean(correlation_array, axis=1)
 corr_std = np.std(correlation_array, axis=1)
+
 dtw_mean = 0 #np.mean(dtw_array, axis=1)
 dtw_std = 0 #np.std(dtw_array, axis=1)
 dtw_mean_random = 0 #np.mean(dtw_array_random, axis=1)
@@ -273,7 +247,7 @@ estimate_egms_reshaped = reshape(estimate_egms_n, (estimate_egms_n.shape[0], est
 interpol = tf.keras.layers.UpSampling2D(size=(4, 1), interpolation='bilinear')(estimate_egms_reshaped)
 Test_estimation = reshape(interpol, (interpol.shape[0], interpol.shape[1]))
 
-label_represent = y_test_subsample[:, :]
+label_represent = y_test_flat[:, :]
 estimate_labels_reshaped = reshape(label_represent, (label_represent.shape[0], label_represent.shape[1], 1, 1))
 interpol_label = tf.keras.layers.UpSampling2D(size=(4, 1), interpolation='bilinear')(estimate_labels_reshaped)
 Label = reshape(interpol_label, (interpol_label.shape[0], interpol_label.shape[1]))
@@ -301,34 +275,32 @@ savemat(dict_var_dir + "/variables23_04.mat", variables)
 
 # Save models
 if sinusoids:
-    regressor.save(models_dir + 'sinusoid_pretrained/model_reconstruction.h5'+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
-    conv_autoencoder.save(models_dir +'sinusoid_pretrained/model_autoencoder.h5'+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+    model.save(models_dir + 'sinusoid_pretrained/model_reconstruction.h5'+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+    model.save(models_dir +'sinusoid_pretrained/model_autoencoder.h5'+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 else:
-    regressor.save(models_dir +'output/model/model_reconstruction.h5')
-    conv_autoencoder.save(models_dir +'output/model/model_autoencoder.h5')
+    model.save(models_dir +'output/model/model_multioutput.h5')
 
-regressor.save('output/model/model_reconstruction.h5'+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
-conv_autoencoder.save('output/model/model_autoencoder.h5'+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+model.save('output/model/model_multioutput.h5'+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
 
 # Save results to csv and export
-results_Autoencoder = pd.DataFrame.from_dict(dict_results_autoencoder, orient='index', columns=['Autoencoder'])
-results_Reconstruction = pd.DataFrame.from_dict(dict_results_reconstruction, orient='index', columns=['Reconstruction'])
+results_Autoencoder = pd.DataFrame.from_dict(results_autoencoder, orient='index', columns=['Autoencoder'])
+results_Reconstruction = pd.DataFrame.from_dict(results_regressor, orient='index', columns=['Reconstruction'])
 global_results = pd.concat([results_Autoencoder, results_Reconstruction], axis=1)
-global_results.to_csv(dict_var_dir + '/Results2304')
+global_results.to_csv(dict_var_dir + '/Results_MO')
 global_results.round(3)
 
 # Save dictionaries into pickle and .mat
 
-with open(dict_var_dir + 'variables.pkl', 'wb') as fp:
+with open(dict_var_dir + 'variables_MO.pkl', 'wb') as fp:
     pickle.dump(dic_vars, fp)
-with open(dict_results_dir + 'dict_results_reconstruction.pkl', 'wb') as fp:
-    pickle.dump(dict_results_reconstruction, fp)
-with open(dict_results_dir + 'dict_results_autoencoder.pkl', 'wb') as fp:
-    pickle.dump(dict_results_autoencoder, fp)
+with open(dict_results_dir + 'dict_results_reconstruction_MO.pkl', 'wb') as fp:
+    pickle.dump(results_regressor, fp)
+with open(dict_results_dir + 'dict_results_autoencoder_MO.pkl', 'wb') as fp:
+    pickle.dump(results_autoencoder, fp)
 
 #savemat(dict_var_dir + "dic_vars.mat", dic_vars) #TODO: cannot be saved to .mat because now is saving a keras model
-savemat(dict_results_dir + "dict_results_autoencoder.mat", dict_results_autoencoder)
-savemat(dict_results_dir + "dict_results_reconstruction.mat", dict_results_reconstruction)
+savemat(dict_results_dir + "dict_results_autoencoder.mat", results_autoencoder)
+savemat(dict_results_dir + "dict_results_reconstruction.mat",results_regressor)
 
 
 
@@ -336,6 +308,13 @@ savemat(dict_results_dir + "dict_results_reconstruction.mat", dict_results_recon
 end = time.time()
 print((end - start) / 60, 'Mins of execution')
 
-models_dir = '../output/model/'
-dict_var_dir = '../output/variables/'
-dict_results_dir = '../output/results/'
+
+
+
+
+
+
+
+
+
+

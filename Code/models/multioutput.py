@@ -38,7 +38,7 @@ class MultiOutput():
         decoder = layers.Conv3D(32, (2, 2, 2), strides=1, padding='same', activation='leaky_relu')(decoder)
         decoder = layers.UpSampling3D((1, 2, 2))(decoder)
         decoder = layers.Conv3D(1, (2, 2, 2), strides=1, padding='same', activation='linear',
-                                kernel_regularizer=tf.keras.regularizers.l2(l=0.001))(decoder)
+                                kernel_regularizer=tf.keras.regularizers.l2(l=0.001), name = 'Autoencoder_output')(decoder)
 
         return decoder
     def build_autoencoder_branch(self, inputs, input_shape):
@@ -63,8 +63,8 @@ class MultiOutput():
         x = layers.Reshape((50, -1))(x)
         x = layers.TimeDistributed(layers.Flatten())(x)
         x = layers.LSTM(15, return_sequences=True)(x)
-        x = layers.Dense(512, activation='leaky_relu')(x)
         x = layers.Dropout(0.6)(x)
+        x = layers.Dense(512, activation='leaky_relu', name = 'Regressor_output')(x)
         return x
 
     def assemble_full_model(self, input_shape):

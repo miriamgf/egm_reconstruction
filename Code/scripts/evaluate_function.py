@@ -52,20 +52,21 @@ def evaluate_function_multioutput(x_train, y_train, x_test, y_test, pred_train, 
 
     '''
 
-    results_test = model.evaluate(x_test, [x_test, y_test], batch_size=batch_size)
-    results_train = model.evaluate(x_train,[x_train, y_train], batch_size=batch_size)
+    global_loss_test, mse_test_ae, mse_test_regressor, mae_test_ae, mae_test_regressor  = model.evaluate(x_test, [x_test, y_test], batch_size=batch_size)
+    global_loss_train, mse_train_ae, mse_train_regressor, mae_train_ae, mae_train_regressor = model.evaluate(x_train, [x_train, y_train], batch_size=batch_size)
 
-    # Save
-    mse_train, mae_train = results_train[0], results_train[2]
-    mse_test, mae_test = results_test[0], results_test[2]
 
     dtw_test, dtw_train = [0,0] #DynamicTimeWarping(y_train, pred_train, y_test, pred_test, model)
 
-    results = {'mse test': mse_test, 'mse train': mse_train,
-               'mae test': mae_test, 'mae train': mae_train,
-               'dtw_test': dtw_test, 'dtw_train': dtw_train}
+    results_autoencoder = {'mse test': mse_test_ae, 'mse train': mse_train_ae,
+               'mae test': mae_test_ae, 'mae train': mae_train_ae,
+               'dtw_test': dtw_test, 'dtw_train': dtw_train, 'global_loss_test': global_loss_test, 'global_loss_train': global_loss_train}
 
-    return results
+    results_regressor = {'mse test': mse_test_regressor, 'mse train': mse_train_regressor,
+                                'mae test': mae_test_regressor, 'mae train': mae_train_regressor,
+                                'dtw_test': dtw_test, 'dtw_train': dtw_train, 'global_loss_test': global_loss_test, 'global_loss_train': global_loss_train}
+
+    return results_autoencoder, results_regressor
 
 def DynamicTimeWarping(pred_train, y_train, pred_test, y_test, model):
     '''
