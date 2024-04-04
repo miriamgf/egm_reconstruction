@@ -1,6 +1,9 @@
 import sys
 sys.path.append('../Code')
 from models.autoencoder_model import autoencoder
+import sys
+sys.path.append('../Code')
+from models.autoencoder_model import autoencoder
 from models.autoencoder_model import autoencoder
 from models.reconstruction_model import reconstruction
 from config import TrainConfig_1
@@ -24,6 +27,7 @@ import pickle
 import sys
 import mlflow
 sys.path.append('/code')
+
 
 
 tf.random.set_seed(42)
