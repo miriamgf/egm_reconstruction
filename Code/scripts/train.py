@@ -1,8 +1,6 @@
 import sys
 sys.path.append('../Code')
 from models.autoencoder_model import autoencoder
-import sys
-sys.path.append('../Code')
 from models.autoencoder_model import autoencoder
 from models.autoencoder_model import autoencoder
 from models.reconstruction_model import reconstruction
@@ -27,15 +25,12 @@ import pickle
 import sys
 import mlflow
 sys.path.append('/code')
-
-
-
 tf.random.set_seed(42)
 
 root_logdir = '../output/logs/'
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-data_dir = '../../../../Data/'
-torsos_dir = '../../../../Labeled_torsos/'
+data_dir = '../../../Data/'
+torsos_dir = '../../../Labeled_torsos/'
 figs_dir = '../output/figures/'
 models_dir = '../output/model/'
 dict_var_dir = '../output/variables/'
@@ -62,14 +57,14 @@ for subdir, dirs, files in os.walk(torsos_dir):
 all_model_names = []
 directory = data_dir
 for subdir, dirs, files in os.walk(directory):
-    print(subdir, directory, files)
+    #print(subdir, directory, files)
 
     if (subdir != directory):
         model_name = subdir.split("/")[-1]
         all_model_names.append(model_name)
 
 all_model_names = sorted(all_model_names)
-print(len(all_model_names))
+#print(len(all_model_names))
 
 mlflow.set_tracking_uri(uri="http://127.0.0.1:5000")
 mlflow.autolog()
@@ -144,7 +139,7 @@ plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'val'], loc='upper left')
 plt.title('Training and validation curves ')
-plt.savefig(figs_dir + str(DataConfig.fs_sub) + 'Learning_curves_AE.png')
+plt.savefig(figs_dir + 'Learning_curves_AE.png')
 plt.show()
 
 # Evaluate
@@ -199,7 +194,7 @@ plt.title('model loss')
 plt.ylabel('loss')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
-plt.savefig(figs_dir + str(DataConfig.fs_sub) + '/Reconstruction_loss.png')
+plt.savefig(figs_dir + '/Reconstruction_loss.png')
 plt.show()
 
 

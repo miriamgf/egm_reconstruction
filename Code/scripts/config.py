@@ -1,12 +1,12 @@
 class TrainConfig_1(object):
     learning_rate_1 = 0.00001
     batch_size_1 = 50
-    n_epoch_1 = 50
+    n_epoch_1 = 1
 
 class TrainConfig_2(object):
     learning_rate_2 = 0.00001
     batch_size_2 = 1
-    n_epoch_2 = 50
+    n_epoch_2 = 1
 
 
 class DataConfig(object):

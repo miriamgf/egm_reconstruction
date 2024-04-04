@@ -48,8 +48,10 @@ from datetime import time
 #%% Path Models
 #%% Path Models
 current = os.path.dirname(os.path.realpath(__file__))
-directory = '../../../../Data/'
-torsos_dir = '../../../../Labeled_torsos/'
+directory = '../../../Data/'
+torsos_dir = '../../../Labeled_torsos/'
+directory = '/home/profes/miriamgf/tesis/Autoencoders/Data/'
+torsos_dir = '/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/'
 
 fs=500
 
@@ -95,6 +97,31 @@ def ECG_filtering(signal, fs, f_low=3, f_high=30):
         proc_ECG_EGM[index,:]=sigproc.filtfilt(b,a,sig_temp[index,:])
 
     return proc_ECG_EGM
+
+def load_egms_df(data_dir):
+    #% Check models in directory
+    all_model_names = []
+    
+    for subdir, dirs, files in os.walk(data_dir):
+        if (subdir != data_dir):
+            model_name = subdir.split("/")[-1]
+            
+            all_model_names.append(model_name)
+    print('data', all_model_names)
+
+    df = pd.DataFrame(columns=['id', 'AF_signal'])
+    
+    for model_name in all_model_names: 
+
+        #%% 1)  Compute EGM of the model
+        egms = load_egms(model_name)
+        df.loc[len(df)] = [model_name, egms]
+        
+    return df
+        
+
+
+
 
 def load_data(data_type, n_classes = 2,  SR = True, subsampling=True, fs_sub=50, SNR=20, norm=False, classification = False, sinusoid = False, n_batch=50):
     """
