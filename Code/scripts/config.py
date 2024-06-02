@@ -1,17 +1,24 @@
+import os
+
+
 class TrainConfig_1(object):
-    learning_rate_1 = 0.00001
+    learning_rate_1 = 0.0001
     batch_size_1 = 50
-    n_epoch_1 = 1
+    n_epoch_1 = 50
+
 
 class TrainConfig_2(object):
-    learning_rate_2 = 0.00001
-    batch_size_2 = 1
-    n_epoch_2 = 1
+    learning_rate_2 = 0.0001
+    batch_size_2 = 50
+    n_epoch_2 = 50
 
 
 class DataConfig(object):
-    fs = 50
-    fs_sub = 50
+    # Obtener la URL y el puerto desde las variables de entorno
+    mlflow_url = os.environ.get("MLFLOW_URL")
+    mlflow_port = os.environ.get("MLFLOW_PORT")
+    fs = 500
+    fs_sub = 400
     SNR = 20
-    n_classes = 3 #this is specific for classification. # 1: Rotor/no rotor ; 2: RA/LA/No rotor (2 classes) ; 3: 7 regions (3 classes) + no rotor (8 classes)
+    n_classes = 3  # this is specific for classification. # 1: Rotor/no rotor ; 2: RA/LA/No rotor (2 classes) ; 3: 7 regions (3 classes) + no rotor (8 classes)
     DF_Mapping = False

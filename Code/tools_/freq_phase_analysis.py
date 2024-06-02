@@ -21,37 +21,37 @@ def freq_response_plot(b, a, fs):
     """
 
     w, h = sigproc.freqz(b, a)
-    w = w * fs / (2 * np.pi);
+    w = w * fs / (2 * np.pi)
     fig = plt.figure()
     ax1 = plt.subplot(121)
-    plt.plot(w, 20 * np.log10(abs(h)), 'b')
-    plt.ylabel('Amplitude [dB]', color='b')
-    plt.xlabel('Frequency [Hz]')
-    plt.axis('tight')
+    plt.plot(w, 20 * np.log10(abs(h)), "b")
+    plt.ylabel("Amplitude [dB]", color="b")
+    plt.xlabel("Frequency [Hz]")
+    plt.axis("tight")
     ax2 = ax1.twinx()
     angles = np.unwrap(np.angle(h))
-    ax2.plot(w, angles, 'g')
-    plt.ylabel('Angle (radians)', color='g')
+    ax2.plot(w, angles, "g")
+    plt.ylabel("Angle (radians)", color="g")
     plt.grid()
-    plt.axis('tight')
+    plt.axis("tight")
     plt.xlim((0, 60))
 
     ax3 = plt.subplot(122)
-    plt.plot(w, abs(h), 'b')
-    plt.ylabel('Amplitude', color='b')
-    plt.xlabel('Frequency [Hz]')
-    plt.axis('tight')
+    plt.plot(w, abs(h), "b")
+    plt.ylabel("Amplitude", color="b")
+    plt.xlabel("Frequency [Hz]")
+    plt.axis("tight")
     ax4 = ax3.twinx()
     angles = np.unwrap(np.angle(h))
-    ax4.plot(w, angles, 'g')
-    plt.ylabel('Angle (radians)', color='g')
+    ax4.plot(w, angles, "g")
+    plt.ylabel("Angle (radians)", color="g")
     plt.grid()
-    plt.axis('tight')
+    plt.axis("tight")
     plt.xlim((0, 60))
 
     fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
-    fig.suptitle('Digital filter frequency response')
+    fig.suptitle("Digital filter frequency response")
     plt.show()
 
 
@@ -82,7 +82,9 @@ def kuklik_DF_phase(signals, fs):
     rsig = np.zeros((n_signals, siglen))
 
     # Filter signals
-    b, a = sigproc.butter(4, [lowf / round((fs / 2)), highf / round((fs / 2))], btype='bandpass')
+    b, a = sigproc.butter(
+        4, [lowf / round((fs / 2)), highf / round((fs / 2))], btype="bandpass"
+    )
     for i in range(0, n_signals):
         sig[i, :] = sigproc.filtfilt(b, a, signals[i, :])
 
@@ -90,47 +92,63 @@ def kuklik_DF_phase(signals, fs):
     diffv = np.diff(sig)
 
     # Determine PD (Welch Periodogram)
-    pd = np.empty((n_signals, 1));
-    pd[:] = np.nan;
+    pd = np.empty((n_signals, 1))
+    pd[:] = np.nan
     tvec = np.arange(1 / fs, siglen / fs, 1 / fs)  # Time at each sample in seconds
-    seglength = 2 * fs;
-    n_overlap = fs;
-    nFFT = np.power(200, 2);  # Zero pad FFT to get finer resolution (interpolates spectrum)
+    seglength = 2 * fs
+    n_overlap = fs
+    nFFT = np.power(200, 2)
+    # Zero pad FFT to get finer resolution (interpolates spectrum)
 
     for i in range(0, n_signals):
         # Find largest continuous chunk of signal for each channel
-        isig = sig[i, :];
-        sigtimes = np.where(~np.isnan(isig))[0];  # Non-saturated times
+        isig = sig[i, :]
+        sigtimes = np.where(~np.isnan(isig))[0]
+        # Non-saturated times
         if np.size(sigtimes) > 0:  # Make sure there is some signal here
-            nvals = np.insert(np.cumsum(np.diff(sigtimes) != 1), 0, 0)  # Mark consecutive regions
-            sigseg = isig[sigtimes[nvals == stats.mode(nvals)[0]]]  # Find longest consecutive region
+            nvals = np.insert(
+                np.cumsum(np.diff(sigtimes) != 1), 0, 0
+            )  # Mark consecutive regions
+            sigseg = isig[
+                sigtimes[nvals == stats.mode(nvals)[0]]
+            ]  # Find longest consecutive region
 
             # Find DF of this chunk
             if np.size(sigseg) >= seglength:  # Ensure we hace enough signal
-                f, pxx = sigproc.welch(sigseg, nperseg=seglength, noverlap=n_overlap, nfft=nFFT, fs=fs)
-                invf = np.divide(1, f);
-                pxx = pxx[np.logical_and(invf >= period_min, invf <= period_max)];
-                invf = np.delete(invf, np.where(np.logical_or(invf < period_min, invf > period_max)))
-                pdval = invf[np.where(pxx == np.max(pxx))[0]];
+                f, pxx = sigproc.welch(
+                    sigseg, nperseg=seglength, noverlap=n_overlap, nfft=nFFT, fs=fs
+                )
+                invf = np.divide(1, f)
+                pxx = pxx[np.logical_and(invf >= period_min, invf <= period_max)]
+                invf = np.delete(
+                    invf, np.where(np.logical_or(invf < period_min, invf > period_max))
+                )
+                pdval = invf[np.where(pxx == np.max(pxx))[0]]
                 mind = np.argmin(np.abs(tvec - pdval))
                 pd[i] = mind  # Save PD in units of samples, NOT seconds.
             else:
                 # If the lenght of the signal is not long enough, channel discarded.
-                print('Not Enough Signal to Take FFT! Channel', i, 'Discarded.');
-                sig[i, :] = np.nan;
+                print("Not Enough Signal to Take FFT! Channel", i, "Discarded.")
+                sig[i, :] = np.nan
 
     # Compute sine recomposition per Kuklik et al (2015 paper). MUUUUCH SLOWER THAN MATLAB: OPTIMIZE
     for i in range(0, n_signals):
-        print('Kuklik signal recomposition. Node:', i);
+        print("Kuklik signal recomposition. Node:", i)
         for t in range(0, siglen - 1):
             if ~np.isnan(pd[i]):
                 halfpd = np.round(pd[i] / 2)
-                dvdt = diffv[i, t];
-                tt = np.arange(-halfpd, halfpd + 1);
-                swave = np.sin(2 * np.pi * tt / pd[i]) * np.abs(dvdt) * ((1 - np.sign(dvdt)) / 2)
-                twave = t + tt;
-                swave = np.delete(swave, np.where(np.logical_or(twave < 0, twave > siglen - 1)))
-                twave = np.delete(twave, np.where(twave < 0));
+                dvdt = diffv[i, t]
+                tt = np.arange(-halfpd, halfpd + 1)
+                swave = (
+                    np.sin(2 * np.pi * tt / pd[i])
+                    * np.abs(dvdt)
+                    * ((1 - np.sign(dvdt)) / 2)
+                )
+                twave = t + tt
+                swave = np.delete(
+                    swave, np.where(np.logical_or(twave < 0, twave > siglen - 1))
+                )
+                twave = np.delete(twave, np.where(twave < 0))
                 twave = np.delete(twave, np.where(twave > siglen - 1))
                 rsig[i, np.int64(twave)] = rsig[i, np.int64(twave)] + swave
             else:
@@ -139,10 +157,12 @@ def kuklik_DF_phase(signals, fs):
     # Compute instantaneous phase using Hilbert transform
     instant_phase = np.zeros((n_signals, siglen))
     for i in range(0, n_signals):
-        instant_phase[i, :] = -np.arctan2(np.imag(sigproc.hilbert(rsig[i, :])), rsig[i, :])
+        instant_phase[i, :] = -np.arctan2(
+            np.imag(sigproc.hilbert(rsig[i, :])), rsig[i, :]
+        )
 
     DFs = np.divide(fs, pd)
-    signals_k = rsig;
+    signals_k = rsig
 
     return DFs, signals_k, instant_phase
 
@@ -165,13 +185,15 @@ def botterom_smith_analysis(signals, fs, f1=40, f2=250, f3=20):
             Dominant frequency estimation using Botterom-Smith preprocessing.
     """
     # Convert signals array to list
-    signals_list = signals.tolist();
+    signals_list = signals.tolist()
 
     df = []
     z_egms = []
     P_z = []
     for signal in signals_list:
-        z_egm_item, P_z_item, f = fq_bs.botterom_smith_df(signal, fs, f1, f2, f3, plot_flag=False)
+        z_egm_item, P_z_item, f = fq_bs.botterom_smith_df(
+            signal, fs, f1, f2, f3, plot_flag=False
+        )
         z_egms.append(z_egm_item)
         P_z.append(P_z_item)
 
@@ -211,7 +233,7 @@ def df_estimation_peak(input_signals, fs):
     #     signals[k,:],_=fq_bs.detrendSpline(input_signals[k,:],fs)
     #
     # # Filter signals (FPA,fc = 2Hz)
-    b, a = sigproc.butter(4, 3, 'hp', fs=fs)
+    b, a = sigproc.butter(4, 3, "hp", fs=fs)
     signals = sigproc.filtfilt(b, a, input_signals, axis=1)
 
     # signals=input_signals
@@ -220,8 +242,14 @@ def df_estimation_peak(input_signals, fs):
     # We take 1/4 seg for each segment, NFFT=2^13, and we don't take into account
     # the start and end segments of each signal.
     # f, pxx = sigproc.welch(signals[:,100:-500],fs=fs,nfft=2**13,nperseg=2048,noverlap=None,axis=1)
-    f, pxx = sigproc.welch(signals[:, int(1 * fs):int(5 * fs)], fs=fs, nfft=2 ** 13, nperseg=2048, noverlap=None,
-                           axis=1)
+    f, pxx = sigproc.welch(
+        signals[:, int(1 * fs) : int(5 * fs)],
+        fs=fs,
+        nfft=2**13,
+        nperseg=2048,
+        noverlap=None,
+        axis=1,
+    )
 
     df = []
     for i in range(0, pxx.shape[0]):
