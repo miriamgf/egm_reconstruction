@@ -3,8 +3,7 @@ print("-------------EXPERIMENT 2 NETWORKS'--------------", experiment_name)
 import sys
 
 sys.path.append("../Code")
-from models.autoencoder_model import autoencoder
-from models.autoencoder_model import autoencoder
+
 from models.autoencoder_model import autoencoder
 from models.reconstruction_model import reconstruction, IntermediateLayerOutputCallback
 from config import TrainConfig_1
@@ -91,7 +90,6 @@ mlflow.autolog()
 if DataConfig.fs == DataConfig.fs_sub:
     DataConfig.fs = DataConfig.fs_sub
 
-Transfer_model = False  # Transfer learning from sinusoids
 sinusoids = False
 
 

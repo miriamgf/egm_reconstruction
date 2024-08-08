@@ -43,7 +43,7 @@ from plots import *
 from scipy.stats import pearsonr
 from scipy.stats import spearmanr
 from datetime import time
-
+#from noise_simulation import *
 
 # %% Path Models
 # %% Path Models
@@ -230,6 +230,7 @@ def load_data(
             bsps_64_or = bsps_64
             # 3) Add NOISE and Filter
             if SNR != None:
+
                 bsps_64_noise = add_noise(np.array(bsps_64), SNR=SNR, fs=500)
 
             # 5) Filter AFTER adding noise

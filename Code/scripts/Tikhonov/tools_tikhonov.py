@@ -25,6 +25,7 @@ from fastdtw import fastdtw
 from scipy.spatial.distance import euclidean
 import tensorflow as tf
 import random
+import pandas as pd
 
 
 # %% Path Models
@@ -155,15 +156,17 @@ def load_data(
     # Load corrected transfer matrices
     transfer_matrices = load_transfer()
     AF_model_i = 1
+    AF_models_names=[]
 
     for model_name in all_model_names:
+        print(model_name)
 
         # %% 1)  Compute EGM of the model
         egms = load_egms(model_name)
 
         # 1.1) Discard models <1500
         if len(egms[1]) < 1500:
-            continue
+            #continue
             print("less than 1500:", model_name)
 
         # 1.2)  EGMs filtering.
@@ -197,7 +200,7 @@ def load_data(
             bsps_64_filt = ECG_filtering(bsps_64_noise, fs)
 
             # RESAMPLING signal to fs= fs_sub
-            if subsampling:
+            if subsampling & fs_sub != 500:
                 # bsps_64 = signal.resample_poly(bsps_64_filt,fs_sub,500, axis=1)
                 x_sub = signal.resample_poly(x, fs_sub, 500, axis=1)
                 bsps_64 = bsps_64_filt
@@ -219,7 +222,7 @@ def load_data(
 
                 Y.extend(np.full(len(x_sub), 0))
 
-            egm_tensor.extend(x_sub.T)
+            egm_tensor.extend([x_sub.T])
 
             if data_type == "3channelTensor":
                 tensors_model = get_tensor_model(bsps_64, tensor_type="3channel")
@@ -257,10 +260,9 @@ def load_data(
                 length_list.append(tensors_model.shape[0])
 
                 X.extend(tensors_model)
-            else:
+            elif data_type == "Flat":
 
                 tensors_model = bsps_64.T
-                print("x shape", tensors_model.shape)
                 X.extend(bsps_64.T)
 
             if not classification:
@@ -270,7 +272,7 @@ def load_data(
                 # Count AF Model
                 AF_model_i_array = np.full(len(tensors_model), AF_model_i)
                 AF_models.extend(AF_model_i_array)
-
+                AF_models_names.extend([model_name]*len(AF_model_i_array))
             n_model += 1
 
         AF_model_i += 1
@@ -279,18 +281,44 @@ def load_data(
         np.array(X),
         np.array(Y),
         np.array(Y_model),
-        np.array(egm_tensor),
+        egm_tensor,
         length_list,
         AF_models,
         all_model_names,
         transfer_matrices,
+        AF_models_names
+
     )
+
 
 
 def sample(input, count):
     ss = float(len(input)) / count
     return [input[int(floor(i * ss))] for i in range(count)]
 
+
+def load_egms_df(data_dir):
+    # % Check models in directory
+    all_model_names = []
+
+    for subdir, dirs, files in os.walk(data_dir):
+        if subdir != data_dir:
+            model_name = subdir.split("/")[-1]
+
+            all_model_names.append(model_name)
+
+    df = pd.DataFrame(columns=["id", "AF_signal"])
+
+
+    for model_name in all_model_names:
+
+        # %% 1)  Compute EGM of the model
+        egms = load_egms(model_name)
+        x = ECG_filtering(egms, 500)
+
+        df.loc[len(df)] = [model_name, x]
+
+    return df
 
 def load_egms(model_name):
     """
