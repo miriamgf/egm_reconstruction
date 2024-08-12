@@ -60,5 +60,5 @@ noise_database= Noise_Simulation.configure_noise_database(X_1channel, all_model_
 
 noise_database
 
-Noise_Simulation.add_noise(X_1channel, 0, noise_database, distribution_noise_mode = 2)
+Noise_Simulation.add_noise(X_1channel, 0, noise_database,  distribution_noise_mode = 2)
 

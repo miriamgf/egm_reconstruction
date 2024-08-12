@@ -1,5 +1,8 @@
+import sys, os
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from numpy import reshape
-from tools_.tools import *
+from tools import *
 import tensorflow as tf
 
 tf.random.set_seed(1)

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import pickle
-from tools_.preprocessing_network import *
-from tools_.plots import *
+from preprocessing_network import *
+from plots import *
 from scripts.config import TrainConfig_1
 from scripts.config import TrainConfig_2
 from scripts.config import DataConfig

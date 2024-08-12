@@ -36,7 +36,7 @@ from scipy.stats import pearsonr
 from scipy.stats import spearmanr
 from datetime import time
 import wfdb
-
+from tools import *
 
 
 # %% Path Models
@@ -51,7 +51,7 @@ class NoiseSimulation:
     def __init__(self, signal, SNR_em_noise = 20, SNR_white_noise=20, oclusion =None, fs=500, random_order_chuncks=True):
 
         self.signal = signal
-        self.SNR_electrode_noise = True
+        self.SNR_em = True
         self.SNR_white_noise = True
         self.fs = fs
         self.SNR_em_noise = SNR_em_noise
@@ -83,7 +83,7 @@ class NoiseSimulation:
         
         return dic_noise
 
-    def add_noise(self, X, AF_model_i, noise_dic, distribution_noise_mode = 2):
+    def add_noise(self, X, AF_model_i, noise_dic, distribution_noise_mode = 2, n_episodes_in_lead=3, n_noise_chunks_per_signal = 4):
 
         # 1) En cada electrodo se asigna solo una realización de ruido
         if distribution_noise_mode ==1:
@@ -91,57 +91,124 @@ class NoiseSimulation:
 
         # 2) En un mismo electrodo se agregan varias realizaciones en diferentes instantes
         if distribution_noise_mode ==2:
+            # EM
             if self.SNR_em_noise != None:
-                
-                #Flatten electrodes
-                if X.ndim == 3:
-                    X=X.reshape(X.shape[0], X.shape[1]*X.shape[2])
-
                 
                 em_noise = noise_dic['em'][AF_model_i]
                 num_noise_chunks = len(em_noise)
-                num_electrodes = X.shape[0]
-                N = round(len(em_noise)//3) #Al menos en cada nodo haya 3 episodios
+                #if the patch size is fixed to (2x2), then the maximum number of patches is the total number of chunks //4
+                min_num_patches_2_2 = num_noise_chunks//4 #this is the number of patches if only 1 noise chunks is assigned per lead
+                num_patches = min_num_patches_2_2//n_noise_chunks_per_signal
 
-                #distribute un clusters of electrodes de available noise chunks
-                binary_list = self.generate_list_probability_based(N)
+                #distribute a clusters of electrodes of available noise chunks in patches of size (2,2)
+                binary_map_2d = self.generate_array_with_non_overlapping_patches(array_shape=(X.shape[1], X.shape[2]),
+                                                                 patch_size = (2,2), num_patches = num_patches )
 
-                for electrode in num_electrodes:
-                    lead_i = X[:, electrode]
+                indices = np.argwhere(binary_map_2d == 1)
+                #leads = X[:, indices[:, 0], indices[:, 1]]
+                for column_i, row_i in indices:
+                    lead_i = X[:, column_i, row_i]
+                    lead_i_noisy, em_noise = self.insert_noise_in_signal(lead_i, em_noise, self.SNR_em_noise,
+                                                                        n_noise_chunks_per_signal)
 
+                    X[:, indices[:, 0], indices[:, 1]] == lead_i_noisy #Assign new noisy value
 
+        return lead_i_noisy
 
+    def insert_noise_in_signal(self, clean_signal, noise_list, SNR, num_chunks_per_clean_signal= 3, normalize_noise=False):
+
+        #Create a disperse signal of same length with N noise realizations
+        noise_signal = np.zeros(len(clean_signal))
+        onset_index = random.randint(0, round(len(clean_signal)*0.2))
+
+        for chunk in range(0,num_chunks_per_clean_signal):
+
+            chunk_i = noise_list.pop(0)
+            chunk_i= chunk_i.flatten()
+
+            #normalize
+            plt.figure()
+            plt.plot(chunk_i, label='before norm')
+            if normalize_noise:
+                chunk_i = normalize_array(chunk_i, high=1, low=-1, axis_n=0)
                 
+                plt.plot(chunk_i, label = 'after norma')
+                plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/norm.png')
+                plt.show()
+
+            #if onset and chunk addition surpasses the clean signal length, then it tries to add it just after the last chunk
+            if onset_index + len(chunk_i) > len(clean_signal) and onset_index_previous + len(chunk_i) <= len(clean_signal):
+                remaining_samples = len(clean_signal) - onset_index
+                chunk_i = chunk_i[0:remaining_samples]
+            #if it is not possible because either way it surpasses the clean signal length, it does not add more chunks
+            elif onset_index + len(chunk_i) > len(clean_signal) and onset_index_previous + len(chunk_i) > len(clean_signal):
+                break
+            #Id the onset index is directly out of range, no more chunks are used
+            elif onset_index > len(clean_signal):
+                break
+            else:
+                noise_signal[onset_index:onset_index+len(chunk_i)] = chunk_i
+            onset_index_previous = onset_index
+
+            #Update onset
+            onset_index= onset_index + len(chunk_i) +  random.randint(0, round(len(clean_signal)*0.3))
+            if onset_index > len (clean_signal):
+                print('Except: onset_index > len (clean_signal)')
+                continue
+        
+        #scale 
+        PowerInSigdB = 10 * np.log10(np.mean(np.power(np.abs(noise_signal), 2)))
+        sigma = np.sqrt(np.power(10, (PowerInSigdB - SNR) / 10))
+        noise_signal = sigma*noise_signal 
 
         
-    
-    import random
+        noisy_signal = clean_signal + noise_signal
 
-    def generate_list_probability_based(self, N, prob_inicial=0.5, prob_incremento=0.2):
-        """
-        Genera una lista de 0s y 1s de longitud N, donde la probabilidad de que un elemento
-        sea 1 aumenta si el elemento anterior también es 1.
+        plt.figure()
+        plt.subplot(3, 1, 1)
+        plt.plot(clean_signal)
+        plt.title('clean_signal')
+        plt.subplot(3, 1, 2)
+        plt.plot(noise_signal)
+        plt.title('noise_signal')
+        plt.subplot(3, 1, 3)
+        plt.plot(noisy_signal)
+        plt.title('noisy_signal')
+        plt.tight_layout()
 
-        :param N: Longitud de la lista a generar.
-        :param prob_inicial: Probabilidad inicial de obtener un 1 para el primer elemento.
-        :param prob_incremento: Incremento de probabilidad si el elemento anterior es 1.
-        :return: Lista generada de 0s y 1s.
-        """
-        lista = []
-        prob_actual = prob_inicial
+        plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/clean_noisy.png')
 
-        for i in range(N):
-            # Genera un 1 o un 0 basado en la probabilidad actual
-            if random.random() < prob_actual:
-                lista.append(1)
-                # Si se generó un 1, aumenta la probabilidad para el siguiente elemento
-                prob_actual = min(1.0, prob_actual + prob_incremento)
-            else:
-                lista.append(0)
-                # Si se generó un 0, restablece la probabilidad inicial
-                prob_actual = prob_inicial
+        plt.show()
 
-        return lista
+        return noisy_signal, noise_list
+
+
+    def generate_array_with_non_overlapping_patches(self, array_shape, patch_size, num_patches):
+        '''
+        Genera un array de ceros con parches de valor 1 en ubicaciones aleatorias sin solapamientos.
+
+        :param array_shape: Tupla que representa la forma del array base (altura, ancho).
+        :param patch_size: Tupla que representa el tamaño del parche (altura, ancho).
+        :param num_patches: Número de parches a colocar en el array.
+        :return: Array con los parches de valor 1.
+        '''
+        array = np.zeros(array_shape, dtype=int)
+        array_height, array_width = array_shape
+        patch_height, patch_width = patch_size
+
+        patches_placed = 0
+        while patches_placed < num_patches:
+            y_start = np.random.randint(0, array_height - patch_height + 1)
+            x_start = np.random.randint(0, array_width - patch_width + 1)
+            
+            if np.all(array[y_start:y_start + patch_height, x_start:x_start + patch_width] == 0):
+                array[y_start:y_start + patch_height, x_start:x_start + patch_width] = 1
+                patches_placed += 1
+        
+        return array
+
+
+
 
     
     def split_into_irregular_chunks(self, split_noise, target_signal_length=2500, noise_augmentation = 3 ):
@@ -220,7 +287,7 @@ class NoiseSimulation:
 
     
 
-    def load_physionet_signals(self, type_noise='em', noise_augmentation=False):
+    def load_physionet_signals(self, type_noise='em', noise_augmentation=False, noise_normalization=True):
         '''
         This functions loads signals from Physionet database MIT-BIH Noise Stress Test Database
         It can load three types of noise:
@@ -241,7 +308,42 @@ class NoiseSimulation:
 
             noise.extend(noise)
 
+        if noise_normalization:
+            noise = normalize_in_batches(noise, batch_size = 100, high=1, low=-1, axis_n=0)
+
+
         return noise
+
+def normalize_in_batches(array, batch_size=200, high=1, low=-1, axis_n=0):
+    """
+    Processes an array in batches, applying normalization if needed.
+    
+    Args:
+        array (numpy.ndarray): Array to be processed.
+        batch_size (int): Size of each batch.
+        noise_normalization (bool): Flag to apply normalization.
+
+    Returns:
+        numpy.ndarray: Array with batches processed and normalized.
+    """
+    num_samples = array.shape[0]
+    num_batches = (num_samples + batch_size - 1) // batch_size  # Number of batches
+
+    processed_array = np.empty_like(array)
+
+    for i in range(num_batches):
+        start_index = i * batch_size
+        end_index = min(start_index + batch_size, num_samples)
+
+        batch = array[start_index:end_index]
+        
+       
+        batch = normalize_array(batch, high=high, low=low, axis_n=axis_n)  # Assuming noise is along axis 0
+        
+        processed_array[start_index:end_index] = batch
+
+    return processed_array
+
     
 
 

@@ -3,14 +3,14 @@ import os
 
 class TrainConfig_1(object):
     learning_rate_1 = 0.0001
-    batch_size_1 = 200
-    n_epoch_1 = 50
+    batch_size_1 = 400
+    n_epoch_1 = 100
 
 
 class TrainConfig_2(object):
     learning_rate_2 = 0.0001
-    batch_size_2 = 200
-    n_epoch_2 = 50
+    batch_size_2 = 400
+    n_epoch_2 = 100
 
 
 class DataConfig(object):

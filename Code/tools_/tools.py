@@ -49,7 +49,7 @@ from datetime import time
 # %% Path Models
 current = os.path.dirname(os.path.realpath(__file__))
 torsos_dir = "../../../Labeled_torsos/"
-directory = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
+directory = "/home/profes/miriamgf/tesis/Autoencoders/Data_short/"
 torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
 
 fs = 500
@@ -134,6 +134,7 @@ def load_data(
     classification=False,
     sinusoid=False,
     n_batch=50,
+    data_dir=directory
 ):
     """
     Returns y values depends of the classification model
@@ -272,6 +273,7 @@ def load_data(
             elif data_type == "1channelTensor":
 
                 tensors_model = get_tensor_model(bsps_64, tensor_type="1channel")
+                
                 # Interpolate
                 reshape_tensor = np.reshape(
                     tensors_model,
