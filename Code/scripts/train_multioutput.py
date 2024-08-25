@@ -1,15 +1,9 @@
 import sys
 sys.path.append('../Code')
 import matplotlib.pyplot as plt
-from models.autoencoder_model import autoencoder
-from models.reconstruction_model import reconstruction
 from config import TrainConfig_1
-from config import TrainConfig_2
 from config import DataConfig
-from sklearn.metrics import mean_absolute_error
 from tensorflow.keras.optimizers import Adam
-from tools_ import freq_phase_analysis as freq_pha
-from tools_ import plots
 from tools_.preprocessing_network import *
 from tools_.tools import *
 from tools_.df_mapping import *
@@ -24,19 +18,66 @@ import pickle
 from models.multioutput import MultiOutput
 import mlflow
 import random
+import argparse
 tf.random.set_seed(42)
+import argparse
+from tensorflow.keras import backend as K
+import mlflow
+import tensorflow as tf
+import datetime
+import time
+from tensorflow.keras.models import load_model
 
-experiment_name=datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
+#Clear GPU
+K.clear_session()
+tf.keras.backend.clear_session()
+tf.compat.v1.reset_default_graph()
+
+
+# parse args
+print('parsing')
+parser = argparse.ArgumentParser(description="Noise params")
+parser.add_argument('--SNR_em_noise', type=int, help='EM noise SNR', required=True)
+parser.add_argument('--SNR_white_noise', type=int, help='white noise SNR', required=True)
+parser.add_argument('--patches_oclussion', type= str, help='Oclussion patches', required=True)
+parser.add_argument('--unfold_code', type=int, help='Unfolding order', required=True)
+parser.add_argument('--experiment_number', type=int,  help='number of experiment', required=True)
+
+
+args = parser.parse_args()
+
+
+SNR_em_noise = args.SNR_em_noise
+SNR_white_noise = args.SNR_white_noise
+patches_oclussion = args.patches_oclussion
+unfold_code =args.unfold_code
+experiment_number = args.experiment_number
+
+print(type(patches_oclussion))
+#Run script IDE
+
+'''
+SNR_em_noise=20
+SNR_white_noise=20
+patches_oclussion='PT'
+experiment_number=0
+unfold_code=1
+
+'''
+
+experiment_name=datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '_EXP_' + str(experiment_number)#+ '_' + str(SNR_white_noise)+ '_' + str(patches_oclussion)+ '_' + str(unfold_code)
+
 
 root_logdir = 'output/logs/'
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-data_dir = '../../../../Data/'
+data_dir = '/home/profes/miriamgf/tesis/Autoencoders/Data/'
 torsos_dir = '../../../../Labeled_torsos/'
 figs_dir = 'output/figures/'
 models_dir = 'output/model/'
 dict_var_dir = 'output/variables/'
 dict_results_dir = 'output/results/'
-experiment_dir='output/experiments/'+ experiment_name+'/'
+experiment_dir='output/experiments/experiments_CINC/'+ experiment_name+'/'
 
 
 
@@ -55,6 +96,8 @@ physical_devices = tf.config.list_physical_devices('GPU')
 print("Num GPUs:", len(physical_devices))
 for gpu in tf.config.experimental.list_physical_devices('GPU'):
     tf.config.experimental.set_memory_growth(gpu, True)
+
+
 
 start = time.time()
 
@@ -89,14 +132,41 @@ if DataConfig.fs == DataConfig.fs_sub:
 Transfer_model = False  # Transfer learning from sinusoids
 sinusoids = False
 
-
+print('loading')
 #Load data
 X_1channel, Y, Y_model, egm_tensor, length_list, AF_models, all_model_names, transfer_matrices = load_data(
-    data_type='1channelTensor', n_classes=DataConfig.n_classes, subsampling=True, fs_sub=DataConfig.fs_sub, norm=False, SR=True, SNR=DataConfig.SNR,
-    n_batch=TrainConfig_1.batch_size_1, sinusoid=sinusoids)
+    directory = data_dir, 
+    data_type='1channelTensor',
+    n_classes=DataConfig.n_classes,
+    subsampling=True,
+    fs_sub=DataConfig.fs_sub,
+    norm=False,
+    SR=True, SNR=DataConfig.SNR,
+    n_batch=TrainConfig_1.batch_size_1,
+    sinusoid=sinusoids, 
+    SNR_em_noise = SNR_em_noise,
+    SNR_white_noise = SNR_em_noise, 
+    patches_oclussion=patches_oclussion,
+    unfold_code=unfold_code)
 
-# Normalize BSPS
-#X_1channel = normalize_by_models(X_1channel, Y_model)
+plt.figure()
+plt.plot(X_1channel[0:200, 0, 0], label='bsps')
+plt.plot(egm_tensor[0:200, 0], label='egm')
+plt.legend()
+plt.savefig('output/figures/input_output/before_norm.png')
+
+# Normalize BSPS and EGM
+X_1channel = normalize_by_models(X_1channel, Y_model)
+egm_tensor = normalize_by_models(egm_tensor, Y_model)
+
+
+
+plt.figure()
+plt.plot(X_1channel[0:200, 0, 0], label='bsps')
+plt.plot(egm_tensor[0:200, 0], label='egm')
+plt.legend()
+plt.savefig('output/figures/input_output/norm.png')
+
 
 new_items = {'Original_X_1channel': X_1channel, 'Y': Y, 'Y_model': Y_model, 'egm_tensor': egm_tensor,
              'AF_models': AF_models, 'all_model_names': all_model_names, 'transfer_matrices': transfer_matrices,
@@ -107,13 +177,13 @@ dic_vars.update(new_items)
 random_split = True
 print('Splitting...')
 x_train, x_test, x_val, train_models, test_models, val_models, AF_models_train, AF_models_test, AF_models_val, BSPM_train, BSPM_test, BSPM_val = train_test_val_split_Autoencoder(
-    X_1channel,AF_models, Y_model, all_model_names, random_split=True, train_percentage=0.9, test_percentage=0.2)
+    X_1channel,AF_models, Y_model, all_model_names, random_split=True, train_percentage=0.90, test_percentage=0.2, deterministic = False)
 
-'''
+
 print('TRAIN SHAPE:', x_train.shape, 'models:', train_models)
 print('TEST SHAPE:', x_test.shape, 'models:', test_models)
 print('VAL SHAPE:', x_val.shape, 'models:', val_models)
-'''
+
 
 new_items = {'x_train_raw': x_train, 'x_test_raw': x_test, 'x_val_raw': x_val, 'train_models': train_models,
              'BSPM_train': BSPM_train, 'BSPM_test': BSPM_test, 'BSPM_val': BSPM_val,
@@ -127,15 +197,16 @@ x_train, x_test, x_val = preprocessing_autoencoder_input(x_train, x_test, x_val,
 new_items = {'x_train': x_train, 'x_test': x_test, 'x_val': x_val}
 dic_vars.update(new_items)
 
-y_train, y_test, y_val = preprocessing_y(egm_tensor,Y_model, AF_models, train_models,test_models, val_models, TrainConfig_1.batch_size_1)
+y_train, y_test, y_val = preprocessing_y(egm_tensor,Y_model, AF_models, train_models,test_models, val_models, TrainConfig_1.batch_size_1, norm =False)
+
+plt.figure()
+plt.plot(x_train[0, :, 0, 0, 0], label = 'bsps')
+plt.plot(y_train[0, :,0], label = 'egm')
+plt.legend()
+plt.savefig('output/figures/input_output/preprocessing.png')
 
 # 1. AUTOENCODER
 print('Training model...')
-
-#This is done to distribute workload among available gpus
-#strategy = tf.distribute.MirroredStrategy()
-#with strategy.scope():
-model = MultiOutput().assemble_full_model(input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1])
 
 optimizer = Adam(learning_rate=TrainConfig_1.learning_rate_1)
 
@@ -146,16 +217,31 @@ cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=models_dir + 'regresso
 early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
 
 # Compilar el modelo
-model.compile(optimizer='adam', loss=['mean_squared_error', 'mean_squared_error'], metrics=['mean_absolute_error'])
+#Configure GPU for paralellism 
+strategy = tf.distribute.MirroredStrategy()
 
-print(model.summary())
-history = model.fit(x=x_train, y=[x_train, y_train], batch_size=1, epochs=TrainConfig_1.n_epoch_1,
-                               validation_data=(x_val, [x_val, y_val]),
-                               callbacks=[early_stopping_callback, cp_callback])
+
+if TrainConfig_1.parallelism:
+    with strategy.scope():
+        model = MultiOutput().assemble_full_model(input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1])
+        model.compile(optimizer='adam',
+                       loss=['mean_squared_error', 'mean_squared_error'], metrics=['mean_absolute_error'], 
+                        loss_weights=[1.0, 5.0])
+
+        print(model.summary())
+        history = model.fit(x=x_train, y=[x_train, y_train], batch_size=1, epochs=TrainConfig_1.n_epoch_1,
+                                    validation_data=(x_val, [x_val, y_val]),
+                                    callbacks=[early_stopping_callback, cp_callback])
+else:
+    model = MultiOutput().assemble_full_model(input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1])
+    model.compile(optimizer='adam', loss=['mean_squared_error', 'mean_squared_error'], loss_weights=[1.0, 5.0], metrics=['mean_absolute_error'])
+    print(model.summary())
+    history = model.fit(x=x_train, y=[x_train, y_train], batch_size=1, epochs=TrainConfig_1.n_epoch_1,
+                                validation_data=(x_val, [x_val, y_val]),
+                                callbacks=[early_stopping_callback, cp_callback])
 
 # summarize history for loss
 plt.figure()
-
 plt.plot(history.history['val_loss'], label = 'Global loss (Validation)')
 plt.plot(history.history['val_Autoencoder_output_loss'], label = 'Autoencoder loss (Validation)' )
 plt.plot(history.history['val_Regressor_output_loss'], label = 'Regressor loss (Validation)')
@@ -167,15 +253,42 @@ plt.title('model loss')
 plt.ylabel('MSE')
 plt.xlabel('epoch')
 plt.title('Training and validation curves ')
-plt.savefig(figs_dir + str(DataConfig.fs_sub) + 'Learning_curves_AE.png')
 plt.savefig(experiment_dir + 'Learning_curves.png')
 
 plt.show()
 
 # Evaluate
-pred_test  = model.predict(x_test, batch_size=1) # x_test=[# batches, batch_size, 12, 32, 1]
-pred_train  = model.predict(x_train, batch_size=1) #(44, 50, 12, 32, 1)
+#model = load_model('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/20240415-172029/model_mo.h5')
+pred_test  = model.predict(x_test, batch_size=1) # x_test=[#batches, batch_size, 12, 32, 1]
 
+if TrainConfig_1.use_generator:
+    pred_train = model.predict(data_generator(x_train), steps=x_train.shape[0], batch_size=1)
+     #TODO: NOT WORKING
+    print('Generator')
+else:
+    try:
+        if TrainConfig_1.parallelism:
+            with strategy.scope():
+                pred_train  = model.predict(x_train, batch_size=1) #(44, 50, 12, 32, 1)
+        else:
+            pred_train  = model.predict(x_train, batch_size=1) #(44, 50, 12, 32, 1)
+    except:
+        if TrainConfig_1.parallelism:
+            with strategy.scope():
+
+                x_train=x_train[0:50, :, :, :, :]
+                y_train=y_train[0:50, :, :]
+                pred_train  = model.predict(x_train, batch_size=1) #(44, 50, 12, 32, 1)
+        else:
+            try:
+                x_train=x_train[0:50, :, :, :, :]
+                y_train=y_train[0:50, :, :]
+                pred_train  = model.predict(x_train, batch_size=1) #(44, 50, 12, 32, 1)
+            except:
+                x_train=x_train[0:20, :, :, :, :]
+                y_train=y_train[0:20, :, :]
+                pred_train  = model.predict(x_train, batch_size=1) #(44, 50, 12, 32, 1)
+                
 results_autoencoder, results_regressor = evaluate_function_multioutput(x_train, y_train, x_test, y_test,
                                                          pred_train, pred_test, model, batch_size=1)
 
@@ -238,7 +351,6 @@ for i in range(0, 60):
     plt.xlabel('Samples')
     plt.ylabel('Amplitude')
     plt.title('BSPM')
-    plt.savefig(figs_dir + str(DataConfig.fs_sub) +'_'+str(i) +  'reconstructions_mo.png')
     plt.savefig(experiment_dir +  'EGM_Reconstructions_' + str(i) + '.png')
 
     plt.show()
@@ -263,7 +375,6 @@ for i in range(0, 5):
     plt.imshow(difference)
     plt.title('Error')
     plt.colorbar(label='Colorbar Label')  # Add a colorbar with a label
-    plt.savefig(figs_dir +'_'+str(i) +  'MO_AE_reconstructions.png')
     plt.savefig(experiment_dir +  'Autoencoder_reconstructions.png')
     plt.show()
 
@@ -379,8 +490,8 @@ Label = reshape(interpol_label, (interpol_label.shape[0], interpol_label.shape[1
 
 print('Saving variables...')
 
-new_correlation_array = interpolate_fun(correlation_array, len(correlation_array), 2048)
-new_rmse_array = interpolate_fun(rmse_array, len(rmse_array), 2048)
+new_correlation_array = interpolate_fun(correlation_array, len(correlation_array), y_train.shape[2])
+new_rmse_array = interpolate_fun(rmse_array, len(rmse_array), y_train.shape[2])
 
 # %%
 # Save the model names in train, test and val
@@ -403,7 +514,7 @@ savemat(experiment_dir + "/matlab_3d_map_" + experiment_name + ".mat", mdic)
 savemat(experiment_dir + "/reconstructions_by_model_" + experiment_name + ".mat", dic_by_models)
 
 
-savemat(dict_var_dir + "/variables23_04.mat", variables)
+savemat(dict_var_dir + "/variables.mat", variables)
 
 # Write dictionary string representation to text file
 file_path = experiment_dir + 'metrics.txt'
@@ -423,6 +534,13 @@ else:
 
 
 model.save('output/model/model_multioutput.h5'+ datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+# Crear un archivo para guardar el summary
+
+file_name=experiment_dir+ 'model_summary.txt'
+
+with open(file_name, 'w') as f:
+    # Redirigir la salida estándar al archivo
+    model.summary(print_fn=lambda x: f.write(x + '\n'))
 
 # Save results to csv and export
 results_Autoencoder = pd.DataFrame.from_dict(results_autoencoder, orient='index', columns=['Autoencoder'])

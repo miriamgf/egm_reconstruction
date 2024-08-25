@@ -43,12 +43,13 @@ dict_results_dir = 'output/results/'
 experiment_dir='output/experiments/'+ experiment_name+'/'
 
 
+
 X_1channel, Y, Y_model, egm_tensor, length_list, AF_models, all_model_names, transfer_matrices = load_data(
     data_type='1channelTensor', n_classes=DataConfig.n_classes, subsampling=True, fs_sub=DataConfig.fs_sub, norm=False, SR=True, SNR=DataConfig.SNR,
     n_batch=TrainConfig_1.batch_size_1, sinusoid=False, data_dir = data_dir )
 
 
-Noise_Simulation = NoiseSimulation(X_1channel, SNR_em_noise = 20, SNR_white_noise=20, oclusion =None, fs=DataConfig.fs_sub)
+Noise_Simulation = NoiseSimulation( SNR_em_noise = 20, SNR_white_noise=20, oclusion =None, fs=DataConfig.fs_sub)
 
 em = Noise_Simulation.load_physionet_signals(type_noise='em')
 

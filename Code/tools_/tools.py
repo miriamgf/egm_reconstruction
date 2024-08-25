@@ -43,19 +43,22 @@ from plots import *
 from scipy.stats import pearsonr
 from scipy.stats import spearmanr
 from datetime import time
+from tools_.noise_simulation import *
+from scripts.config import DataConfig
+from tools_.oclusion import Oclussion
+import time
 #from noise_simulation import *
 
 # %% Path Models
 # %% Path Models
 current = os.path.dirname(os.path.realpath(__file__))
 torsos_dir = "../../../Labeled_torsos/"
-directory = "/home/profes/miriamgf/tesis/Autoencoders/Data_short/"
+#directory = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
 torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
 
 fs = 500
 
 # %%
-
 
 # %% Add noise to signals
 def add_noise(X, SNR=20, fs=50):
@@ -70,7 +73,7 @@ def add_noise(X, SNR=20, fs=50):
     return X_noisy
 
 
-def ECG_filtering(signal, fs, f_low=3, f_high=30):
+def ECG_filtering(signal, fs, order = 2, f_low=3, f_high=30):
     """
     Frequency filtering of ECG-EGM.
     SR model: low-pass filtering, 4th-order Butterworth filter.
@@ -88,15 +91,22 @@ def ECG_filtering(signal, fs, f_low=3, f_high=30):
 
     # Remove DC component
     sig_temp = remove_mean(signal)
+    #sig_temp = signal
 
     # Bandpass filtering
     b, a = sigproc.butter(
-        4, [f_low / round((fs / 2)), f_high / round((fs / 2))], btype="bandpass"
+        order, [f_low / round((fs / 2)), f_high / round((fs / 2))], btype="bandpass"
     )
-    proc_ECG_EGM = np.zeros(sig_temp.shape)
 
-    for index in range(0, sig_temp.shape[0]):
-        proc_ECG_EGM[index, :] = sigproc.filtfilt(b, a, sig_temp[index, :])
+    proc_ECG_EGM = np.zeros(sig_temp.shape)
+    if sig_temp.ndim ==3:
+        for i in range(sig_temp.shape[1]):  
+            for j in range(sig_temp.shape[2]):  
+                #for index in range(sig_temp.shape[0]):
+                proc_ECG_EGM[:, i, j] = sigproc.filtfilt(b, a, sig_temp[:, i, j])
+    else: 
+        for index in range(0, sig_temp.shape[0]):
+            proc_ECG_EGM[index, :] = sigproc.filtfilt(b, a, sig_temp[index, :])
 
     return proc_ECG_EGM
 
@@ -130,12 +140,17 @@ def load_data(
     subsampling=True,
     fs_sub=50,
     SNR=20,
+    SNR_bsps = True,
+    SNR_em_noise=20,
+    SNR_white_noise=20,
     norm=False,
     classification=False,
     sinusoid=False,
     n_batch=50,
-    data_dir=directory
-):
+    patches_oclussion=None,
+    directory=directory, 
+    unfold_code=1
+    ):
     """
     Returns y values depends of the classification model
 
@@ -198,10 +213,35 @@ def load_data(
 
     AF_model_i = 0
 
+    #SNR_em_noise = 10
+    #SNR_white_noise=20
+
+    #hacer una estimación de la longitud del array de BSPMs
+    len_target_signal = 2000
+    Noise_Simulation = NoiseSimulation(SNR_em_noise = SNR_em_noise,
+                                       SNR_white_noise=SNR_white_noise,
+                                       oclusion = None,
+                                       fs=DataConfig.fs_sub) #instance of class
+
+
+    noise_database= Noise_Simulation.configure_noise_database(len_target_signal, all_model_names,
+                                                        em = True,
+                                                        ma = False,
+                                                        gn = True,
+                                                        )
+
     for model_name in all_model_names:
+
+        print('Loading model', model_name, '......')
 
         # %% 1)  Compute EGM of the model
         egms = load_egms(model_name, sinusoid)
+
+        if model_name == 'LA_RSPV_CAF_150115':
+            plt.figure(figsize=(20, 7))
+            plt.plot(egms[0, 0:2000])
+            plt.title(model_name)
+            plt.savefig('output/figures/input_output/load_egms.png')
 
         # 1.1) Discard models <1500
         # if len(egms[1])<1500:
@@ -209,9 +249,14 @@ def load_data(
 
         # 1.2)  EGMs filtering.
         x = ECG_filtering(egms, 500)
+        plt.figure(figsize=(20, 7))
+        plt.plot(x[0, 0:2000])
+        plt.title(model_name)
+        plt.savefig('output/figures/input_output/ecg_filtering.png')
+
 
         # 1.3 Normalize models
-        if norm == True:
+        if norm:
 
             high = 1
             low = -1
@@ -221,6 +266,9 @@ def load_data(
             rng = maxs - mins
 
             bsps_64_n = high - (((high - low) * (maxs - x)) / rng)
+        
+
+        
 
         # 2) Compute the Forward problem with each of the transfer matrices
         for matrix in transfer_matrices:
@@ -229,18 +277,17 @@ def load_data(
             y = forward_problem(x, matrix[0])
             bsps_64 = y[matrix[1].ravel(), :]
             bsps_64_or = bsps_64
-            # 3) Add NOISE and Filter
-            if SNR != None:
-
-                bsps_64_noise = add_noise(np.array(bsps_64), SNR=SNR, fs=500)
-
-            # 5) Filter AFTER adding noise
-            bsps_64_filt = ECG_filtering(bsps_64_noise, 500)
+            bsps_64_filt=bsps_64_or
 
             # RESAMPLING signal to fs= fs_sub
             if subsampling:
                 bsps_64 = signal.resample_poly(bsps_64_filt, fs_sub, 500, axis=1)
                 x_sub = signal.resample_poly(x, fs_sub, 500, axis=1)
+
+                plt.figure(figsize=(20, 7))
+                plt.plot(x[0, 0:2000])
+                plt.title(model_name)
+                plt.savefig('output/figures/input_output/subsample.png')
 
             else:
 
@@ -264,6 +311,8 @@ def load_data(
             else:
 
                 Y.extend(np.full(len(x_sub), 0))
+            
+            #RESHAPE TO TENSOR
 
             if data_type == "3channelTensor":
 
@@ -272,47 +321,71 @@ def load_data(
 
             elif data_type == "1channelTensor":
 
-                tensors_model = get_tensor_model(bsps_64, tensor_type="1channel")
+                tensors_model = get_tensor_model(bsps_64, tensor_type="1channel", unfold_code=unfold_code)
                 
+                # Interpo was here *
+
+                # Noise 
+                start_time = time.time()
+
+                if SNR_bsps != None:
+                    #New noise module
+                    #num_patches must be maximum 16 (for 64 electrodes)
+                    tensors_model_noisy, map_distribution_noise = Noise_Simulation.add_noise(tensors_model,
+                                                                                            AF_model_i,
+                                                                                            noise_database,
+                                                                                            num_patches = 4,
+                                                                                            distribution_noise_mode = 2)
+                
+                
+                    
+                # 5) Filter AFTER adding noise
+
+                tensor_model_filt = ECG_filtering(tensors_model_noisy, order = 3, fs = fs_sub, f_low=3, f_high=30 )
+
+                plt.figure(figsize=(20,5))
+                plt.plot(tensors_model_noisy[0:1000, 1, 2], label = 'Noisy')
+                plt.plot(tensors_model[0:1000,  1, 2], label = 'Original')
+                plt.plot(tensor_model_filt[0:1000,  1, 2], label = 'Cleaned')
+                plt.legend()
+                plt.savefig('output/figures/Noise_module/filtered_vs_original.png')
+
+                #Turn off electrodes
+
+                if patches_oclussion != 'PT':
+                    oclussion= Oclussion(tensor_model_filt, patches_oclussion = patches_oclussion)
+                    tensors_model = oclussion.turn_off_patches()
+
                 # Interpolate
-                reshape_tensor = np.reshape(
-                    tensors_model,
-                    (
-                        len(tensors_model),
-                        tensors_model.shape[1],
-                        tensors_model.shape[2],
-                        1,
-                    ),
-                )
-                tensors_model = tf.keras.layers.UpSampling2D(
-                    size=(2, 2), interpolation="bilinear"
-                )(reshape_tensor)
-                tensors_model = np.reshape(
-                    tensors_model,
-                    (
-                        len(tensors_model),
-                        tensors_model.shape[1],
-                        tensors_model.shape[2],
-                    ),
-                )
+                tensors_model= interpolate_2D_array(tensors_model)
 
-                # Truncate for being divisible by the batch size
-                batch_size = n_batch
-                if tensors_model.shape[0] % batch_size != 0:
-                    trunc_val = np.floor_divide(tensors_model.shape[0], batch_size)
-                    tensors_model = tensors_model[0 : batch_size * trunc_val, :, :]
-                    x_sub = x_sub[:, 0 : batch_size * trunc_val]
-                length_list.append(tensors_model.shape[0])
+                plt.figure(figsize=(20, 7))
+                plt.plot(x_sub[0, 0:2000]) 
+                plt.plot(tensors_model[0:2000, 0, 0])
+                plt.title(model_name)
+                plt.savefig('output/figures/input_output/before_truncate.png')
 
-                if x_sub.shape[1] != tensors_model.shape[0]:
-                    print(x_sub.shape, tensors_model.shape, model_name)
-
+                # Truncate length to be divisible by the batch size
+                tensors_model, length_list, x_sub = truncate_length_bsps(n_batch, tensors_model, length_list, x_sub)
+                
+                
                 X.extend(tensors_model)
                 egm_tensor.extend(x_sub.T)
+
+
+                plt.figure(figsize=(20, 7))
+                plt.plot(x_sub[0, 0:2000]) 
+                plt.plot(tensors_model[0:2000, 0, 0])
+                plt.title(model_name)
+                plt.savefig(model_name)
+
+                plt.savefig('output/figures/input_output/saving_truncate.png')
 
             else:
                 X.extend(bsps_64.T)
                 egm_tensor.extend(x_sub.T)
+
+
 
             if not classification:
                 y_model = np.full(len(tensors_model), n_model)
@@ -336,6 +409,42 @@ def load_data(
         all_model_names,
         transfer_matrices,
     )
+
+def truncate_length_bsps(n_batch, tensors_model, length_list, x_sub):
+    batch_size = n_batch
+    if tensors_model.shape[0] % batch_size != 0:
+        trunc_val = np.floor_divide(tensors_model.shape[0], batch_size)
+        tensors_model = tensors_model[0 : batch_size * trunc_val, :, :]
+        x_sub = x_sub[:, 0 : batch_size * trunc_val]
+
+    length_list.append(tensors_model.shape[0])
+
+    return tensors_model, length_list, x_sub
+
+
+
+def interpolate_2D_array(tensors_model):
+    reshape_tensor = np.reshape(
+    tensors_model,
+    (
+        len(tensors_model),
+        tensors_model.shape[1],
+        tensors_model.shape[2],
+        1,
+    ),
+    )
+    tensors_model = tf.keras.layers.UpSampling2D(
+        size=(2, 2), interpolation="bilinear"
+    )(reshape_tensor)
+    tensors_model = np.reshape(
+        tensors_model,
+        (
+            len(tensors_model),
+            tensors_model.shape[1],
+            tensors_model.shape[2],
+        ),
+    )
+    return tensors_model
 
 
 def sample(input, count):
@@ -541,7 +650,7 @@ def get_bsps_192(model_name, ten_leads=False):
     return np.array(bsps_192)
 
 
-def get_tensor_model(bsps_64, tensor_type="3channel"):
+def get_tensor_model(bsps_64, tensor_type="3channel", unfold_code=1):
     """
     Get X (tensor) from one model
 
@@ -558,7 +667,7 @@ def get_tensor_model(bsps_64, tensor_type="3channel"):
         if tensor_type == "3channel":
             tensor_model = get_subtensor_2(bsps_64[:, t], tensor_type)
         else:
-            tensor_model = get_subtensor_2(bsps_64[:, t], tensor_type)
+            tensor_model = get_subtensor_2(bsps_64[:, t], tensor_type, unfold_code=1)
         if all_tensors.size == 0:
             all_tensors = tensor_model
         else:
@@ -674,7 +783,7 @@ def get_labels(class_type, model_name):
         return labels
 
 
-def get_subtensor_2(bsps_64_t, tensor_type="3_channel"):
+def get_subtensor_2(bsps_64_t,  tensor_type="3_channel", unfold_code= 1):
     """
     Get (6 x 4 x 3) tensor for 1 instance of time.
 
@@ -735,124 +844,143 @@ def get_subtensor_2(bsps_64_t, tensor_type="3_channel"):
         interp_lat_L5 = np.mean((patches["C1"], patches["C2"], patches["L5"]))
         interp_lat_L1 = np.mean((patches["B1"], patches["B2"], patches["L1"]))
 
-        subtensor = np.array(
-            [
+        if unfold_code == 1:
+            subtensor = np.array(
                 [
                     [
-                        patches["B6"],
-                        patches["B12"],
-                        patches["A12"],
-                        patches["A6"],
-                        interp_lat_R4,
-                        interp_lat_R8,
-                        patches["D12"],
-                        patches["D6"],
-                        patches["C12"],
-                        patches["C6"],
-                        interp_lat_L8,
-                        interp_lat_L4,
-                        patches["B6"],
-                        patches["B12"],
-                        patches["A12"],
-                        patches["A6"],
-                    ],
-                    [
-                        patches["B5"],
-                        patches["B11"],
-                        patches["A11"],
-                        patches["A5"],
-                        patches["R4"],
-                        patches["R8"],
-                        patches["D11"],
-                        patches["D5"],
-                        patches["C11"],
-                        patches["C5"],
-                        patches["L8"],
-                        patches["L4"],
-                        patches["B5"],
-                        patches["B11"],
-                        patches["A11"],
-                        patches["A5"],
-                    ],
-                    [
-                        patches["B4"],
-                        patches["B10"],
-                        patches["A10"],
-                        patches["A4"],
-                        patches["R3"],
-                        patches["R7"],
-                        patches["D10"],
-                        patches["D4"],
-                        patches["C10"],
-                        patches["C4"],
-                        patches["L7"],
-                        patches["L3"],
-                        patches["B4"],
-                        patches["B10"],
-                        patches["A10"],
-                        patches["A4"],
-                    ],
-                    [
-                        patches["B3"],
-                        patches["B9"],
-                        patches["A9"],
-                        patches["A3"],
-                        patches["R2"],
-                        patches["R6"],
-                        patches["D9"],
-                        patches["D3"],
-                        patches["C9"],
-                        patches["C3"],
-                        patches["L6"],
-                        patches["L2"],
-                        patches["B3"],
-                        patches["B9"],
-                        patches["A9"],
-                        patches["A3"],
-                    ],
-                    [
-                        patches["B2"],
-                        patches["B8"],
-                        patches["A8"],
-                        patches["A2"],
-                        patches["R1"],
-                        patches["R5"],
-                        patches["D8"],
-                        patches["D2"],
-                        patches["C8"],
-                        patches["C2"],
-                        patches["L5"],
-                        patches["L1"],
-                        patches["B2"],
-                        patches["B8"],
-                        patches["A8"],
-                        patches["A2"],
-                    ],
-                    [
-                        patches["B1"],
-                        patches["B7"],
-                        patches["A7"],
-                        patches["A1"],
-                        interp_lat_R1,
-                        interp_lat_R5,
-                        patches["D7"],
-                        patches["D1"],
-                        patches["C7"],
-                        patches["C1"],
-                        interp_lat_L5,
-                        interp_lat_L1,
-                        patches["B1"],
-                        patches["B7"],
-                        patches["A7"],
-                        patches["A1"],
-                    ],
+                        [
+                            patches["B6"],
+                            patches["B12"],
+                            patches["A12"],
+                            patches["A6"],
+                            interp_lat_R4,
+                            interp_lat_R8,
+                            patches["D12"],
+                            patches["D6"],
+                            patches["C12"],
+                            patches["C6"],
+                            interp_lat_L8,
+                            interp_lat_L4,
+                            patches["B6"],
+                            patches["B12"],
+                            patches["A12"],
+                            patches["A6"],
+                        ],
+                        [
+                            patches["B5"],
+                            patches["B11"],
+                            patches["A11"],
+                            patches["A5"],
+                            patches["R4"],
+                            patches["R8"],
+                            patches["D11"],
+                            patches["D5"],
+                            patches["C11"],
+                            patches["C5"],
+                            patches["L8"],
+                            patches["L4"],
+                            patches["B5"],
+                            patches["B11"],
+                            patches["A11"],
+                            patches["A5"],
+                        ],
+                        [
+                            patches["B4"],
+                            patches["B10"],
+                            patches["A10"],
+                            patches["A4"],
+                            patches["R3"],
+                            patches["R7"],
+                            patches["D10"],
+                            patches["D4"],
+                            patches["C10"],
+                            patches["C4"],
+                            patches["L7"],
+                            patches["L3"],
+                            patches["B4"],
+                            patches["B10"],
+                            patches["A10"],
+                            patches["A4"],
+                        ],
+                        [
+                            patches["B3"],
+                            patches["B9"],
+                            patches["A9"],
+                            patches["A3"],
+                            patches["R2"],
+                            patches["R6"],
+                            patches["D9"],
+                            patches["D3"],
+                            patches["C9"],
+                            patches["C3"],
+                            patches["L6"],
+                            patches["L2"],
+                            patches["B3"],
+                            patches["B9"],
+                            patches["A9"],
+                            patches["A3"],
+                        ],
+                        [
+                            patches["B2"],
+                            patches["B8"],
+                            patches["A8"],
+                            patches["A2"],
+                            patches["R1"],
+                            patches["R5"],
+                            patches["D8"],
+                            patches["D2"],
+                            patches["C8"],
+                            patches["C2"],
+                            patches["L5"],
+                            patches["L1"],
+                            patches["B2"],
+                            patches["B8"],
+                            patches["A8"],
+                            patches["A2"],
+                        ],
+                        [
+                            patches["B1"],
+                            patches["B7"],
+                            patches["A7"],
+                            patches["A1"],
+                            interp_lat_R1,
+                            interp_lat_R5,
+                            patches["D7"],
+                            patches["D1"],
+                            patches["C7"],
+                            patches["C1"],
+                            interp_lat_L5,
+                            interp_lat_L1,
+                            patches["B1"],
+                            patches["B7"],
+                            patches["A7"],
+                            patches["A1"],
+                        ],
+                    ]
                 ]
-            ]
-        )
+            )
+
+        if unfold_code == 2:
+
+            unfold_order = ['L_side', 'front', 'L_side', 'back' ]
+            new_subtensor = np.zeros(subtensor.shape)
+
+            patch_indices = {
+            'front': (slice(0, 6), slice(0, 4)),
+            'R_side': (slice(0, 6), slice(4, 6)),
+            'back': (slice(0, 6), slice(6, 10)),
+            'L_side': (slice(0, 6), slice(10, 12)), 
+        }
+            for segment in unfold_order:
+                new_subtensor[patch_indices[segment]] = subtensor[patch_indices[segment]]
+
+            new_subtensor = subtensor
 
         subtensor = subtensor.reshape(1, 6, 16)
 
     return subtensor
+
+
 
 
 def get_patches_name(bsps_64):
@@ -897,6 +1025,8 @@ def get_patches_name(bsps_64):
         index += 1
 
     return patches
+
+
 
 
 def plot_confusion_matrix(
@@ -963,6 +1093,7 @@ def train_test_val_split_Autoencoder(
     random_split,
     train_percentage,
     test_percentage,
+    deterministic = True
 ):
     """
     This function splits the input tensor into train, tets and validation
@@ -1011,25 +1142,68 @@ def train_test_val_split_Autoencoder(
     # Random
     if random_split:
 
-        if caution_split:
-            train_models = random.sample(
-                list(AF_models_unique),
-                int(np.floor(AF_models[-1] * train_percentage - len(indx))),
-            )
-            train_models = train_models + indx
-        else:
-            train_models = random.sample(
-                list(AF_models_unique), int(np.floor(AF_models[-1] * train_percentage))
-            )
+        if deterministic:
+            # Deterministic assignation
+            train_models_deterministic= ['RA_RAA_141230', 'Simulation_01_190502_001_003', 'Simulation_01_190502_001_004', 
+            'Simulation_01_190502_001_006', 'Simulation_01_190619_001_001', 'Simulation_01_190619_001_002', 
+            'Simulation_01_190619_001_003', 'Simulation_01_190619_001_004', 'Simulation_01_190717_001_001', 
+            'Simulation_01_190717_001_002', 'Simulation_01_190717_001_003', 'Simulation_01_190717_001_004', 
+            'Simulation_01_191001_001_001', 'Simulation_01_191001_001_002', 'Simulation_01_191001_001_005', 
+            'Simulation_01_191001_001_007', 'Simulation_01_200212_001_  1', 'Simulation_01_200212_001_  2', 
+            'Simulation_01_200212_001_  4', 'Simulation_01_200212_001_  6', 'Simulation_01_200212_001_  7', 
+            'Simulation_01_200212_001_  9', 'Simulation_01_200316_001_  1', 'Simulation_01_200316_001_  5', 
+            'Simulation_01_200316_001_  7', 'Simulation_01_200428_001_001', 'Simulation_01_200428_001_002', 
+            'Simulation_01_200428_001_003', 'Simulation_01_200428_001_005', 'Simulation_01_200428_001_006', 
+            'Simulation_01_200428_001_007', 'Simulation_01_200428_001_009', 'Simulation_01_201223_001_002', 
+            'Simulation_01_210209_001_003', 'Simulation_01_210210_001_001', 'TwoRotors_181219']
 
-        aux_models = [x for x in AF_models_unique if x not in train_models]
-        test_models = random.sample(
-            list(aux_models), int(np.floor(AF_models[-1] * test_percentage))
-        )
-        val_models = [x for x in aux_models if x not in test_models]
+            val_models_deterministic= ['LA_RIPV_150121', 'RA_RAFW_140807', 'Simulation_01_190502_001_005',
+            'Simulation_01_200212_001_  8', 'Sinusal_150629']
+
+            test_models_deterministic = ['LA_PLAW_140711_arm' 'LA_RSPV_CAF_150115', 'Simulation_01_200212_001_  5',
+            'Simulation_01_200212_001_ 10', 'Simulation_01_200316_001_  3',
+            'Simulation_01_200316_001_  4', 'Simulation_01_200316_001_  8',
+            'Simulation_01_200428_001_004', 'Simulation_01_200428_001_008',
+            'Simulation_01_200428_001_010', 'Simulation_01_210119_001_001',
+            'Simulation_01_210208_001_002']
+
+            train_models, test_models, val_models = [],[],[]
+            for elemento in train_models_deterministic:
+                if elemento in all_model_names:
+                    train_models.append(all_model_names.index(elemento))
+            
+            for elemento in test_models_deterministic:
+                if elemento in all_model_names:
+                    test_models.append(all_model_names.index(elemento))
+
+            for elemento in val_models_deterministic:
+                if elemento in all_model_names:
+                    val_models.append(all_model_names.index(elemento))
+        else:
+
+            if caution_split:
+
+
+                train_models = random.sample(
+                    list(AF_models_unique),
+                    int(np.floor(AF_models[-1] * train_percentage - len(indx))),
+                )
+                train_models = train_models + indx
+            else:
+                train_models = random.sample(
+                    list(AF_models_unique), int(np.floor(AF_models[-1] * train_percentage))
+                )
+
+            aux_models = [x for x in AF_models_unique if x not in train_models]
+            test_models = random.sample(
+                list(aux_models), int(np.floor(AF_models[-1] * test_percentage))
+            )
+            val_models = [x for x in aux_models if x not in test_models]
+   
         x_train = X_1channel[np.in1d(AF_models, train_models)]
         x_test = X_1channel[np.in1d(AF_models, test_models)]
         x_val = X_1channel[np.in1d(AF_models, val_models)]
+
 
         print("TRAIN MODELS:", train_models)
         print("TEST MODELS:", test_models)
@@ -1549,3 +1723,9 @@ def array_to_dic_by_models(dic, model_list, AF_models, all_model_names):
         }
 
     return new_dic
+
+def data_generator(data, batch_size=1):
+    num_batches = data.shape[0]
+    while True:
+        for i in range(num_batches):
+            yield data[i:i + batch_size]

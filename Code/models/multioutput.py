@@ -41,7 +41,7 @@ class MultiOutput:
             strides=1,
             padding="same",
             activation="leaky_relu",
-            kernel_regularizer=tf.keras.regularizers.l2(l=0.001),
+            kernel_regularizer=tf.keras.regularizers.l2(l=0.01),
         )(encoder)
         encoder = layers.MaxPooling3D((1, 2, 2))(encoder)
         encoder = layers.Conv3D(
@@ -70,7 +70,7 @@ class MultiOutput:
             strides=1,
             padding="same",
             activation="linear",
-            kernel_regularizer=tf.keras.regularizers.l2(l=0.001),
+            kernel_regularizer=tf.keras.regularizers.l2(l=0.01),
             name="Autoencoder_output",
         )(decoder)
 
@@ -83,16 +83,12 @@ class MultiOutput:
         return encoder, decoder
 
     def build_reconstruction_branch(self, inputs, input_shape, encoder, n_nodes):
-        """
-        Used to directly obtain EGMs from BSPS
-        """
         initializer = tf.keras.initializers.HeNormal()
-        # encoder = self.build_encoder_module(inputs, input_shape)
 
         x = layers.Conv3D(
             64,
             (2, 2, 2),
-            strides=1,
+            strides=(1, 1, 1),
             padding="same",
             activation="leaky_relu",
             input_shape=input_shape[1:],
@@ -103,20 +99,21 @@ class MultiOutput:
         x = layers.Conv3D(
             32,
             (3, 3, 3),
-            strides=1,
+            strides=(1, 1, 1),
             padding="same",
             activation="leaky_relu",
             kernel_regularizer=tf.keras.regularizers.l2(l=0.001),
         )(x)
         x = layers.UpSampling3D((1, 2, 2))(x)
-        x = layers.Conv3D(3, (1, 3, 3), strides=1, padding="valid", activation="relu")(
-            x
-        )
+        # Ajusta el kernel temporal a 1 para evitar cambio en la dimensión temporal
+        x = layers.Conv3D(3, (3, 3, 3), strides=(1, 1, 1),
+                        padding="same", activation="leaky_relu")(x)
         x = layers.TimeDistributed(layers.Flatten())(x)
         x = BatchNormalization(axis=1)(x)
-        x = layers.LSTM(50, return_sequences=True)(x)
-        x = layers.Dropout(0.3)(x)
+        x = layers.LSTM(25, return_sequences=True)(x)
+        x = layers.Dropout(0.2)(x)
         x = layers.Dense(n_nodes, activation="leaky_relu", name="Regressor_output")(x)
+
         return x
 
     def assemble_full_model(self, input_shape, n_nodes):

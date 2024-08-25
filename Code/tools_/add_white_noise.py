@@ -152,9 +152,21 @@ def addwhitenoise(signal, fs=50, SNR=20, model="AF", seed="N"):
     PowerInSigdB = 10 * np.log10(np.mean(np.power(np.abs(signal), 2)))
 
     sigma = np.sqrt(np.power(10, (PowerInSigdB - SNR) / 10))
-    noise = sigma * (np.random.randn(signal.shape[0], signal.shape[1]))
+    if signal.ndim == 2:
+        noise = sigma * (np.random.randn(signal.shape[0], signal.shape[1]))
+    else: 
+        noise = sigma * (np.random.randn(signal.shape[0], signal.shape[1], signal.shape[2] ))
 
     noisy_EGM = noise + signal
+    
+    plt.figure()
+    plt.plot(noise[:, 0, 0], label = 'noise')
+    plt.plot(signal[:, 0, 0], label = 'signal')
+    plt.plot(noisy_EGM[:, 0, 0], label='noisy')
+    plt.legend()
+    plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/white_noise.png')
+
+
 
     Cn = np.power(sigma, 2) * np.eye(noisy_EGM.shape[0])
 

@@ -1,7 +1,7 @@
 import sys
 
 sys.path.append("../Code")
-from tools_tikhonov import  load_data, load_egms_df
+from tools_tikhonov import  load_data, load_egms_df, normalize_array
 import forward_inverse_problem as fip
 import filtering
 
@@ -48,7 +48,8 @@ from tools import array_to_dic_by_models
 
 
 directory = "/home/profes/miriamgf/tesis/Autoencoders/Data_short/"
-fs = 500
+
+fs = 100
 
 #
 physical_devices = tf.config.list_physical_devices("GPU")
@@ -72,6 +73,38 @@ all_model_names = sorted(all_model_names)
 
 
 
+# parse args
+print('parsing')
+parser = argparse.ArgumentParser(description="Noise params")
+parser.add_argument('--SNR_em_noise', type=int, help='EM noise SNR', required=True)
+parser.add_argument('--SNR_white_noise', type=int, help='white noise SNR', required=True)
+parser.add_argument('--experiment_number', type=int,  help='number of experiment', required=True)
+
+
+args = parser.parse_args()
+
+
+SNR_em_noise = args.SNR_em_noise
+SNR_white_noise = args.SNR_white_noise
+experiment_number = args.experiment_number
+
+#Run script IDE
+
+'''
+SNR_em_noise=20
+SNR_white_noise=20
+patches_oclussion='PT'
+experiment_number=1
+unfold_code=1
+'''
+
+experiment_name='_EXP_' + str(experiment_number)
+experiment_dir='output/experiments/experiments_CINC/'+ experiment_name+'/'
+
+if not os.path.exists(experiment_dir):
+    os.makedirs(experiment_dir)
+    print("Directory for experiment", experiment_dir, 'created')
+
 n_classes = 3  # 1: Rotor/no rotor ; 2: RA/LA/No rotor (2 classes) ; 3: 7 regions (3 classes) + no rotor (8 classes)
 
 
@@ -93,6 +126,9 @@ n_classes = 3  # 1: Rotor/no rotor ; 2: RA/LA/No rotor (2 classes) ; 3: 7 region
     norm=False,
     SR=True,
     SNR=20,
+    data_dir =directory 
+
+
 )
 
 
@@ -111,26 +147,37 @@ new_dic = {}
 
 df = load_egms_df(directory)
 
+
 for model in range(len(all_model_names)):
 
     #if model ==2:
         #continue
     
+    print('Computing model ', model)
     model_name= all_model_names[model]
     pos_model = np.where(np.array(AF_models_names) == model_name)
     pos_unique = np.unique(Y_model[pos_model])[0]  # Select only the first torso
     y = np.array(X_1channel[np.where(Y_model == pos_unique)])
+    #y = y[:, 0:]
     af_signal_values = df.loc[df['id'] == model_name, 'AF_signal']
     af_signal_list = af_signal_values.tolist()  # Para obtener una lista
     af_signal_array = np.array(af_signal_list)
     x=af_signal_array[0]
-
-    # y = np.array(X_1channel[np.where(Y_model==model)])
-    
-    #egm_tensor_flat = [element for sublist in egm_tensor for element in sublist]
-    #x =np.array([egm_tensor_flat[i] for i in np.where(Y_model == pos_unique)[0]])
-    #x = np.array(egm_tensor_flat[np.where(Y_model == pos_unique)[0]])
     y = np.vstack(y).T
+
+    #Normalize
+    x= normalize_array(x, axis_n=1)
+    y= normalize_array(y, axis_n=1)
+
+
+
+    plt.figure(figsize=(20, 7))
+    plt.plot(x[0, 0:], label= 'EGM')
+    plt.plot(y[0, 0:], label= 'BSPS')
+    plt.legend()
+    plt.savefig('output/figures/Tikhonov_rec/egm_bsps.png')
+
+
 
     A = np.array(transfer_matrices[0][0])  # Only one torso
     AA, L, LL = pre_m.precompute_matrix(A, atrial_model, order)
@@ -163,6 +210,7 @@ for model in range(len(all_model_names)):
     plt.figure()
     plt.plot(x_hat[0:1000, 0], label="rec")
     plt.plot(x_array[0:1000, 0], label="real")
+    plt.plot(x_hat[0:1000, 0], label='rec')
     plt.legend()
     plt.title(model_name)
     plt.savefig("scripts/Tikhonov/figures/" + str(model) + str(".png"))
@@ -184,7 +232,7 @@ for model in range(len(all_model_names)):
 
 
 #print(new_dic)
-savemat("/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/Tikhonov/tikhonov_matlab.mat", new_dic )
+savemat(experiment_dir + "tikhonov_matlab.mat", new_dic )
 corr_dic = {
     "Correlation array": corr_list,
     "corr_list_mean": corr_list_mean,
@@ -192,6 +240,8 @@ corr_dic = {
 }
 print("mean", corr_list_mean)
 print("std", corr_list_std)
-with open("results/correlation.txt", "w") as f:
+
+file_name=experiment_dir + "correlation.txt"
+with open(file_name, "w") as f:
     for key, value in corr_dic.items():
         f.write(f"{key}: {value}\n")

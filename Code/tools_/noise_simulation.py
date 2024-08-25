@@ -36,7 +36,9 @@ from scipy.stats import pearsonr
 from scipy.stats import spearmanr
 from datetime import time
 import wfdb
-from tools import *
+from tools_.tools import *
+from scipy.signal import welch
+from scripts.config import DataConfig
 
 
 # %% Path Models
@@ -48,9 +50,8 @@ torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
 
 class NoiseSimulation:
 
-    def __init__(self, signal, SNR_em_noise = 20, SNR_white_noise=20, oclusion =None, fs=500, random_order_chuncks=True):
+    def __init__(self, SNR_em_noise = 20, SNR_white_noise=20, oclusion =None, fs=500, random_order_chuncks=True):
 
-        self.signal = signal
         self.SNR_em = True
         self.SNR_white_noise = True
         self.fs = fs
@@ -58,7 +59,9 @@ class NoiseSimulation:
         self.SNR_white_noise = SNR_white_noise
         self.random_order_chunks = True
 
-    def configure_noise_database(self, target_signal, all_model_names, em = True, ma = False, gn = True, noise_augmentation = 2):
+    def configure_noise_database(self,len_target_signal,  all_model_names, em = True, ma = False, gn = True):
+
+  
         '''
         This function organizes the loaded flat noise signal into
         #N_models equal groups to encapsulate the chunks by single AF models.
@@ -69,72 +72,139 @@ class NoiseSimulation:
         dic_noise = {}
 
         if em:
-            em_signal_flat = self.load_physionet_signals(type_noise='em')
-            em_split = np.split(em_signal_flat, n_models)
-            em_split_split = self.split_into_irregular_chunks(em_split, target_signal_length = len(target_signal), noise_augmentation=3)
-            
+            em_signal_flat = self.load_physionet_signals(type_noise='em', noise_normalization=True)
 
+            if len(em_signal_flat)%n_models != 0: #Truncate if necessary
+                truncated_samples = (len(em_signal_flat) // n_models) * n_models
+                em_signal_flat=em_signal_flat[:truncated_samples]
+
+            em_split = np.split(em_signal_flat, n_models)
+            em_split_split = self.split_into_irregular_chunks(em_split,
+                                                            target_signal_length = len_target_signal,
+                                                            noise_augmentation=5)
+            
             dic_noise['em'] = em_split_split
             #TODO: Data augmentation: Concatenar dentro de un mismo modelo de AF
         elif ma:
-            ma_signal_flat = self.load_physionet_signals(len(target_signal), type_noise='ma')
+            ma_signal_flat = self.load_physionet_signals( type_noise='ma',
+                                                        noise_normalization=True)
             ma_split = np.split(ma_signal_flat, n_models)
             dic_noise['ma'] = ma_split
         
         return dic_noise
 
-    def add_noise(self, X, AF_model_i, noise_dic, distribution_noise_mode = 2, n_episodes_in_lead=3, n_noise_chunks_per_signal = 4):
+    def add_noise(self, clean_signal, AF_model_i, noise_dic, distribution_noise_mode = 2,
 
-        # 1) En cada electrodo se asigna solo una realización de ruido
-        if distribution_noise_mode ==1:
-            pass
+                    n_noise_chunks_per_signal = 3, 
+                    num_patches = None, 
+                    flatten_electrodes = False,
+                    Tikhonov_data_loading = False):
 
-        # 2) En un mismo electrodo se agregan varias realizaciones en diferentes instantes
-        if distribution_noise_mode ==2:
-            # EM
-            if self.SNR_em_noise != None:
-                
-                em_noise = noise_dic['em'][AF_model_i]
-                num_noise_chunks = len(em_noise)
+        # EM
+        if self.SNR_em_noise != None:
+            
+            #if clean_signal.ndim ==2:
+                #clean_signal = get_tensor_model(clean_signal, tensor_type="1channel")
+                #flatten_electrodes = True 
+
+            em_noise = noise_dic['em'][AF_model_i]
+            num_noise_chunks = len(em_noise)
+
+            if distribution_noise_mode ==2:
+
                 #if the patch size is fixed to (2x2), then the maximum number of patches is the total number of chunks //4
                 min_num_patches_2_2 = num_noise_chunks//4 #this is the number of patches if only 1 noise chunks is assigned per lead
-                num_patches = min_num_patches_2_2//n_noise_chunks_per_signal
+                if num_patches == None:
+                    num_patches = min_num_patches_2_2//n_noise_chunks_per_signal
+                
+                if Tikhonov_data_loading: # 3900 Nodes --> data augmentation. Apply noise to random nodes
+                    binary_map = self.create_1d_binary_map(array_shape=(clean_signal[0], clean_signal[1]), n_leads = num_patches*4)
 
-                #distribute a clusters of electrodes of available noise chunks in patches of size (2,2)
-                binary_map_2d = self.generate_array_with_non_overlapping_patches(array_shape=(X.shape[1], X.shape[2]),
-                                                                 patch_size = (2,2), num_patches = num_patches )
+                else:
+                    #distribute a clusters of electrodes of available noise chunks in patches of size (2,2)
+                    binary_map = self.generate_array_with_non_overlapping_patches(array_shape=(clean_signal.shape[1],
+                                                                                            clean_signal.shape[2]),
+                                                                                            patch_size = (2,2),
+                                                                                            num_patches = 3
+                                                                                            )
+                indices = np.argwhere(binary_map == 1)
+                #print(binary_map_2d)
 
-                indices = np.argwhere(binary_map_2d == 1)
-                #leads = X[:, indices[:, 0], indices[:, 1]]
+            elif distribution_noise_mode==1:
+                indices = np.argwhere(binary_map >= 1)
+                n_noise_chunks_per_signal = 1
+
+            noisy_signal = clean_signal.copy() #np.zeros(clean_signal.shape)
+
+            #leads = clean_signal[:, indices[:, 0], indices[:, 1]]
+            if DataConfig.fs_sub == 100:
+                num_chunks_per_clean_signal = 3
+            elif DataConfig.fs_sub == 200:
+                num_chunks_per_clean_signal = 3
+            
+            if Tikhonov_data_loading: # 3900 Nodes --> data augmentation. Apply noise to random nodes
+                for row_i, column_i in indices:
+                    lead_i = clean_signal[:, column_i]
+                    lead_i_noisy, em_noise = self.insert_noise_in_signal(lead_i, em_noise,
+                                                                        self.SNR_em_noise,
+                                                                        num_chunks_per_clean_signal=2,
+                                                                        normalize_noise=False)
+                    noisy_signal[:, column_i] = lead_i_noisy #Assign new noisy value
+
+
+            else:
+
                 for column_i, row_i in indices:
-                    lead_i = X[:, column_i, row_i]
-                    lead_i_noisy, em_noise = self.insert_noise_in_signal(lead_i, em_noise, self.SNR_em_noise,
-                                                                        n_noise_chunks_per_signal)
+                    lead_i = clean_signal[:, column_i, row_i]
+                    lead_i_noisy, em_noise = self.insert_noise_in_signal(lead_i, em_noise,
+                                                                        self.SNR_em_noise,
+                                                                        num_chunks_per_clean_signal=2,
+                                                                        normalize_noise=False)
+                    noisy_signal[:, column_i, row_i] = lead_i_noisy #Assign new noisy value
 
-                    X[:, indices[:, 0], indices[:, 1]] == lead_i_noisy #Assign new noisy value
+            if flatten_electrodes:
+                noisy_signal = noisy_signal.reshape(clean_signal.shape[0], clean_signal.shape[1]*clean_signal.shape[2]).T
 
-        return lead_i_noisy
 
-    def insert_noise_in_signal(self, clean_signal, noise_list, SNR, num_chunks_per_clean_signal= 3, normalize_noise=False):
+        if self.SNR_white_noise != None:
+            noisy_signal_before = noisy_signal.copy()
+            noisy_signal = self.add_white_noise(noisy_signal, SNR=self.SNR_white_noise, fs=self.fs)
+            #plt.figure(figsize =(20,5))
+            #plt.plot(noisy_signal[:, 0, 0], label='EM + WN')
+            #plt.plot(noisy_signal_before[:, 0, 0], label='only EM')
+            #plt.plot(clean_signal[:, 0, 0], label='clean')
+            #plt.legend()
+            #plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/phases_filtering1.png')
+            #plt.show()
 
+        return noisy_signal, binary_map
+
+    def insert_noise_in_signal(self, clean_signal, noise_list, SNR, num_chunks_per_clean_signal= 3, normalize_noise=True):
+
+   
         #Create a disperse signal of same length with N noise realizations
         noise_signal = np.zeros(len(clean_signal))
         onset_index = random.randint(0, round(len(clean_signal)*0.2))
+        onset_index_previous = onset_index
 
         for chunk in range(0,num_chunks_per_clean_signal):
+            try:
+                chunk_i = noise_list.pop(0)
+            except:
 
-            chunk_i = noise_list.pop(0)
+                break
             chunk_i= chunk_i.flatten()
-
+            
             #normalize
-            plt.figure()
-            plt.plot(chunk_i, label='before norm')
+            #plt.figure()
+            #plt.plot(chunk_i, label='before norm')
             if normalize_noise:
-                chunk_i = normalize_array(chunk_i, high=1, low=-1, axis_n=0)
+                #chunk_i = normalize_array(chunk_i, high=1, low=-1, axis_n=0)
+                chunk_i = self.normalize_in_batches(chunk_i, batch_size = 10, high=1, low=-1, axis_n=0)
                 
-                plt.plot(chunk_i, label = 'after norma')
-                plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/norm.png')
-                plt.show()
+                #plt.plot(chunk_i, label = 'after norma')
+                #plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/norm.png')
+                #plt.show()
 
             #if onset and chunk addition surpasses the clean signal length, then it tries to add it just after the last chunk
             if onset_index + len(chunk_i) > len(clean_signal) and onset_index_previous + len(chunk_i) <= len(clean_signal):
@@ -145,6 +215,7 @@ class NoiseSimulation:
                 break
             #Id the onset index is directly out of range, no more chunks are used
             elif onset_index > len(clean_signal):
+                print('Warning: onset_index > len (clean_signal). Further chunks excluded.')
                 break
             else:
                 noise_signal[onset_index:onset_index+len(chunk_i)] = chunk_i
@@ -152,33 +223,46 @@ class NoiseSimulation:
 
             #Update onset
             onset_index= onset_index + len(chunk_i) +  random.randint(0, round(len(clean_signal)*0.3))
-            if onset_index > len (clean_signal):
-                print('Except: onset_index > len (clean_signal)')
-                continue
-        
+            
         #scale 
-        PowerInSigdB = 10 * np.log10(np.mean(np.power(np.abs(noise_signal), 2)))
-        sigma = np.sqrt(np.power(10, (PowerInSigdB - SNR) / 10))
-        noise_signal = sigma*noise_signal 
+            
+        signal_power = np.mean(clean_signal ** 2)        
+        noise_power = np.mean(noise_signal ** 2)
 
-        
-        noisy_signal = clean_signal + noise_signal
+        snr_linear = 10 ** (SNR / 10)
+        desired_noise_power = signal_power / snr_linear
+        scaling_factor = np.sqrt(desired_noise_power / noise_power)
+        noise_signal_SNR = noise_signal * scaling_factor
+        noisy_signal = clean_signal + noise_signal_SNR
+        indices_noise_addition = [i for i, x in enumerate(noise_signal) if x != 0]
 
-        plt.figure()
-        plt.subplot(3, 1, 1)
-        plt.plot(clean_signal)
-        plt.title('clean_signal')
-        plt.subplot(3, 1, 2)
-        plt.plot(noise_signal)
-        plt.title('noise_signal')
-        plt.subplot(3, 1, 3)
-        plt.plot(noisy_signal)
-        plt.title('noisy_signal')
-        plt.tight_layout()
+        #plt.figure()
+        #plt.subplot(3, 1, 1)
+        #plt.plot(noisy_signal, label ='noisy signal')
+        #plt.plot(clean_signal, label = 'clean signal')
+        #plt.xlabel('Samples')
+        #plt.ylabel('Amplitude (norm)')
 
-        plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/clean_noisy.png')
+        #plt.title('noisy vs clean_signal')
+        #plt.subplot(3, 1, 2)
+        #plt.plot(noise_signal, label = 'noise (norm)')
+        #plt.plot(noise_signal_SNR, label='SNR')
+        #plt.xlabel('Samples')
+        #plt.ylabel('Amplitude (norm)')
+        #plt.legend(loc='upper right')
+        #plt.title('noise_signal at ' + str(SNR) + ' dB')
+        #plt.subplot(3, 1, 3)
+        #plt.plot(clean_signal[indices_noise_addition[0]:indices_noise_addition[0]+500], label = 'clean signal')
+        #plt.plot(noise_signal_SNR[indices_noise_addition[0]:indices_noise_addition[0]+500], label = 'noise')
+        #plt.xlabel('Samples')
+        #plt.ylabel('Amplitude (norm)')
+        #plt.legend(loc='upper right')
+        #plt.title('Zoom in first chunk inclusion')
+        #plt.tight_layout()
 
-        plt.show()
+        #plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/clean_noisy.png')
+
+        #plt.show()
 
         return noisy_signal, noise_list
 
@@ -211,9 +295,9 @@ class NoiseSimulation:
 
 
     
-    def split_into_irregular_chunks(self, split_noise, target_signal_length=2500, noise_augmentation = 3 ):
+    def split_into_irregular_chunks(self, split_noise, target_signal_length=2500, max_chunks=20, noise_augmentation = 3 ):
         '''
-        Splits a list of arrays into irregularly sized chunks based on the specified signal length.
+        Splits a list of arrays into irregularly sized chunks based on the specified signal length (number of samples).
 
         Parameters:
         split_noise (list of np.ndarray): A list of NumPy arrays to be split into chunks. Each array will be processed individually.
@@ -224,12 +308,10 @@ class NoiseSimulation:
 
         Description:
         This function divides each array in `split_noise` into chunks of varying sizes, ensuring that each chunk's size falls between a minimum and maximum value. 
-        The minimum and maximum chunk sizes are dynamically determined based on the `target_signal_length`. The function aims to produce at least 10 chunks per array, 
-        though the exact number of chunks may vary depending on the array size and the calculated chunk sizes.
+        The minimum and maximum chunk sizes are dynamically determined based on the `target_signal_length`.  
 
         - `min_size`: Minimum chunk size, calculated as 5% of `target_signal_length`.
         - `max_size`: Maximum chunk size, calculated as 10% of `target_signal_length`.
-        - `min_chunks`: Minimum number of chunks to be produced, set to 10.
 
         Chunks are created such that their sizes are randomly determined within the specified range, but the function ensures that the total size of chunks does not exceed 
         the length of the original array. If fewer chunks are left to create, the last chunk will absorb any remaining elements to fit the exact size of the array.
@@ -240,7 +322,6 @@ class NoiseSimulation:
         # Automatically configures sizes of chunks based on signal length
         min_size = round(target_signal_length * 0.02)  # Minimum chunk size as 5% of the target signal length
         max_size = round(target_signal_length * 0.08)   # Maximum chunk size as 10% of the target signal length
-        min_chunks = 10  # Minimum number of chunks desired
 
         new_db = []
         for arr in split_noise:
@@ -248,7 +329,6 @@ class NoiseSimulation:
             chunks = []
             start_idx = 0
             while start_idx < total_size:
-                remaining_chunks = min_chunks - len(chunks)
                 remaining_size = total_size - start_idx
 
                 # Determine the size of the next chunk
@@ -257,8 +337,7 @@ class NoiseSimulation:
                 # Ensure we do not exceed the remaining size or number of chunks
                 if chunk_size > remaining_size:
                     chunk_size = remaining_size
-                if remaining_chunks == 1:
-                    chunk_size = remaining_size
+                
 
                 # Append the chunk to the list
                 chunks.append(arr[start_idx:start_idx + chunk_size])
@@ -276,7 +355,7 @@ class NoiseSimulation:
         return new_db
 
 
-    def add_white_noise(self, X, SNR=20, fs=50):
+    def add_white_noise(self, X, SNR=20, fs=200):
         '''
         
         '''
@@ -287,62 +366,117 @@ class NoiseSimulation:
 
     
 
-    def load_physionet_signals(self, type_noise='em', noise_augmentation=False, noise_normalization=True):
+    def load_physionet_signals(self, type_noise='em', noise_normalization=True):
         '''
         This functions loads signals from Physionet database MIT-BIH Noise Stress Test Database
         It can load three types of noise:
         * baseline wander (in record 'bw')
         * muscle artifact (in record 'ma')
         * electrode motion artifact (in record 'em')
+
+        Original fs = 360 Hz
         
         '''
         record_name = type_noise  # Nombre del registro
         path_noise_models = 'tools_/noise_models'
-        record = wfdb.rdrecord(f'{path_noise_models}/{record_name}', sampfrom=self.fs, channels=[0])
+        record = wfdb.rdrecord(f'{path_noise_models}/{record_name}', sampfrom=0, channels=[0])
 
         noise = record.p_signal
+        noise_original = noise.copy()
 
-        if noise_augmentation:
+        self.compute_periodogram_of_noise(noise_original)
 
-            # Si se quiere alargar la señal flat de ruido, concatenando al final la misma señal.
-
-            noise.extend(noise)
+        #resample to target signal fs
+        if self.fs > 360:
+            raise ValueError('Error: cannot add EM noise from MIT DB Database. Fs cannot match.')
+        
+        noise = signal.resample_poly(noise, self.fs, 360)
 
         if noise_normalization:
-            noise = normalize_in_batches(noise, batch_size = 100, high=1, low=-1, axis_n=0)
-
+            noise = self.normalize_in_batches(noise, batch_size = 50, high=1, low=-1, axis_n=0)
 
         return noise
-
-def normalize_in_batches(array, batch_size=200, high=1, low=-1, axis_n=0):
-    """
-    Processes an array in batches, applying normalization if needed.
     
-    Args:
-        array (numpy.ndarray): Array to be processed.
-        batch_size (int): Size of each batch.
-        noise_normalization (bool): Flag to apply normalization.
+    def compute_periodogram_of_noise(self, noise_signal, fs=360, nperseg=50):
 
-    Returns:
-        numpy.ndarray: Array with batches processed and normalized.
+        signal = noise_signal.T
+        signal = signal.flatten()
+        f, Pxx = welch(signal, fs, nperseg=nperseg, noverlap=nperseg//2)
+        # Graficar el periodograma de Welch
+        plt.figure(figsize=(10, 6))
+        plt.semilogy(f, Pxx)
+        plt.title('Periodograma de Welch')
+        plt.xlabel('Frecuencia [Hz]')
+        plt.ylabel('Densidad espectral de potencia [V**2/Hz]')
+        plt.grid(True)
+        plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/welch_noise.png')
+
+
+    def normalize_in_batches(self,array, batch_size=200, high=1, low=-1, axis_n=0):
+
+        
+
+        
+        """
+        Processes an array in batches, applying normalization if needed.
+        
+        Args:
+            array (numpy.ndarray): Array to be processed.
+            batch_size (int): Size of each batch.
+            noise_normalization (bool): Flag to apply normalization.
+
+        Returns:
+            numpy.ndarray: Array with batches processed and normalized.
+        """
+        num_samples = array.shape[0]
+        num_batches = (num_samples + batch_size - 1) // batch_size  # Number of batches
+
+        processed_array = np.empty_like(array)
+
+        for i in range(num_batches):
+            start_index = i * batch_size
+            end_index = min(start_index + batch_size, num_samples)
+
+            batch = array[start_index:end_index]
+            batch = normalize_array(batch, high=high, low=low, axis_n=axis_n)  # Assuming noise is along axis 0
+            
+            processed_array[start_index:end_index] = batch
+
+        return processed_array
+    
+    def create_1d_binary_map(self,array_shape, n_leads):
+
+
+        # Crear un array de ceros
+        binary_map = np.zeros((1, len(array_shape[1])))
+
+        # Seleccionar N posiciones únicas aleatorias en el array
+        pos = np.random.choice(len(array_shape[1]), n_leads, replace=False)
+
+        # Asignar el valor 1 a esas posiciones
+        binary_map[0, pos] = 1
+
+        return binary_map
+
+        
+
+
+def normalize_array(array, high, low, axis_n=0):
     """
-    num_samples = array.shape[0]
-    num_batches = (num_samples + batch_size - 1) // batch_size  # Number of batches
+    This functions normalized a 2D 'array' along axis 'axis_n' and between the values 'high' and 'low'
 
-    processed_array = np.empty_like(array)
+    To normalize a full signal, indicate the index dimension
 
-    for i in range(num_batches):
-        start_index = i * batch_size
-        end_index = min(start_index + batch_size, num_samples)
-
-        batch = array[start_index:end_index]
-        
-       
-        batch = normalize_array(batch, high=high, low=low, axis_n=axis_n)  # Assuming noise is along axis 0
-        
-        processed_array[start_index:end_index] = batch
-
-    return processed_array
+    """
+    mins = np.min(array, axis=axis_n)
+    maxs = np.max(array, axis=axis_n)
+    rng = maxs - mins
+    # if axis_n==1:
+    # array=array.T
+    norm_array = high - (((high - low) * (maxs - array)) / rng)
+    # if axis_n==1:
+    # norm_array=norm_array.T
+    return norm_array
 
     
 

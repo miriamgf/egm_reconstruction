@@ -2,7 +2,7 @@ import sys, os
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from numpy import reshape
-from tools import *
+from tools_.tools import *
 import tensorflow as tf
 
 tf.random.set_seed(1)
@@ -197,8 +197,8 @@ def preprocessing_y(
     test_models,
     val_models,
     n_batch,
-    norm=True,
-    random_split=True,
+    norm=False,
+    random_split=True
 ):
     # Normalize
     if norm:
@@ -232,9 +232,20 @@ def preprocessing_y(
 
     # %% Subsample EGM nodes
 
-    y_train_subsample = y_train[:, 0:2048]  #:, 0:2048:2] --> 1024
-    y_test_subsample = y_test[:, 0:2048]
-    y_val_subsample = y_val[:, 0:2048]
+    if DataConfig.n_nodes_regression == 2048:
+        N = 1
+    elif DataConfig.n_nodes_regression == 1024:
+        N = 2
+    elif DataConfig.n_nodes_regression == 682:
+        N = 3
+    elif DataConfig.n_nodes_regression == 512:
+        N = 4
+
+
+
+    y_train_subsample = y_train[:, 0:2048:N]  #:, 0:2048:2] --> 1024
+    y_test_subsample = y_test[:, 0:2048:N]
+    y_val_subsample = y_val[:, 0:2048:N]
 
     n_nodes = y_train_subsample.shape[1]
 

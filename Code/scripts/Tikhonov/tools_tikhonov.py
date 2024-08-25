@@ -26,16 +26,18 @@ from scipy.spatial.distance import euclidean
 import tensorflow as tf
 import random
 import pandas as pd
+from tools_.noise_simulation import *
+from scripts.config import DataConfig
+from tools_.oclusion import Oclussion
 
 
 # %% Path Models
 # %% Path Models
 current = os.path.dirname(os.path.realpath(__file__))
-directory = "/home/mgutierrez/Desktop/Autoencoders/Data/"
+directory = "/home/profes/miriamgf/tesis/Autoencoders/Data_short/"
 torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos_tik/"
-directory = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
 
-fs = 500
+fs = 200
 
 # %%
 
@@ -47,7 +49,7 @@ def add_noise(X, SNR=20, fs=50):
     return X_noisy
 
 
-def ECG_filtering(signal, fs, f_low=3, f_high=30):
+def ECG_filtering(signal, fs, order = 2, f_low=3, f_high=30):
     """
     Frequency filtering of ECG-EGM.
     SR model: low-pass filtering, 4th-order Butterworth filter.
@@ -64,16 +66,23 @@ def ECG_filtering(signal, fs, f_low=3, f_high=30):
     """
 
     # Remove DC component
-    sig_temp = remove_mean(signal)
+    #sig_temp = remove_mean(signal)
+    sig_temp = signal
 
     # Bandpass filtering
     b, a = sigproc.butter(
-        4, [f_low / round((fs / 2)), f_high / round((fs / 2))], btype="bandpass"
+        order, [f_low / round((fs / 2)), f_high / round((fs / 2))], btype="bandpass"
     )
-    proc_ECG_EGM = np.zeros(sig_temp.shape)
 
-    for index in range(0, sig_temp.shape[0]):
-        proc_ECG_EGM[index, :] = sigproc.filtfilt(b, a, sig_temp[index, :])
+    proc_ECG_EGM = np.zeros(sig_temp.shape)
+    if sig_temp.ndim ==3:
+        for i in range(sig_temp.shape[1]):  
+            for j in range(sig_temp.shape[2]):  
+                #for index in range(sig_temp.shape[0]):
+                proc_ECG_EGM[:, i, j] = sigproc.filtfilt(b, a, sig_temp[:, i, j])
+    else: 
+        for index in range(0, sig_temp.shape[0]):
+            proc_ECG_EGM[index, :] = sigproc.filtfilt(b, a, sig_temp[index, :])
 
     return proc_ECG_EGM
 
@@ -115,6 +124,11 @@ def load_data(
     norm=False,
     classification=False,
     transfer_matrices=None,
+    SNR_bsps = True,
+    SNR_em_noise=20,
+    SNR_white_noise=20,
+    data_dir = directory
+
 ):
     """
     Returns y values depends of the classification model
@@ -158,8 +172,20 @@ def load_data(
     AF_model_i = 1
     AF_models_names=[]
 
+    #Noise config
+    Noise_Simulation = NoiseSimulation(SNR_em_noise = SNR_em_noise,
+                                       SNR_white_noise=SNR_white_noise,
+                                       oclusion = None,
+                                       fs=DataConfig.fs_sub) #instance of class
+
+    len_target_signal = 2000
+    noise_database= Noise_Simulation.configure_noise_database(len_target_signal, all_model_names,
+                                                        em = True,
+                                                        ma = False,
+                                                        gn = True,
+                                                        )
+    print('Loading data...')
     for model_name in all_model_names:
-        print(model_name)
 
         # %% 1)  Compute EGM of the model
         egms = load_egms(model_name)
@@ -196,8 +222,12 @@ def load_data(
             if SNR != None:
                 bsps_64_noise = add_noise(np.array(bsps_64), SNR=SNR, fs=fs)
 
-            # 5) Filter AFTER adding noise
-            bsps_64_filt = ECG_filtering(bsps_64_noise, fs)
+            ## 5) Filter AFTER adding noise
+            if SNR_bsps == None:
+
+                bsps_64_filt = add_noise(bsps_64_noise, fs = fs)
+
+            bsps_64_filt = bsps_64_noise #ECG_filtering(bsps_64_noise, fs)
 
             # RESAMPLING signal to fs= fs_sub
             if subsampling & fs_sub != 500:
@@ -205,22 +235,7 @@ def load_data(
                 x_sub = signal.resample_poly(x, fs_sub, 500, axis=1)
                 bsps_64 = bsps_64_filt
 
-            if classification:
-
-                y_labels = get_labels(n_classes, model_name)
-                y_labels_list = y_labels.tolist()
-
-                # RESAMPLING labels to fs= fs_sub
-                if subsampling:
-                    y_labels = sample(y_labels, len(bsps_64[1]))
-
-                y_model = np.full(len(y_labels), n_model)
-                Y_model.extend(y_model)
-                Y.extend(y_labels)
-
-            else:
-
-                Y.extend(np.full(len(x_sub), 0))
+            Y.extend(np.full(len(x_sub), 0))
 
             egm_tensor.extend([x_sub.T])
 
@@ -260,10 +275,41 @@ def load_data(
                 length_list.append(tensors_model.shape[0])
 
                 X.extend(tensors_model)
-            elif data_type == "Flat":
 
-                tensors_model = bsps_64.T
-                X.extend(bsps_64.T)
+            elif data_type == "Flat": 
+
+                if SNR_bsps != None:
+
+
+                    #New noise module
+                    #num_patches must be maximum 16 (for 64 electrodes)
+                    tensors_model_noisy, map_distribution_noise = Noise_Simulation.add_noise(bsps_64.T,
+                                                                                            AF_model_i-1,
+                                                                                            noise_database,
+                                                                                            num_patches = 4,
+                                                                                            distribution_noise_mode = 2, 
+                                                                                            Tikhonov_data_loading = True)
+                    
+                    plt.figure()
+                    plt.plot(map_distribution_noise[0, :])
+                    plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/1d_map.png')
+                    plt.show()
+                
+                
+                    
+                    # 5) Filter AFTER adding noise
+
+                    tensor_model_filt = ECG_filtering(tensors_model_noisy, order = 3, fs = fs_sub, f_low=3, f_high=30 )
+                    bsps_64=tensor_model_filt
+                    tensors_model = bsps_64
+                    X.extend(bsps_64)
+
+                else:
+
+                    tensors_model = bsps_64.T
+                    X.extend(bsps_64.T)
+
+
 
             if not classification:
                 y_model = np.full(len(tensors_model), n_model)
@@ -869,7 +915,7 @@ def plot_confusion_matrix(
     plt.xlabel("Predicted label")
 
 
-def normalize_array(array, high, low, axis_n=0):
+def normalize_array(array, high=1, low=-1, axis_n=0):
     mins = np.min(array, axis=axis_n)
     maxs = np.max(array, axis=axis_n)
     rng = maxs - mins

@@ -15,7 +15,7 @@ def load_signals(type, experiment = '20240530-141019', p =None):
         
     elif type == 'DL':
          if p ==None:
-            p = '/home/profes/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/'+ str(experiment) + '/reconstructions_by_model_'+str(experiment)+'.mat'
+            p = '/home/profes/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_CINC/'+ str(experiment) + '/reconstructions_by_model_'+str(experiment)+'.mat'
          dic = scipy.io.loadmat(p)
          fs=get_fs_from_experiment(experiment=experiment)    
     return dic, fs
@@ -23,7 +23,7 @@ def load_signals(type, experiment = '20240530-141019', p =None):
 
 def get_fs_from_experiment(experiment = '20240530-141019' ):
     
-    p = '/home/profes/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/'+ str(experiment) + '/'
+    p = '/home/profes/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_CINC/'+ str(experiment) + '/'
 
     # Abrir y leer el archivo hiperparams.txt
     with open(p + 'hyperparams.txt', 'r') as file:
@@ -110,6 +110,8 @@ def plot_1D_signals(tikhonov_signal, tikhonov_label,
     plt.title('Reconstruction with Deep Learning (normalized)')
     plt.show()
 
+
+
 def normalize_array(array, high, low, axis_n=0):
     """
     This functions normalized a 2D 'array' along axis 'axis_n' and between the values 'high' and 'low'
@@ -127,7 +129,7 @@ def normalize_array(array, high, low, axis_n=0):
     # norm_array=norm_array.T
     return norm_array
 
-def plot_correlation_by_nodes(range_of_models=None, smoothing = None, type_corr = 'Pearson'):
+def plot_correlation_by_nodes(range_of_models=None, smoothing = None, type_corr = 'Pearson', experiment=None):
     '''
     This function plots the correlation of each node between real and reconstructed signals
     in the range of models introduced
@@ -140,7 +142,7 @@ def plot_correlation_by_nodes(range_of_models=None, smoothing = None, type_corr 
     for model_i in range_of_models:
         #Load signals of that model
         tikhonov, fs_tk= load_signals('Tik')
-        dl, fs_dl= load_signals('DL', experiment='20240530-141019')
+        dl, fs_dl= load_signals('DL', experiment=experiment)
         dl_label=dl[model_i]['label'][0][0]
         dl_signal=dl[model_i]['reconstruction'][0][0]
         tikhonov_label=tikhonov[model_i]['label'][0][0]
@@ -191,7 +193,7 @@ def moving_average(signal, window_size):
     return np.convolve(signal, np.ones(window_size)/window_size, mode='valid')
 
     
-def plot_correlation_by_models(range_of_models=None, type_corr = 'Pearson', separation= 0.3, rotation=45):
+def plot_correlation_by_models(range_of_models=None, type_corr = 'Pearson', separation= 0.3, rotation=45, experiment=None):
     '''
     This function plots a boxplot representing the mean correlation between real and reconstructed signals
     for all the nodes of each model in the range of models introduced
@@ -203,7 +205,7 @@ def plot_correlation_by_models(range_of_models=None, type_corr = 'Pearson', sepa
     for model_i in range_of_models:
         #Load signals of that model
         tikhonov, fs_tk= load_signals('Tik')
-        dl, fs_dl= load_signals('DL', experiment='20240530-141019')
+        dl, fs_dl= load_signals('DL', experiment=experiment)
         dl_label=dl[model_i]['label'][0][0]
         dl_signal=dl[model_i]['reconstruction'][0][0]
         tikhonov_label=tikhonov[model_i]['label'][0][0]
