@@ -125,10 +125,9 @@ class NoiseSimulation:
                     binary_map = self.generate_array_with_non_overlapping_patches(array_shape=(clean_signal.shape[1],
                                                                                             clean_signal.shape[2]),
                                                                                             patch_size = (2,2),
-                                                                                            num_patches = 3
+                                                                                            num_patches = num_patches
                                                                                             )
                 indices = np.argwhere(binary_map == 1)
-                #print(binary_map_2d)
 
             elif distribution_noise_mode==1:
                 indices = np.argwhere(binary_map >= 1)
@@ -147,7 +146,7 @@ class NoiseSimulation:
                     lead_i = clean_signal[:, column_i]
                     lead_i_noisy, em_noise = self.insert_noise_in_signal(lead_i, em_noise,
                                                                         self.SNR_em_noise,
-                                                                        num_chunks_per_clean_signal=2,
+                                                                        num_chunks_per_clean_signal=n_noise_chunks_per_signal,
                                                                         normalize_noise=False)
                     noisy_signal[:, column_i] = lead_i_noisy #Assign new noisy value
 
@@ -158,25 +157,24 @@ class NoiseSimulation:
                     lead_i = clean_signal[:, column_i, row_i]
                     lead_i_noisy, em_noise = self.insert_noise_in_signal(lead_i, em_noise,
                                                                         self.SNR_em_noise,
-                                                                        num_chunks_per_clean_signal=2,
+                                                                        num_chunks_per_clean_signal=num_chunks_per_clean_signal,
                                                                         normalize_noise=False)
                     noisy_signal[:, column_i, row_i] = lead_i_noisy #Assign new noisy value
 
             if flatten_electrodes:
                 noisy_signal = noisy_signal.reshape(clean_signal.shape[0], clean_signal.shape[1]*clean_signal.shape[2]).T
 
-
+        '''
         if self.SNR_white_noise != None:
             noisy_signal_before = noisy_signal.copy()
             noisy_signal = self.add_white_noise(noisy_signal, SNR=self.SNR_white_noise, fs=self.fs)
-            #plt.figure(figsize =(20,5))
-            #plt.plot(noisy_signal[:, 0, 0], label='EM + WN')
-            #plt.plot(noisy_signal_before[:, 0, 0], label='only EM')
-            #plt.plot(clean_signal[:, 0, 0], label='clean')
-            #plt.legend()
-            #plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/phases_filtering1.png')
-            #plt.show()
-
+            plt.figure(figsize =(20,5))
+            plt.plot(noisy_signal[:, 0, 4], label='EM + WN')
+            plt.plot(noisy_signal_before[:, 0, 4], label='only EM')
+            plt.plot(clean_signal[:, 0, 4], label='clean')
+            plt.legend()
+            plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/phases_filtering1.png')
+        '''
         return noisy_signal, binary_map
 
     def insert_noise_in_signal(self, clean_signal, noise_list, SNR, num_chunks_per_clean_signal= 3, normalize_noise=True):
@@ -200,7 +198,7 @@ class NoiseSimulation:
             #plt.plot(chunk_i, label='before norm')
             if normalize_noise:
                 #chunk_i = normalize_array(chunk_i, high=1, low=-1, axis_n=0)
-                chunk_i = self.normalize_in_batches(chunk_i, batch_size = 10, high=1, low=-1, axis_n=0)
+                chunk_i = self.normalize_in_batches(chunk_i, batch_size = 10, high=5, low=-5, axis_n=0)
                 
                 #plt.plot(chunk_i, label = 'after norma')
                 #plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/norm.png')
@@ -233,7 +231,8 @@ class NoiseSimulation:
         desired_noise_power = signal_power / snr_linear
         scaling_factor = np.sqrt(desired_noise_power / noise_power)
         noise_signal_SNR = noise_signal * scaling_factor
-        noisy_signal = clean_signal + noise_signal_SNR
+        
+        noisy_signal = clean_signal + 2*noise_signal_SNR
         indices_noise_addition = [i for i, x in enumerate(noise_signal) if x != 0]
 
         #plt.figure()

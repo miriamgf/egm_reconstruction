@@ -20,32 +20,32 @@ class MultiOutput:
         initializer = tf.keras.initializers.HeNormal()
         encoder = layers.Conv3D(
             64,
-            (2, 2, 2),
+            (5, 2, 2),
             strides=1,
             padding="same",
             activation="leaky_relu",
             input_shape=input_shape[2:],
             kernel_initializer=initializer,
-            kernel_regularizer=tf.keras.regularizers.l2(l=0.01),
+            kernel_regularizer=tf.keras.regularizers.l2(l=0.1),
         )(inputs)
         encoder = layers.Conv3D(
-            64, (2, 2, 2), strides=1, padding="same", activation="leaky_relu"
+            64, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
         )(encoder)
         encoder = layers.Conv3D(
-            32, (2, 2, 2), strides=1, padding="same", activation="leaky_relu"
+            32, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
         )(encoder)
         encoder = layers.MaxPooling3D((1, 2, 2))(encoder)
         encoder = layers.Conv3D(
             12,
-            (2, 2, 2),
+            (5, 2, 2),
             strides=1,
             padding="same",
             activation="leaky_relu",
-            kernel_regularizer=tf.keras.regularizers.l2(l=0.01),
+            kernel_regularizer=tf.keras.regularizers.l2(l=0.1),
         )(encoder)
         encoder = layers.MaxPooling3D((1, 2, 2))(encoder)
         encoder = layers.Conv3D(
-            12, (2, 2, 2), strides=1, padding="same", activation="linear"
+            12, (5, 2, 2), strides=1, padding="same", activation="linear"
         )(encoder)
         encoder = layers.MaxPooling3D((1, 1, 2))(encoder)
         return encoder
@@ -53,24 +53,24 @@ class MultiOutput:
     def build_decoder_module(self, inputs, input_shape, encoder):
 
         decoder = layers.Conv3D(
-            12, (2, 2, 2), strides=1, padding="same", activation="leaky_relu"
+            12, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
         )(encoder)
         decoder = layers.UpSampling3D((1, 1, 2))(decoder)
         decoder = layers.Conv3D(
-            32, (2, 2, 2), strides=1, padding="same", activation="leaky_relu"
+            32, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
         )(decoder)
         decoder = layers.UpSampling3D((1, 2, 2))(decoder)
         decoder = layers.Conv3D(
-            32, (2, 2, 2), strides=1, padding="same", activation="leaky_relu"
+            32, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
         )(decoder)
         decoder = layers.UpSampling3D((1, 2, 2))(decoder)
         decoder = layers.Conv3D(
             1,
-            (2, 2, 2),
+            (5, 2, 2),
             strides=1,
             padding="same",
             activation="linear",
-            kernel_regularizer=tf.keras.regularizers.l2(l=0.01),
+            kernel_regularizer=tf.keras.regularizers.l2(l=0.1),
             name="Autoencoder_output",
         )(decoder)
 
@@ -87,31 +87,31 @@ class MultiOutput:
 
         x = layers.Conv3D(
             64,
-            (2, 2, 2),
+            (5, 2, 2),
             strides=(1, 1, 1),
             padding="same",
             activation="leaky_relu",
             input_shape=input_shape[1:],
-            kernel_regularizer=tf.keras.regularizers.l2(l=0.001),
+            kernel_regularizer=tf.keras.regularizers.l2(l=0.1),
             kernel_initializer=initializer,
         )(encoder)
         x = layers.UpSampling3D((1, 2, 2))(x)
         x = layers.Conv3D(
             32,
-            (3, 3, 3),
+            (5, 3, 3),
             strides=(1, 1, 1),
             padding="same",
             activation="leaky_relu",
-            kernel_regularizer=tf.keras.regularizers.l2(l=0.001),
+            kernel_regularizer=tf.keras.regularizers.l2(l=0.1),
         )(x)
         x = layers.UpSampling3D((1, 2, 2))(x)
         # Ajusta el kernel temporal a 1 para evitar cambio en la dimensión temporal
-        x = layers.Conv3D(3, (3, 3, 3), strides=(1, 1, 1),
+        x = layers.Conv3D(3, (5, 3, 3), strides=(1, 1, 1),
                         padding="same", activation="leaky_relu")(x)
         x = layers.TimeDistributed(layers.Flatten())(x)
         x = BatchNormalization(axis=1)(x)
-        x = layers.LSTM(25, return_sequences=True)(x)
-        x = layers.Dropout(0.2)(x)
+        x = layers.LSTM(50, return_sequences=True)(x)
+        x = layers.Dropout(0.3)(x)
         x = layers.Dense(n_nodes, activation="leaky_relu", name="Regressor_output")(x)
 
         return x

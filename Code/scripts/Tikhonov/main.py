@@ -4,6 +4,7 @@ sys.path.append("../Code")
 from tools_tikhonov import  load_data, load_egms_df, normalize_array
 import forward_inverse_problem as fip
 import filtering
+from sklearn.metrics import mean_squared_error
 
 # import data_load as dl
 import precompute_matrix as pre_m
@@ -45,11 +46,13 @@ from scipy.io import savemat
 import forward_inverse_problem as fip
 from tools import corr_spearman_cols
 from tools import array_to_dic_by_models
+import argparse
+import math
 
 
-directory = "/home/profes/miriamgf/tesis/Autoencoders/Data_short/"
+directory = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
 
-fs = 100
+fs = 200
 
 #
 physical_devices = tf.config.list_physical_devices("GPU")
@@ -70,7 +73,6 @@ for subdir, dirs, files in os.walk(directory):
         all_model_names.append(model_name)
 
 all_model_names = sorted(all_model_names)
-
 
 
 # parse args
@@ -144,8 +146,9 @@ reconstruction_list = []
 x_real_list = []
 
 new_dic = {}
+MSE_list = []
 
-df = load_egms_df(directory)
+df = load_egms_df(directory, fs_sub=fs)
 
 
 for model in range(len(all_model_names)):
@@ -157,6 +160,7 @@ for model in range(len(all_model_names)):
     model_name= all_model_names[model]
     pos_model = np.where(np.array(AF_models_names) == model_name)
     pos_unique = np.unique(Y_model[pos_model])[0]  # Select only the first torso
+
     y = np.array(X_1channel[np.where(Y_model == pos_unique)])
     #y = y[:, 0:]
     af_signal_values = df.loc[df['id'] == model_name, 'AF_signal']
@@ -165,17 +169,22 @@ for model in range(len(all_model_names)):
     x=af_signal_array[0]
     y = np.vstack(y).T
 
+    plt.figure(figsize = (20, 7))
+    plt.plot(y[0, :])
+    plt.plot(x[0, :])
+
+    plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Tikhonov_rec/y.png')
+
     #Normalize
     x= normalize_array(x, axis_n=1)
     y= normalize_array(y, axis_n=1)
 
-
-
-    plt.figure(figsize=(20, 7))
-    plt.plot(x[0, 0:], label= 'EGM')
-    plt.plot(y[0, 0:], label= 'BSPS')
-    plt.legend()
-    plt.savefig('output/figures/Tikhonov_rec/egm_bsps.png')
+    plt.figure(figsize = (20, 7))
+    plt.subplot(2, 1, 1)
+    plt.plot(y[0, 0:2000])
+    plt.subplot(2, 1, 2)
+    plt.plot(x[0,0:2000])
+    plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Tikhonov_rec/y_vs_x'+str(model_name)+'.png')
 
 
 
@@ -195,7 +204,14 @@ for model in range(len(all_model_names)):
     x_hat = x_hat.T
 
     x_hat = np.array(x_hat)
+    plt.figure(figsize = (20, 7))
+    plt.plot(x_hat[:, 0])
+    plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Tikhonov_rec/x_hat.png')
     x_array = np.array(x).T
+    x_hat =  normalize_array(x_hat, axis_n=0)
+    plt.figure(figsize = (20, 7))
+    plt.plot(x_hat[:, 0])
+    plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Tikhonov_rec/x_hat_norm.png')
 
     reconstruction_list.append(x_hat)
     x_real_list.append(x_array)
@@ -207,15 +223,14 @@ for model in range(len(all_model_names)):
     corr_list_mean.append(corr_mean)
     corr_list_std.append(corr_std)
 
-    plt.figure()
-    plt.plot(x_hat[0:1000, 0], label="rec")
-    plt.plot(x_array[0:1000, 0], label="real")
-    plt.plot(x_hat[0:1000, 0], label='rec')
+    plt.figure(figsize=(20,7))
+    plt.plot(x_hat[0:1000,0], label="rec")
+    plt.plot(x_array[0:1000,0], label="real")
     plt.legend()
     plt.title(model_name)
-    plt.savefig("scripts/Tikhonov/figures/" + str(model) + str(".png"))
+    plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Tikhonov_rec/x_hat_final.png')
 
-    plt.show()
+    #plt.show()
 
     model_name = all_model_names[model]
     key = f"model{model_name}"
@@ -225,10 +240,22 @@ for model in range(len(all_model_names)):
         "label": x_array.tolist(),  
     }
 
-    model_name
-
+    rmse_list_node = []
     #except:
-    #print(model, "EXCLUDED")
+    for node in range(0, x_hat.shape[1]):
+
+        # RMSE
+        MSE = mean_squared_error(x_hat[:, node], x_array[:, node])
+        RMSE = math.sqrt(MSE)
+        rmse_list_node.append(RMSE)
+
+    MSE_list.extend([rmse_list_node])
+
+    rmse_array = np.array(MSE_list)
+
+
+rmse_mean = np.mean(rmse_array, axis=1)
+rmse_std = np.std(rmse_array, axis=1)
 
 
 #print(new_dic)
@@ -237,9 +264,11 @@ corr_dic = {
     "Correlation array": corr_list,
     "corr_list_mean": corr_list_mean,
     "corr_list_std": corr_list_std,
+    "RMSE": rmse_mean
 }
 print("mean", corr_list_mean)
 print("std", corr_list_std)
+print('MSE mean', np.mean(rmse_mean))
 
 file_name=experiment_dir + "correlation.txt"
 with open(file_name, "w") as f:

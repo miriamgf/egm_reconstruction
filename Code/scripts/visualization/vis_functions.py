@@ -229,7 +229,7 @@ def plot_correlation_by_models(range_of_models=None, type_corr = 'Pearson', sepa
 
     data_tk = correlations_tk
     data_dl = correlations_dl
-
+    renamed_models = list(range(1, len(range_of_models)))
     positions_tk = [i * 2 + 1 for i in range(len(data_tk))]
     boxplots_tk = plt.boxplot(data_tk, positions=positions_tk, widths=0.6, patch_artist=True, 
                             boxprops=dict(facecolor='lightblue'))
@@ -238,7 +238,7 @@ def plot_correlation_by_models(range_of_models=None, type_corr = 'Pearson', sepa
     boxplots_dl = plt.boxplot(data_dl, positions=positions_dl, widths=0.6, patch_artist=True, 
                             boxprops=dict(facecolor='lightgreen'))
 
-    plt.xticks(ticks=[i * 2 + 1 + separation / 2 for i in range(len(range_of_models))], labels=range_of_models, rotation=rotation)
+    plt.xticks(ticks=[i * 2 + 1 + separation / 2 for i in range(len(renamed_models))], labels=renamed_models, rotation=rotation)
     plt.xlabel('Model')
     plt.ylabel('Correlation Values')
     plt.title('Correlation of AF Models. Compared performance in Tikhonov and DL reconstructions')

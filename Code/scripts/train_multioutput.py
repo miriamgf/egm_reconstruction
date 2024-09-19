@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from config import TrainConfig_1
 from config import DataConfig
 from tensorflow.keras.optimizers import Adam
+print('importing tools')
 from tools_.preprocessing_network import *
 from tools_.tools import *
 from tools_.df_mapping import *
@@ -28,13 +29,14 @@ import datetime
 import time
 from tensorflow.keras.models import load_model
 
-
+print('end imports')
 #Clear GPU
 K.clear_session()
 tf.keras.backend.clear_session()
 tf.compat.v1.reset_default_graph()
 
 
+'''
 # parse args
 print('parsing')
 parser = argparse.ArgumentParser(description="Noise params")
@@ -58,13 +60,11 @@ print(type(patches_oclussion))
 #Run script IDE
 
 '''
-SNR_em_noise=20
+SNR_em_noise=1
 SNR_white_noise=20
-patches_oclussion='PT'
+patches_oclussion='P1'
 experiment_number=0
 unfold_code=1
-
-'''
 
 experiment_name=datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '_EXP_' + str(experiment_number)#+ '_' + str(SNR_white_noise)+ '_' + str(patches_oclussion)+ '_' + str(unfold_code)
 
@@ -132,7 +132,7 @@ if DataConfig.fs == DataConfig.fs_sub:
 Transfer_model = False  # Transfer learning from sinusoids
 sinusoids = False
 
-print('loading')
+print('Loading dATA')
 #Load data
 X_1channel, Y, Y_model, egm_tensor, length_list, AF_models, all_model_names, transfer_matrices = load_data(
     directory = data_dir, 
@@ -147,7 +147,8 @@ X_1channel, Y, Y_model, egm_tensor, length_list, AF_models, all_model_names, tra
     SNR_em_noise = SNR_em_noise,
     SNR_white_noise = SNR_em_noise, 
     patches_oclussion=patches_oclussion,
-    unfold_code=unfold_code)
+    unfold_code=unfold_code, 
+    inference = False)
 
 plt.figure()
 plt.plot(X_1channel[0:200, 0, 0], label='bsps')
@@ -158,8 +159,7 @@ plt.savefig('output/figures/input_output/before_norm.png')
 # Normalize BSPS and EGM
 X_1channel = normalize_by_models(X_1channel, Y_model)
 egm_tensor = normalize_by_models(egm_tensor, Y_model)
-
-
+X_1channel = np.nan_to_num(X_1channel, nan=0.0)
 
 plt.figure()
 plt.plot(X_1channel[0:200, 0, 0], label='bsps')
@@ -177,7 +177,7 @@ dic_vars.update(new_items)
 random_split = True
 print('Splitting...')
 x_train, x_test, x_val, train_models, test_models, val_models, AF_models_train, AF_models_test, AF_models_val, BSPM_train, BSPM_test, BSPM_val = train_test_val_split_Autoencoder(
-    X_1channel,AF_models, Y_model, all_model_names, random_split=True, train_percentage=0.90, test_percentage=0.2, deterministic = False)
+    X_1channel,AF_models, Y_model, all_model_names, random_split=True, train_percentage=0.90, test_percentage=0.2, deterministic = True)
 
 
 print('TRAIN SHAPE:', x_train.shape, 'models:', train_models)
@@ -214,7 +214,7 @@ tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram
 cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=models_dir + 'regressor' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
                                                  save_weights_only=True,
                                                  verbose=1)
-early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
+early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=50)
 
 # Compilar el modelo
 #Configure GPU for paralellism 
@@ -233,27 +233,31 @@ if TrainConfig_1.parallelism:
                                     validation_data=(x_val, [x_val, y_val]),
                                     callbacks=[early_stopping_callback, cp_callback])
 else:
-    model = MultiOutput().assemble_full_model(input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1])
-    model.compile(optimizer='adam', loss=['mean_squared_error', 'mean_squared_error'], loss_weights=[1.0, 5.0], metrics=['mean_absolute_error'])
-    print(model.summary())
-    history = model.fit(x=x_train, y=[x_train, y_train], batch_size=1, epochs=TrainConfig_1.n_epoch_1,
-                                validation_data=(x_val, [x_val, y_val]),
-                                callbacks=[early_stopping_callback, cp_callback])
+    if TrainConfig_1.inference_pretrained_model:
+        model = load_model('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_CINC/20240827-112359_EXP_0/model_mo.h5')
 
-# summarize history for loss
-plt.figure()
-plt.plot(history.history['val_loss'], label = 'Global loss (Validation)')
-plt.plot(history.history['val_Autoencoder_output_loss'], label = 'Autoencoder loss (Validation)' )
-plt.plot(history.history['val_Regressor_output_loss'], label = 'Regressor loss (Validation)')
-plt.plot(history.history['loss'], label = 'Global loss (Train)')
-plt.plot(history.history['Autoencoder_output_loss'], label = 'Autoencoder loss (Train)' )
-plt.plot(history.history['Regressor_output_loss'], label = 'Regressor loss (Train)')
-plt.legend( loc='upper left')
-plt.title('model loss')
-plt.ylabel('MSE')
-plt.xlabel('epoch')
-plt.title('Training and validation curves ')
-plt.savefig(experiment_dir + 'Learning_curves.png')
+    else:
+        model = MultiOutput().assemble_full_model(input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1])
+        model.compile(optimizer='adam', loss=['mean_squared_error', 'mean_squared_error'], loss_weights=[1.0, 5.0], metrics=['mean_absolute_error'])
+        print(model.summary())
+        history = model.fit(x=x_train, y=[x_train, y_train], batch_size=1, epochs=TrainConfig_1.n_epoch_1,
+                                    validation_data=(x_val, [x_val, y_val]),
+                                    callbacks=[early_stopping_callback, cp_callback])
+
+        # summarize history for loss
+        plt.figure()
+        plt.plot(history.history['val_loss'], label = 'Global loss (Validation)')
+        plt.plot(history.history['val_Autoencoder_output_loss'], label = 'Autoencoder loss (Validation)' )
+        plt.plot(history.history['val_Regressor_output_loss'], label = 'Regressor loss (Validation)')
+        plt.plot(history.history['loss'], label = 'Global loss (Train)')
+        plt.plot(history.history['Autoencoder_output_loss'], label = 'Autoencoder loss (Train)' )
+        plt.plot(history.history['Regressor_output_loss'], label = 'Regressor loss (Train)')
+        plt.legend( loc='upper left')
+        plt.title('model loss')
+        plt.ylabel('MSE')
+        plt.xlabel('epoch')
+        plt.title('Training and validation curves ')
+        plt.savefig(experiment_dir + 'Learning_curves.png')
 
 plt.show()
 
