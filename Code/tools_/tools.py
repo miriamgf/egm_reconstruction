@@ -43,7 +43,7 @@ from plots import *
 from scipy.stats import pearsonr
 from scipy.stats import spearmanr
 from datetime import time
-from tools_.noise_simulation import *
+from tools_.noise_simulation import NoiseSimulation
 from scripts.config import DataConfig
 from tools_.oclusion import Oclussion
 import time
@@ -137,7 +137,7 @@ def load_data(
     data_type,
     n_classes=2,
     SR=True,
-    subsampling=True,
+    downsampling=True,
     fs_sub=50,
     SNR=20,
     SNR_bsps = True,
@@ -165,7 +165,7 @@ def load_data(
                     '2' ->  RA/LA/No rotor (2 classes)
                     '3' ->  7 regions (3 classes) + no rotor (8 classes)
         SR: If Sinus Ryhthm Model is included (True/False)
-        subsampling: if downsampling from fs= 500Hz to a lower fs_sub is done (True/False)
+        downsampling: if downsampling from fs= 500Hz to a lower fs_sub is done (True/False)
         fs_sub: Freq sampl to downsample the signal from its original fs= 500Hz
         norm: if normalizing is performed to models when loading them (True/False)
         classification: if classification task is performed
@@ -247,7 +247,7 @@ def load_data(
         print('Loading model', model_name, '......')
 
         # %% 1)  Compute EGM of the model
-        egms = load_egms(model_name, sinusoid)
+        egms = load_egms(model_name, directory, sinusoid)
 
         
         # 1.1) Discard models <1500
@@ -289,27 +289,31 @@ def load_data(
             plt.savefig('output/figures/input_output/forward_problem.png')
 
             # RESAMPLING signal to fs= fs_sub
-            if subsampling:
+            '''
+            if downsampling:
                 bsps_64 = signal.resample_poly(bsps_64_filt, fs_sub, 500, axis=1)
                 x_sub = signal.resample_poly(x, fs_sub, 500, axis=1)
 
+                
                 plt.figure(figsize=(20, 7))
                 plt.plot(x[0, 0:2000])
                 plt.title(model_name)
                 plt.savefig('output/figures/input_output/subsample.png')
+                
 
             else:
 
                 bsps_64 = bsps_64_filt
                 x_sub = x
 
+            '''
             if classification:
 
                 y_labels = get_labels(n_classes, model_name)
                 y_labels_list = y_labels.tolist()
 
                 # RESAMPLING labels to fs= fs_sub
-                if subsampling:
+                if downsampling:
                     y_labels = sample(y_labels, len(bsps_64[1]))
 
                 y_model = np.full(len(y_labels), n_model)
@@ -319,7 +323,7 @@ def load_data(
 
             else:
 
-                Y.extend(np.full(len(x_sub), 0))
+                Y.extend(np.full(len(x), 0))
             
             #RESHAPE TO TENSOR
 
@@ -332,7 +336,6 @@ def load_data(
 
                 tensor_model = get_tensor_model(bsps_64, tensor_type="1channel", unfold_code=unfold_code)
                 
-                # Interpo was here *
 
                 # Noise 
                 start_time = time.time()
@@ -346,8 +349,6 @@ def load_data(
                                                                                             num_patches = 10,
                                                                                             distribution_noise_mode = 2, 
                                                                                             n_noise_chunks_per_signal = 3)
-                
-                
                     
                 # 5) Filter AFTER adding noise
 
@@ -371,17 +372,17 @@ def load_data(
                 tensor_model= interpolate_2D_array(tensor_model)
 
                 plt.figure(figsize=(20, 7))
-                plt.plot(x_sub[0, 0:2000]) 
+                plt.plot(x[0, 0:2000]) 
                 plt.plot(tensor_model[0:2000, 0, 0])
                 plt.title(model_name)
                 plt.savefig('output/figures/input_output/before_truncate.png')
 
                 # Truncate length to be divisible by the batch size
-                tensor_model, length_list, x_sub = truncate_length_bsps(n_batch, tensor_model, length_list, x_sub)
+                #tensor_model, length_list, x_sub = truncate_length_bsps(n_batch, tensor_model, length_list, x_sub)
                 
                 
                 X.extend(tensor_model)
-                egm_tensor.extend(x_sub.T)
+                egm_tensor.extend(x.T)
 
 
                 #plt.figure(figsize=(20, 7))
@@ -394,7 +395,7 @@ def load_data(
 
             else:
                 X.extend(bsps_64.T)
-                egm_tensor.extend(x_sub.T)
+                egm_tensor.extend(x.T)
 
 
 
@@ -535,7 +536,7 @@ def sinusoids_generator(n, m, fs=100):
     return sinusoids
 
 
-def load_egms(model_name, sinusoid=False):
+def load_egms(model_name, directory, sinusoid=False ):
     """
     Load electrograms and select 2500 time instants and 2048 nodes
 

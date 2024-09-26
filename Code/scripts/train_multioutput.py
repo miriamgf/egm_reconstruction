@@ -215,7 +215,7 @@ cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=models_dir + 'regresso
                                                  save_weights_only=True,
                                                  verbose=1)
 early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=50)
-
+callbacks=[early_stopping_callback, cp_callback]
 # Compilar el modelo
 #Configure GPU for paralellism 
 strategy = tf.distribute.MirroredStrategy()
