@@ -198,7 +198,7 @@ def preprocessing_y(
     val_models,
     n_batch,
     norm=False,
-    random_split=True
+    random_split=True,
 ):
     # Normalize
     if norm:
@@ -240,8 +240,6 @@ def preprocessing_y(
         N = 3
     elif DataConfig.n_nodes_regression == 512:
         N = 4
-
-
 
     y_train_subsample = y_train[:, 0:2048:N]  #:, 0:2048:2] --> 1024
     y_test_subsample = y_test[:, 0:2048:N]

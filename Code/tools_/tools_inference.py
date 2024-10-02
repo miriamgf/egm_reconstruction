@@ -2,7 +2,7 @@ import numpy as np
 import h5py
 from scipy.io import loadmat
 from scipy import signal as sigproc
-from scipy import signal 
+from scipy import signal
 import sys, os
 import scipy
 from scipy.interpolate import interp1d
@@ -14,16 +14,17 @@ from numpy import reshape
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 
-directory='/home/pdi/miriamgf/tesis/Autoencoders/Real_data/'
+directory = "/home/pdi/miriamgf/tesis/Autoencoders/Real_data/"
 
 
-def load_EGM(SR=True, 
-            subsampling=True, 
-            fs = 977,
-            fs_sub=100, 
-            n_nodes_regression=512, 
-            batch_size=400
-            ):
+def load_EGM(
+    SR=True,
+    subsampling=True,
+    fs=977,
+    fs_sub=100,
+    n_nodes_regression=512,
+    batch_size=400,
+):
 
     all_model_names = []
     for subdir, dirs, files in os.walk(directory):
@@ -41,42 +42,45 @@ def load_EGM(SR=True,
         x = x[:, 3000:]
         if subsampling:
             x_sub = signal.resample_poly(x, fs_sub, fs, axis=1)
-            x=x_sub
+            x = x_sub
         x = x.T
-        #Interpolate nodes to get 512
+        # Interpolate nodes to get 512
         x_original = np.linspace(0, 1, 62)  # Eje original con 62 puntos
         x_new = np.linspace(0, 1, n_nodes_regression)  # Eje nuevo con 512 puntos
-        egm_interpolated = np.zeros((x.shape[0], n_nodes_regression))  # Inicializa la matriz interpolada
+        egm_interpolated = np.zeros(
+            (x.shape[0], n_nodes_regression)
+        )  # Inicializa la matriz interpolada
 
         for i in range(x.shape[0]):
-            f = interp1d(x_original, x[i, :], kind='linear')  
+            f = interp1d(x_original, x[i, :], kind="linear")
             egm_interpolated[i, :] = f(x_new)  # Interpolación en el nuevo eje
-        
-        _, _, x= truncate_length_bsps(batch_size, np.zeros(shape=(egm_interpolated.shape[0], 1, 1)), [], egm_interpolated.T)
+
+        _, _, x = truncate_length_bsps(
+            batch_size,
+            np.zeros(shape=(egm_interpolated.shape[0], 1, 1)),
+            [],
+            egm_interpolated.T,
+        )
 
         # x= egm_interpolated
 
-
     return x.T
 
-def load_BSPS(subsampling=True, 
-              fs = 977,
-              fs_sub=100, 
-              batch_size = 200
-            ):
+
+def load_BSPS(subsampling=True, fs=977, fs_sub=100, batch_size=200):
 
     all_model_names = []
     for subdir, dirs, files in os.walk(directory):
         if subdir != directory:
             model_name = subdir.split("/")[-1]
             all_model_names.append(model_name)
-            
+
     # 1) Load EGM
     for model_name in all_model_names:
         bsps = load_ecgs(model_name)
         bsps = bsps[:, 3000:]
         bsps_64_filt = ECG_filtering(bsps, fs)
-    
+
     # RESAMPLING signal to fs= fs_sub
     if subsampling:
         bsps_64 = signal.resample_poly(bsps_64_filt, fs_sub, fs, axis=1)
@@ -85,13 +89,12 @@ def load_BSPS(subsampling=True,
         bsps_64 = bsps_64_filt
 
     tensors_model = get_tensor_model(bsps_64, tensor_type="1channel")
-    tensors_model, _, _= truncate_length_bsps(batch_size, tensors_model, [], tensors_model)
+    tensors_model, _, _ = truncate_length_bsps(
+        batch_size, tensors_model, [], tensors_model
+    )
     tensors_model = interpolate_2D_array(tensors_model)
 
-
-    
     return tensors_model
-
 
 
 def remove_mean(signal):
@@ -109,7 +112,8 @@ def remove_mean(signal):
         signotmean[index, :] = sigproc.detrend(signal[index, :], type="constant")
     return signotmean
 
-def ECG_filtering(signal, fs, order = 2, f_low=3, f_high=30):
+
+def ECG_filtering(signal, fs, order=2, f_low=3, f_high=30):
     """
     Frequency filtering of ECG-EGM.
     SR model: low-pass filtering, 4th-order Butterworth filter.
@@ -127,7 +131,7 @@ def ECG_filtering(signal, fs, order = 2, f_low=3, f_high=30):
 
     # Remove DC component
     sig_temp = remove_mean(signal)
-    #sig_temp = signal
+    # sig_temp = signal
 
     # Bandpass filtering
     b, a = sigproc.butter(
@@ -135,16 +139,17 @@ def ECG_filtering(signal, fs, order = 2, f_low=3, f_high=30):
     )
 
     proc_ECG_EGM = np.zeros(sig_temp.shape)
-    if sig_temp.ndim ==3:
-        for i in range(sig_temp.shape[1]):  
-            for j in range(sig_temp.shape[2]):  
-                #for index in range(sig_temp.shape[0]):
+    if sig_temp.ndim == 3:
+        for i in range(sig_temp.shape[1]):
+            for j in range(sig_temp.shape[2]):
+                # for index in range(sig_temp.shape[0]):
                 proc_ECG_EGM[:, i, j] = sigproc.filtfilt(b, a, sig_temp[:, i, j])
-    else: 
+    else:
         for index in range(0, sig_temp.shape[0]):
             proc_ECG_EGM[index, :] = sigproc.filtfilt(b, a, sig_temp[index, :])
 
     return proc_ECG_EGM
+
 
 def get_tensor_model(bsps_64, tensor_type="3channel", unfold_code=1):
     """
@@ -171,7 +176,8 @@ def get_tensor_model(bsps_64, tensor_type="3channel", unfold_code=1):
 
     return all_tensors
 
-def get_subtensor_54(bsps_54_t,  tensor_type="1channel", unfold_code= 1):
+
+def get_subtensor_54(bsps_54_t, tensor_type="1channel", unfold_code=1):
     """
     Get (6 x 4 x 3) tensor for 1 instance of time.
 
@@ -319,10 +325,9 @@ def get_subtensor_54(bsps_54_t,  tensor_type="1channel", unfold_code= 1):
                     patches["A1"],
                 ],
             ]
-        ])
-    
+        ]
+    )
 
-    
     subtensor = subtensor.reshape(1, 6, 16)
 
     return subtensor
@@ -382,23 +387,20 @@ def load_egms(model_name, sinusoid=False):
     Returns:
         x: Electrograms for the selected model
     """
-    
-    
 
     try:
         EG = np.transpose(
-            np.array(
-                (h5py.File(directory + model_name + "/EGMs.mat", "r")).get("x")
-            )
+            np.array((h5py.File(directory + model_name + "/EGMs.mat", "r")).get("x"))
         )
     except:
         EG = scipy.io.loadmat(directory + model_name + "/EGMs.mat").get("x")
 
     return EG
 
+
 def load_ecgs(model_name, sinusoid=False):
     """
-    Load bsps 
+    Load bsps
 
     Parameters:
         model (str): Model to load
@@ -406,19 +408,16 @@ def load_ecgs(model_name, sinusoid=False):
     Returns:
         x: Electrograms for the selected model
     """
-    
-    
 
     try:
         EG = np.transpose(
-            np.array(
-                (h5py.File(directory + model_name + "/ECGs.mat", "r")).get("y")
-            )
+            np.array((h5py.File(directory + model_name + "/ECGs.mat", "r")).get("y"))
         )
     except:
         EG = scipy.io.loadmat(directory + model_name + "/ECGs.mat").get("y")
 
     return EG
+
 
 def normalize_by_models(data, Y_model):
     """
@@ -467,6 +466,7 @@ def normalize_by_models(data, Y_model):
         )
 
     return data_n
+
 
 def normalize_array(array, high, low, axis_n=0):
     """

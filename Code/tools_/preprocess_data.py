@@ -4,6 +4,7 @@ import os
 from tools_.noise_simulation import *
 import sys, os
 from tools_.tools_1 import *
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from scripts.config import TrainConfig_1
 import os
@@ -48,20 +49,21 @@ from tools_.noise_simulation import NoiseSimulation
 from scripts.config import DataConfig
 from tools_.oclusion import Oclussion
 import time
-#from noise_simulation import *
+
+# from noise_simulation import *
 
 # %% Path Models
 # %% Path Models
 current = os.path.dirname(os.path.realpath(__file__))
 torsos_dir = "../../../Labeled_torsos/"
-#directory = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
+# directory = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
 torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
 
 fs = 500
 
 
 class Preprocess_Dataset:
-    '''
+    """
     The Preprocess_Dataset class preprocess dataset loaded previously. Among the tasks that it performs:
         - Temporal Downsampling
         - Split into train and test
@@ -69,9 +71,19 @@ class Preprocess_Dataset:
         - Normalization
         -Reshape to fit into input layers of the network
 
-    '''
+    """
 
-    def __init__(self, X_1channel, egm_tensor, AF_models, Y_model, dic_vars, Y, all_model_names, transfer_matrices ):
+    def __init__(
+        self,
+        X_1channel,
+        egm_tensor,
+        AF_models,
+        Y_model,
+        dic_vars,
+        Y,
+        all_model_names,
+        transfer_matrices,
+    ):
 
         self.X_1channel = X_1channel
         self.egm_tensor = egm_tensor
@@ -79,87 +91,165 @@ class Preprocess_Dataset:
         self.Y_model = Y_model
         self.dic_vars = dic_vars
         self.Y = Y
-        self.all_model_names= all_model_names
-        self.transfer_matrices= transfer_matrices
+        self.all_model_names = all_model_names
+        self.transfer_matrices = transfer_matrices
 
     def preprocess_main(self, X_1channel, egm_tensor, AF_models, Y_model):
-        '''
+        """
         This function defines the main steps to perform preprocessing over target signals
         1) Apply downsampling and truncate length according to batch size
         2) Normalization between -1 and 1
         3) Clean Nans generated during Noise Generation (zero-Patches)
         4) Train/Test/Val split
-        5) Batch generation 
+        5) Batch generation
 
 
-        '''
+        """
         # Downsampling and truncate
-        X_1channel, egm_tensor, AF_models, Y_model = self.preprocess_compression(X_1channel, egm_tensor, AF_models,Y_model, 
-                                            fs_sub = DataConfig.fs_sub, batch_size= TrainConfig_1.batch_size_1, 
-                                            downsampling = True)
+        X_1channel, egm_tensor, AF_models, Y_model = self.preprocess_compression(
+            X_1channel,
+            egm_tensor,
+            AF_models,
+            Y_model,
+            fs_sub=DataConfig.fs_sub,
+            batch_size=TrainConfig_1.batch_size_1,
+            downsampling=True,
+        )
 
         # Normalize BSPS and EGM
         X_1channel = normalize_by_models(X_1channel, Y_model)
         egm_tensor = normalize_by_models(egm_tensor, Y_model)
-        X_1channel = np.nan_to_num(X_1channel, nan=0.0) #Nans generated during noise addition
+        X_1channel = np.nan_to_num(
+            X_1channel, nan=0.0
+        )  # Nans generated during noise addition
 
         plt.figure()
-        plt.plot(X_1channel[0:200, 0, 0], label='bsps')
-        plt.plot(egm_tensor[0:200, 0], label='egm')
+        plt.plot(X_1channel[0:200, 0, 0], label="bsps")
+        plt.plot(egm_tensor[0:200, 0], label="egm")
         plt.legend()
-        os.makedirs('output/figures/input_output/', exist_ok=True)
-        plt.savefig('output/figures/input_output/norm.png')
+        os.makedirs("output/figures/input_output/", exist_ok=True)
+        plt.savefig("output/figures/input_output/norm.png")
 
-
-        new_items = {'Original_X_1channel': X_1channel, 'Y': self.Y, 'Y_model': Y_model, 'egm_tensor': egm_tensor,
-                    'AF_models': AF_models, 'all_model_names': self.all_model_names, 'transfer_matrices': self.transfer_matrices,
-                    'X_1channel_norm': X_1channel}
+        new_items = {
+            "Original_X_1channel": X_1channel,
+            "Y": self.Y,
+            "Y_model": Y_model,
+            "egm_tensor": egm_tensor,
+            "AF_models": AF_models,
+            "all_model_names": self.all_model_names,
+            "transfer_matrices": self.transfer_matrices,
+            "X_1channel_norm": X_1channel,
+        }
         self.dic_vars.update(new_items)
 
         # Train/Test/Val Split
         random_split = True
-        print('Splitting...')
-        x_train, x_test, x_val, train_models, test_models, val_models, AF_models_train, AF_models_test, AF_models_val, BSPM_train, BSPM_test, BSPM_val = self.train_test_val_split_Autoencoder(
-            X_1channel,AF_models, Y_model, self.all_model_names, random_split=True, train_percentage=0.90, test_percentage=0.2, deterministic = False)
+        print("Splitting...")
+        (
+            x_train,
+            x_test,
+            x_val,
+            train_models,
+            test_models,
+            val_models,
+            AF_models_train,
+            AF_models_test,
+            AF_models_val,
+            BSPM_train,
+            BSPM_test,
+            BSPM_val,
+        ) = self.train_test_val_split_Autoencoder(
+            X_1channel,
+            AF_models,
+            Y_model,
+            self.all_model_names,
+            random_split=True,
+            train_percentage=0.90,
+            test_percentage=0.2,
+            deterministic=False,
+        )
 
-        print('TRAIN SHAPE:', x_train.shape, 'models:', train_models)
-        print('TEST SHAPE:', x_test.shape, 'models:', test_models)
-        print('VAL SHAPE:', x_val.shape, 'models:', val_models)
+        print("TRAIN SHAPE:", x_train.shape, "models:", train_models)
+        print("TEST SHAPE:", x_test.shape, "models:", test_models)
+        print("VAL SHAPE:", x_val.shape, "models:", val_models)
 
-        new_items = {'x_train_raw': x_train, 'x_test_raw': x_test, 'x_val_raw': x_val, 'train_models': train_models,
-                    'BSPM_train': BSPM_train, 'BSPM_test': BSPM_test, 'BSPM_val': BSPM_val,
-                    'test_models': test_models, 'AF_models_train': AF_models_train, 'AF_models_test': AF_models_test,
-                    'AF_models_val': AF_models_val}
+        new_items = {
+            "x_train_raw": x_train,
+            "x_test_raw": x_test,
+            "x_val_raw": x_val,
+            "train_models": train_models,
+            "BSPM_train": BSPM_train,
+            "BSPM_test": BSPM_test,
+            "BSPM_val": BSPM_val,
+            "test_models": test_models,
+            "AF_models_train": AF_models_train,
+            "AF_models_test": AF_models_test,
+            "AF_models_val": AF_models_val,
+        }
         self.dic_vars.update(new_items)
 
+        x_train, x_test, x_val = self.preprocessing_autoencoder_input(
+            x_train, x_test, x_val, TrainConfig_1.batch_size_1
+        )
 
-        x_train, x_test, x_val = self.preprocessing_autoencoder_input(x_train, x_test, x_val, TrainConfig_1.batch_size_1)
-
-        new_items = {'x_train': x_train, 'x_test': x_test, 'x_val': x_val}
+        new_items = {"x_train": x_train, "x_test": x_test, "x_val": x_val}
         self.dic_vars.update(new_items)
 
-        y_train, y_test, y_val = self.preprocessing_y(egm_tensor,Y_model, AF_models, train_models,test_models, val_models, TrainConfig_1.batch_size_1, norm =False)
+        y_train, y_test, y_val = self.preprocessing_y(
+            egm_tensor,
+            Y_model,
+            AF_models,
+            train_models,
+            test_models,
+            val_models,
+            TrainConfig_1.batch_size_1,
+            norm=False,
+        )
 
         plt.figure()
-        plt.plot(x_train[0, :, 0, 0, 0], label = 'bsps')
-        plt.plot(y_train[0, :,0], label = 'egm')
+        plt.plot(x_train[0, :, 0, 0, 0], label="bsps")
+        plt.plot(y_train[0, :, 0], label="egm")
         plt.legend()
-        os.makedirs('output/figures/input_output/', exist_ok=True)
-        plt.savefig('output/figures/input_output/preprocessing.png')
+        os.makedirs("output/figures/input_output/", exist_ok=True)
+        plt.savefig("output/figures/input_output/preprocessing.png")
 
-        return x_train, x_test, x_val, y_train, y_test, y_val, self.dic_vars, BSPM_train, BSPM_test, BSPM_val, AF_models_train, AF_models_test, AF_models_val, train_models, test_models, val_models
+        return (
+            x_train,
+            x_test,
+            x_val,
+            y_train,
+            y_test,
+            y_val,
+            self.dic_vars,
+            BSPM_train,
+            BSPM_test,
+            BSPM_val,
+            AF_models_train,
+            AF_models_test,
+            AF_models_val,
+            train_models,
+            test_models,
+            val_models,
+        )
 
-    
-    def preprocess_compression(self, X_1channel, egm_tensor, AF_models, Y_model,  fs_sub, batch_size, downsampling = True):
-
-        '''
-        This function process loaded data (BSPS, EGMs and metadata) to perform downsampling and 
+    def preprocess_compression(
+        self,
+        X_1channel,
+        egm_tensor,
+        AF_models,
+        Y_model,
+        fs_sub,
+        batch_size,
+        downsampling=True,
+    ):
+        """
+        This function process loaded data (BSPS, EGMs and metadata) to perform downsampling and
         truncate the length of the arrays according to the specified batch size
 
         This operation must be accomplished by AF model to ensure that the truncation alineates when splitting
         into train - test - val
 
-        '''
+        """
 
         AF_models = np.array(AF_models)
 
@@ -175,22 +265,26 @@ class Preprocess_Dataset:
             AF_models_from_model_i = AF_models[np.where(AF_models == AF_model_i)]
             Y_model_from_model_i = Y_model[np.where(AF_models == AF_model_i)]
 
-
-
             if downsampling:
-                #X_1channel_sub = signal.resample_poly(X_1channel, fs_sub, 500, axis=0)
-                #egm_tensor_sub = signal.resample_poly(egm_tensor, fs_sub, 500, axis=0)
-                #AF_models_sub = signal.resample_poly(AF_models, fs_sub, 500, axis=0)
-                #Y_model_sub = signal.resample_poly(Y_model, fs_sub, 500, axis=0)
-                downsampling_factor = int(500 / fs_sub)     
+                # X_1channel_sub = signal.resample_poly(X_1channel, fs_sub, 500, axis=0)
+                # egm_tensor_sub = signal.resample_poly(egm_tensor, fs_sub, 500, axis=0)
+                # AF_models_sub = signal.resample_poly(AF_models, fs_sub, 500, axis=0)
+                # Y_model_sub = signal.resample_poly(Y_model, fs_sub, 500, axis=0)
+                downsampling_factor = int(500 / fs_sub)
                 X_1channel_sub = X_1channel_from_model_i[::downsampling_factor]
-                egm_tensor_sub = egm_tensor_from_model_i[::downsampling_factor]       
+                egm_tensor_sub = egm_tensor_from_model_i[::downsampling_factor]
                 AF_models_sub = AF_models_from_model_i[::downsampling_factor]
                 Y_model_sub = Y_model_from_model_i[::downsampling_factor]
 
-            X_1channel_sub = self.truncate_length_by_batch_size(batch_size, X_1channel_sub)
-            egm_tensor_sub = self.truncate_length_by_batch_size(batch_size, egm_tensor_sub)
-            AF_models_sub = self.truncate_length_by_batch_size(batch_size, AF_models_sub)
+            X_1channel_sub = self.truncate_length_by_batch_size(
+                batch_size, X_1channel_sub
+            )
+            egm_tensor_sub = self.truncate_length_by_batch_size(
+                batch_size, egm_tensor_sub
+            )
+            AF_models_sub = self.truncate_length_by_batch_size(
+                batch_size, AF_models_sub
+            )
             Y_model_sub = self.truncate_length_by_batch_size(batch_size, Y_model_sub)
 
             new_X_1channel.extend(X_1channel_sub)
@@ -198,8 +292,12 @@ class Preprocess_Dataset:
             new_AF_models.extend(AF_models_sub)
             new_Y_model.extend(Y_model_sub)
 
-        return np.array(new_X_1channel), np.array(new_egm_tensor),  list(new_AF_models), np.array(new_Y_model)
-
+        return (
+            np.array(new_X_1channel),
+            np.array(new_egm_tensor),
+            list(new_AF_models),
+            np.array(new_Y_model),
+        )
 
     def truncate_length_by_batch_size(self, batch_size, signal_data):
 
@@ -207,7 +305,7 @@ class Preprocess_Dataset:
             trunc_val = np.floor_divide(signal_data.shape[0], batch_size)
             signal_data = signal_data[0 : batch_size * trunc_val, ...]
         return signal_data
-    
+
     def preprocessing_autoencoder_input(self, x_train, x_test, x_val, n_batch):
         """
         Function to preprocess input to fit autoencoder shapes
@@ -241,7 +339,13 @@ class Preprocess_Dataset:
             )
             x_test_reshaped = reshape(
                 x_test,
-                (int(len(x_test) / n_batch), n_batch, x_test.shape[1], x_test.shape[2], 1),
+                (
+                    int(len(x_test) / n_batch),
+                    n_batch,
+                    x_test.shape[1],
+                    x_test.shape[2],
+                    1,
+                ),
             )
             x_val_reshaped = reshape(
                 x_val,
@@ -257,9 +361,8 @@ class Preprocess_Dataset:
 
         return x_train_reshaped, x_test_reshaped, x_val_reshaped
 
-
     def preprocessing_regression_input(
-        self, 
+        self,
         latent_vector_train,
         latent_vector_test,
         latent_vector_val,
@@ -376,7 +479,11 @@ class Preprocess_Dataset:
 
         y_train = reshape(
             y_train_subsample,
-            (int(len(y_train_subsample) / n_batch), n_batch, y_train_subsample.shape[1]),
+            (
+                int(len(y_train_subsample) / n_batch),
+                n_batch,
+                y_train_subsample.shape[1],
+            ),
         )
         y_test = reshape(
             y_test_subsample,
@@ -389,18 +496,17 @@ class Preprocess_Dataset:
 
         return y_train, y_test, y_val, x_train_ls, x_test_ls, x_val_ls, n_nodes
 
-
     def preprocessing_y(
-        self, 
+        self,
         egm_tensor,
         Y_model,
         AF_models,
         train_models,
         test_models,
-        val_models,     
+        val_models,
         n_batch,
         norm=False,
-        random_split=True
+        random_split=True,
     ):
         # Normalize
         if norm:
@@ -443,8 +549,6 @@ class Preprocess_Dataset:
         elif DataConfig.n_nodes_regression == 512:
             N = 4
 
-
-
         y_train_subsample = y_train[:, 0:2048:N]  #:, 0:2048:2] --> 1024
         y_test_subsample = y_test[:, 0:2048:N]
         y_val_subsample = y_val[:, 0:2048:N]
@@ -453,7 +557,11 @@ class Preprocess_Dataset:
 
         y_train = reshape(
             y_train_subsample,
-            (int(len(y_train_subsample) / n_batch), n_batch, y_train_subsample.shape[1]),
+            (
+                int(len(y_train_subsample) / n_batch),
+                n_batch,
+                y_train_subsample.shape[1],
+            ),
         )
         y_test = reshape(
             y_test_subsample,
@@ -465,8 +573,9 @@ class Preprocess_Dataset:
         )
 
         return y_train, y_test, y_val
-    
-    def train_test_val_split_Autoencoder(self,
+
+    def train_test_val_split_Autoencoder(
+        self,
         X_1channel,
         AF_models,
         BSPM_Models,
@@ -474,7 +583,7 @@ class Preprocess_Dataset:
         random_split,
         train_percentage,
         test_percentage,
-        deterministic = True
+        deterministic=True,
     ):
         """
         This function splits the input tensor into train, tets and validation
@@ -525,34 +634,73 @@ class Preprocess_Dataset:
 
             if deterministic:
                 # Deterministic assignation
-                train_models_deterministic= ['RA_RAA_141230', 'Simulation_01_190502_001_003', 'Simulation_01_190502_001_004', 
-                'Simulation_01_190502_001_006', 'Simulation_01_190619_001_001', 'Simulation_01_190619_001_002', 
-                'Simulation_01_190619_001_003', 'Simulation_01_190619_001_004', 'Simulation_01_190717_001_001', 
-                'Simulation_01_190717_001_002', 'Simulation_01_190717_001_003', 'Simulation_01_190717_001_004', 
-                'Simulation_01_191001_001_001', 'Simulation_01_191001_001_002', 'Simulation_01_191001_001_005', 
-                'Simulation_01_191001_001_007', 'Simulation_01_200212_001_  1', 'Simulation_01_200212_001_  2', 
-                'Simulation_01_200212_001_  4', 'Simulation_01_200212_001_  6', 'Simulation_01_200212_001_  7', 
-                'Simulation_01_200212_001_  9', 'Simulation_01_200316_001_  1', 'Simulation_01_200316_001_  5', 
-                'Simulation_01_200316_001_  7', 'Simulation_01_200428_001_001', 'Simulation_01_200428_001_002', 
-                'Simulation_01_200428_001_003', 'Simulation_01_200428_001_005', 'Simulation_01_200428_001_006', 
-                'Simulation_01_200428_001_007', 'Simulation_01_200428_001_009', 'Simulation_01_201223_001_002', 
-                'Simulation_01_210209_001_003', 'Simulation_01_210210_001_001', 'TwoRotors_181219']
+                train_models_deterministic = [
+                    "RA_RAA_141230",
+                    "Simulation_01_190502_001_003",
+                    "Simulation_01_190502_001_004",
+                    "Simulation_01_190502_001_006",
+                    "Simulation_01_190619_001_001",
+                    "Simulation_01_190619_001_002",
+                    "Simulation_01_190619_001_003",
+                    "Simulation_01_190619_001_004",
+                    "Simulation_01_190717_001_001",
+                    "Simulation_01_190717_001_002",
+                    "Simulation_01_190717_001_003",
+                    "Simulation_01_190717_001_004",
+                    "Simulation_01_191001_001_001",
+                    "Simulation_01_191001_001_002",
+                    "Simulation_01_191001_001_005",
+                    "Simulation_01_191001_001_007",
+                    "Simulation_01_200212_001_  1",
+                    "Simulation_01_200212_001_  2",
+                    "Simulation_01_200212_001_  4",
+                    "Simulation_01_200212_001_  6",
+                    "Simulation_01_200212_001_  7",
+                    "Simulation_01_200212_001_  9",
+                    "Simulation_01_200316_001_  1",
+                    "Simulation_01_200316_001_  5",
+                    "Simulation_01_200316_001_  7",
+                    "Simulation_01_200428_001_001",
+                    "Simulation_01_200428_001_002",
+                    "Simulation_01_200428_001_003",
+                    "Simulation_01_200428_001_005",
+                    "Simulation_01_200428_001_006",
+                    "Simulation_01_200428_001_007",
+                    "Simulation_01_200428_001_009",
+                    "Simulation_01_201223_001_002",
+                    "Simulation_01_210209_001_003",
+                    "Simulation_01_210210_001_001",
+                    "TwoRotors_181219",
+                ]
 
-                val_models_deterministic= ['LA_RIPV_150121', 'RA_RAFW_140807', 'Simulation_01_190502_001_005',
-                'Simulation_01_200212_001_  8', 'Sinusal_150629']
+                val_models_deterministic = [
+                    "LA_RIPV_150121",
+                    "RA_RAFW_140807",
+                    "Simulation_01_190502_001_005",
+                    "Simulation_01_200212_001_  8",
+                    "Sinusal_150629",
+                ]
 
-                test_models_deterministic = ['LA_PLAW_140711_arm', 'LA_RSPV_CAF_150115', 'Simulation_01_200212_001_  5',
-                'Simulation_01_200212_001_ 10', 'Simulation_01_200316_001_  3',
-                'Simulation_01_200316_001_  4', 'Simulation_01_200316_001_  8',
-                'Simulation_01_200428_001_004', 'Simulation_01_200428_001_008',
-                'Simulation_01_200428_001_010', 'Simulation_01_210119_001_001',
-                'Simulation_01_210208_001_002']
+                test_models_deterministic = [
+                    "LA_PLAW_140711_arm",
+                    "LA_RSPV_CAF_150115",
+                    "Simulation_01_200212_001_  5",
+                    "Simulation_01_200212_001_ 10",
+                    "Simulation_01_200316_001_  3",
+                    "Simulation_01_200316_001_  4",
+                    "Simulation_01_200316_001_  8",
+                    "Simulation_01_200428_001_004",
+                    "Simulation_01_200428_001_008",
+                    "Simulation_01_200428_001_010",
+                    "Simulation_01_210119_001_001",
+                    "Simulation_01_210208_001_002",
+                ]
 
-                train_models, test_models, val_models = [],[],[]
+                train_models, test_models, val_models = [], [], []
                 for elemento in train_models_deterministic:
                     if elemento in all_model_names:
                         train_models.append(all_model_names.index(elemento))
-                
+
                 for elemento in test_models_deterministic:
                     if elemento in all_model_names:
                         test_models.append(all_model_names.index(elemento))
@@ -570,7 +718,8 @@ class Preprocess_Dataset:
                     train_models = train_models + indx
                 else:
                     train_models = random.sample(
-                        list(AF_models_unique), int(np.floor(AF_models[-1] * train_percentage))
+                        list(AF_models_unique),
+                        int(np.floor(AF_models[-1] * train_percentage)),
                     )
 
                 aux_models = [x for x in AF_models_unique if x not in train_models]
@@ -578,11 +727,10 @@ class Preprocess_Dataset:
                     list(aux_models), int(np.floor(AF_models[-1] * test_percentage))
                 )
                 val_models = [x for x in aux_models if x not in test_models]
-    
+
             x_train = X_1channel[np.in1d(AF_models, train_models)]
             x_test = X_1channel[np.in1d(AF_models, test_models)]
             x_val = X_1channel[np.in1d(AF_models, val_models)]
-
 
             print("TRAIN MODELS:", train_models)
             print("TEST MODELS:", test_models)
@@ -622,8 +770,9 @@ class Preprocess_Dataset:
             BSPM_test,
             BSPM_val,
         )
-    
-    def preprocess_latent_space(self,
+
+    def preprocess_latent_space(
+        self,
         latent_vector_train,
         latent_vector_test,
         latent_vector_val,
@@ -698,8 +847,9 @@ class Preprocess_Dataset:
 
     def __call__(self, verbose=False, all=False):
         """Calls the Preprocess class."""
-        return self.preprocess_main(self.X_1channel,self.egm_tensor,self.AF_models,self.Y_model,
+        return self.preprocess_main(
+            self.X_1channel,
+            self.egm_tensor,
+            self.AF_models,
+            self.Y_model,
         )
-
-
-    

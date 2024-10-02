@@ -5,6 +5,7 @@ import os
 from tools_.noise_simulation import *
 import sys, os
 from tools_.tools_1 import *
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from scipy.io import loadmat
 import numpy as np
@@ -43,32 +44,49 @@ from tools_.noise_simulation import NoiseSimulation
 from scripts.config import DataConfig
 from tools_.oclusion import Oclussion
 import time
-#from noise_simulation import *
+
+# from noise_simulation import *
 
 # %% Path Models
 # %% Path Models
 current = os.path.dirname(os.path.realpath(__file__))
 torsos_dir = "../../../Labeled_torsos/"
-#directory = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
+# directory = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
 torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
 
 fs = 500
 
 
 class LoadDataset:
-    '''
+    """
     The LoadDataset class loads signals from original format (.mat), performs basic preprocessing in EGMs
-    and BSPs and creates variables that store metadata for tracking during the training and validation process. 
-    Also basic preprocessing applicable and fixed for all data is performed, like EGM filtering or interpolation 
+    and BSPs and creates variables that store metadata for tracking during the training and validation process.
+    Also basic preprocessing applicable and fixed for all data is performed, like EGM filtering or interpolation
 
 
-    
-    '''
-    def __init__(self, data_type, n_classes=2, SR=True, downsampling=True, fs_sub=50,
-                SNR_bsps=True, SNR_em_noise=20, SNR_white_noise=20,
-                norm=False, classification=False, sinusoid=False, n_batch=50,
-                patches_oclussion=None, directory=directory, unfold_code=1, inference=True):
-        
+
+    """
+
+    def __init__(
+        self,
+        data_type,
+        n_classes=2,
+        SR=True,
+        downsampling=True,
+        fs_sub=50,
+        SNR_bsps=True,
+        SNR_em_noise=20,
+        SNR_white_noise=20,
+        norm=False,
+        classification=False,
+        sinusoid=False,
+        n_batch=50,
+        patches_oclussion=None,
+        directory=directory,
+        unfold_code=1,
+        inference=True,
+    ):
+
         self.data_type = data_type
         self.n_classes = n_classes
         self.SR = SR
@@ -86,14 +104,14 @@ class LoadDataset:
         self.unfold_code = unfold_code
         self.inference = inference
 
-
-    def load_data(self,
+    def load_data(
+        self,
         data_type,
         n_classes=2,
         SR=True,
         downsampling=True,
         fs_sub=50,
-        SNR_bsps = True,
+        SNR_bsps=True,
         SNR_em_noise=20,
         SNR_white_noise=20,
         norm=False,
@@ -101,10 +119,10 @@ class LoadDataset:
         sinusoid=False,
         n_batch=50,
         patches_oclussion=None,
-        directory=directory, 
-        unfold_code=1, 
-        inference = True
-        ):
+        directory=directory,
+        unfold_code=1,
+        inference=True,
+    ):
         """
         Returns y values depends of the classification model
 
@@ -167,49 +185,60 @@ class LoadDataset:
 
         AF_model_i = 0
 
-        #SNR_em_noise = 10
-        #SNR_white_noise=20
+        # SNR_em_noise = 10
+        # SNR_white_noise=20
 
-        #hacer una estimación de la longitud del array de BSPMs
+        # hacer una estimación de la longitud del array de BSPMs
         len_target_signal = 2000
-        Noise_Simulation = NoiseSimulation(SNR_em_noise = self.SNR_em_noise,
-                                        SNR_white_noise=self.SNR_white_noise,
-                                        oclusion = None,
-                                        fs=DataConfig.fs_sub) #instance of class
+        Noise_Simulation = NoiseSimulation(
+            SNR_em_noise=self.SNR_em_noise,
+            SNR_white_noise=self.SNR_white_noise,
+            oclusion=None,
+            fs=DataConfig.fs_sub,
+        )  # instance of class
 
-        test_models_deterministic = ['LA_PLAW_140711_arm', 'LA_RSPV_CAF_150115', 'Simulation_01_200212_001_  5',
-                'Simulation_01_200212_001_ 10', 'Simulation_01_200316_001_  3',
-                'Simulation_01_200316_001_  4', 'Simulation_01_200316_001_  8',
-                'Simulation_01_200428_001_004', 'Simulation_01_200428_001_008',
-                'Simulation_01_200428_001_010', 'Simulation_01_210119_001_001',
-                'Simulation_01_210208_001_002']
+        test_models_deterministic = [
+            "LA_PLAW_140711_arm",
+            "LA_RSPV_CAF_150115",
+            "Simulation_01_200212_001_  5",
+            "Simulation_01_200212_001_ 10",
+            "Simulation_01_200316_001_  3",
+            "Simulation_01_200316_001_  4",
+            "Simulation_01_200316_001_  8",
+            "Simulation_01_200428_001_004",
+            "Simulation_01_200428_001_008",
+            "Simulation_01_200428_001_010",
+            "Simulation_01_210119_001_001",
+            "Simulation_01_210208_001_002",
+        ]
         if self.inference:
-            all_model_names=test_models_deterministic
-        
-        noise_database= Noise_Simulation.configure_noise_database(len_target_signal, all_model_names,
-                                                            em = True,
-                                                            ma = False,
-                                                            gn = True,
-                                                            )
+            all_model_names = test_models_deterministic
+
+        noise_database = Noise_Simulation.configure_noise_database(
+            len_target_signal,
+            all_model_names,
+            em=True,
+            ma=False,
+            gn=True,
+        )
 
         for model_name in all_model_names:
 
             if self.inference:
                 if model_name not in model_name:
                     break
-            print('Loading model', model_name, '......')
+            print("Loading model", model_name, "......")
 
             # %% 1)  Compute EGM of the model
             egms = self.load_egms(model_name, self.sinusoid)
 
-            
             # 1.1) Discard models <1500
             # if len(egms[1])<1500:
             # continue
 
             # 1.2)  EGMs filtering.
             x = self.ECG_filtering(egms, 500)
-        
+
             # 1.3 Normalize EGMS
             if self.norm:
 
@@ -221,7 +250,6 @@ class LoadDataset:
                 rng = maxs - mins
 
                 bsps_64_n = high - (((high - low) * (maxs - x)) / rng)
-            
 
             # 2) Compute the Forward problem with each of the transfer matrices
             for matrix in transfer_matrices:
@@ -230,7 +258,7 @@ class LoadDataset:
                 y = self.forward_problem(x, matrix[0])
                 bsps_64 = y[matrix[1].ravel(), :]
                 bsps_64_or = bsps_64
-                bsps_64_filt=bsps_64_or
+                bsps_64_filt = bsps_64_or
 
                 plt.figure(figsize=(20, 7))
                 plt.subplot(2, 1, 1)
@@ -239,18 +267,20 @@ class LoadDataset:
                 plt.plot(y[0, 0:2000])
 
                 plt.title(model_name)
-                os.makedirs('output/figures/Noise_module/', exist_ok=True)
-                plt.savefig('output/figures/input_output/forward_problem.png')
+                os.makedirs("output/figures/Noise_module/", exist_ok=True)
+                plt.savefig("output/figures/input_output/forward_problem.png")
 
                 # RESAMPLING signal to fs= fs_sub
                 if self.downsampling:
-                    bsps_64 = signal.resample_poly(bsps_64_filt, self.fs_sub, 500, axis=1)
+                    bsps_64 = signal.resample_poly(
+                        bsps_64_filt, self.fs_sub, 500, axis=1
+                    )
                     x_sub = signal.resample_poly(x, self.fs_sub, 500, axis=1)
 
                     plt.figure(figsize=(20, 7))
                     plt.plot(x[0, 0:2000])
                     plt.title(model_name)
-                    plt.savefig('output/figures/input_output/subsample.png')
+                    plt.savefig("output/figures/input_output/subsample.png")
 
                 else:
 
@@ -274,74 +304,82 @@ class LoadDataset:
                 else:
 
                     Y.extend(np.full(len(x_sub), 0))
-                
-                #RESHAPE TO TENSOR
+
+                # RESHAPE TO TENSOR
 
                 if self.data_type == "3channelTensor":
 
-                    tensor_model = self.get_tensor_model(bsps_64, tensor_type="3channel")
+                    tensor_model = self.get_tensor_model(
+                        bsps_64, tensor_type="3channel"
+                    )
                     X.extend(tensor_model)
 
                 elif self.data_type == "1channelTensor":
 
-                    tensor_model = self.get_tensor_model(bsps_64, tensor_type="1channel", unfold_code=self.unfold_code)
-                    
-                    # Noise 
+                    tensor_model = self.get_tensor_model(
+                        bsps_64, tensor_type="1channel", unfold_code=self.unfold_code
+                    )
+
+                    # Noise
                     start_time = time.time()
 
                     if self.SNR_bsps != None:
-                        #New noise module
-                        #num_patches must be maximum 16 (for 64 electrodes)
-                        tensor_model_noisy, map_distribution_noise = Noise_Simulation.add_noise(tensor_model,
-                                                                                                AF_model_i,
-                                                                                                noise_database,
-                                                                                                num_patches = 10,
-                                                                                                distribution_noise_mode = 2, 
-                                                                                                n_noise_chunks_per_signal = 3)
-                    
-                    
-                        
+                        # New noise module
+                        # num_patches must be maximum 16 (for 64 electrodes)
+                        tensor_model_noisy, map_distribution_noise = (
+                            Noise_Simulation.add_noise(
+                                tensor_model,
+                                AF_model_i,
+                                noise_database,
+                                num_patches=10,
+                                distribution_noise_mode=2,
+                                n_noise_chunks_per_signal=3,
+                            )
+                        )
+
                     # 5) Filter AFTER adding noise
 
-                    tensor_model_filt = self.ECG_filtering(tensor_model_noisy, order = 3, fs = self.fs_sub, f_low=3, f_high=30 )
-                    tensor_model=tensor_model_filt 
+                    tensor_model_filt = self.ECG_filtering(
+                        tensor_model_noisy, order=3, fs=self.fs_sub, f_low=3, f_high=30
+                    )
+                    tensor_model = tensor_model_filt
 
-                    plt.figure(figsize=(20,5))
-                    plt.plot(tensor_model_noisy[0:1000, 0, 0], label = 'Noisy')
-                    plt.plot(tensor_model[0:1000,   0, 0], label = 'Original')
-                    plt.plot(tensor_model_filt[0:1000,   0, 0], label = 'Cleaned')
+                    plt.figure(figsize=(20, 5))
+                    plt.plot(tensor_model_noisy[0:1000, 0, 0], label="Noisy")
+                    plt.plot(tensor_model[0:1000, 0, 0], label="Original")
+                    plt.plot(tensor_model_filt[0:1000, 0, 0], label="Cleaned")
                     plt.legend()
-                    plt.savefig('output/figures/Noise_module/filtered_vs_original.png')
+                    plt.savefig("output/figures/Noise_module/filtered_vs_original.png")
 
-                    #Turn off electrodes
-                    if self.patches_oclussion != 'PT':
-                        oclussion= Oclussion(tensor_model, patches_oclussion = self.patches_oclussion)
+                    # Turn off electrodes
+                    if self.patches_oclussion != "PT":
+                        oclussion = Oclussion(
+                            tensor_model, patches_oclussion=self.patches_oclussion
+                        )
                         tensor_model = oclussion.turn_off_patches()
 
                     # Interpolate
-                    tensor_model= interpolate_2D_array(tensor_model)
+                    tensor_model = interpolate_2D_array(tensor_model)
 
                     plt.figure(figsize=(20, 7))
-                    plt.plot(x_sub[0, 0:2000]) 
+                    plt.plot(x_sub[0, 0:2000])
                     plt.plot(tensor_model[0:2000, 0, 0])
                     plt.title(model_name)
-                    plt.savefig('output/figures/input_output/before_truncate.png')
+                    plt.savefig("output/figures/input_output/before_truncate.png")
 
                     # Truncate length to be divisible by the batch size
                     # tensor_model, length_list, x_sub = truncate_length_bsps(self.n_batch, tensor_model, length_list, x_sub)
-                    
-                    
+
                     X.extend(tensor_model)
                     egm_tensor.extend(x_sub.T)
 
+                    # plt.figure(figsize=(20, 7))
+                    # plt.plot(x_sub[0, 0:2000])
+                    # plt.plot(tensors_model[0:2000, 0, 0])
+                    # plt.title(model_name)
+                    # plt.savefig(model_name)
 
-                    #plt.figure(figsize=(20, 7))
-                    #plt.plot(x_sub[0, 0:2000]) 
-                    #plt.plot(tensors_model[0:2000, 0, 0])
-                    #plt.title(model_name)
-                    #plt.savefig(model_name)
-
-                    #plt.savefig('output/figures/input_output/saving_truncate.png')
+                    # plt.savefig('output/figures/input_output/saving_truncate.png')
 
                 else:
                     X.extend(bsps_64.T)
@@ -370,7 +408,6 @@ class LoadDataset:
             transfer_matrices,
         )
 
-
     def load_transfer(self, ten_leads=False, bsps_set=False):
         """
         Load the transfer matrix for atria and torso models
@@ -390,15 +427,17 @@ class LoadDataset:
             MTransfer = scipy.io.loadmat(torsos_dir + torso).get("TransferMatrix")
 
             if ten_leads == True:
-                BSP_pos = scipy.io.loadmat(torsos_dir + torso).get("torso")["leads"][0, 0]
+                BSP_pos = scipy.io.loadmat(torsos_dir + torso).get("torso")["leads"][
+                    0, 0
+                ]
             elif bsps_set == True:
                 torso_electrodes = loadmat(self.directory + "torso_electrodes.mat")
                 BSP_pos = torso_electrodes["torso_electrodes"][0]
                 # BSP_pos = get_bsps_192 (torso, False)
             else:
-                BSP_pos = scipy.io.loadmat(torsos_dir + torso).get("torso")["bspmcoord"][
-                    0, 0
-                ]
+                BSP_pos = scipy.io.loadmat(torsos_dir + torso).get("torso")[
+                    "bspmcoord"
+                ][0, 0]
 
             # Transform transfer matrix to account for WCT correction. A matrix is the result of
             # referencing MTransfer to a promediated MTransfer. THe objective is to obtain an ECG
@@ -413,9 +452,9 @@ class LoadDataset:
 
             transfer_matrices.append((A, BSP_pos - 1))
 
-        return transfer_matrices      
-    
-    def load_egms(self, model_name, directory, sinusoid=False ):
+        return transfer_matrices
+
+    def load_egms(self, model_name, directory, sinusoid=False):
         """
         Load electrograms and select 2500 time instants and 2048 nodes
 
@@ -433,11 +472,15 @@ class LoadDataset:
             try:
                 EG = np.transpose(
                     np.array(
-                        (h5py.File(self.directory + model_name + "/EGMs.mat", "r")).get("x")
+                        (h5py.File(self.directory + model_name + "/EGMs.mat", "r")).get(
+                            "x"
+                        )
                     )
                 )
             except:
-                EG = scipy.io.loadmat(self.directory + model_name + "/EGMs.mat").get("x")
+                EG = scipy.io.loadmat(self.directory + model_name + "/EGMs.mat").get(
+                    "x"
+                )
 
         return EG
 
@@ -477,7 +520,6 @@ class LoadDataset:
 
         return np.array(bsps_192)
 
-
     def get_tensor_model(self, bsps_64, tensor_type="3channel", unfold_code=1):
         """
         Get X (tensor) from one model
@@ -495,14 +537,15 @@ class LoadDataset:
             if tensor_type == "3channel":
                 tensor_model = self.get_subtensor_2(bsps_64[:, t], tensor_type)
             else:
-                tensor_model = self.get_subtensor_2(bsps_64[:, t], tensor_type, unfold_code=1)
+                tensor_model = self.get_subtensor_2(
+                    bsps_64[:, t], tensor_type, unfold_code=1
+                )
             if all_tensors.size == 0:
                 all_tensors = tensor_model
             else:
                 all_tensors = np.concatenate((all_tensors, tensor_model), axis=0)
 
         return all_tensors
-
 
     def get_bsps_64(self, bsps_192, seed="Y"):
         """
@@ -597,8 +640,7 @@ class LoadDataset:
 
             return labels
 
-
-    def get_subtensor_2(self, bsps_64_t,  tensor_type="3_channel", unfold_code= 1):
+    def get_subtensor_2(self, bsps_64_t, tensor_type="3_channel", unfold_code=1):
         """
         Get (6 x 4 x 3) tensor for 1 instance of time.
 
@@ -777,27 +819,25 @@ class LoadDataset:
 
             if unfold_code == 2:
 
-                unfold_order = ['L_side', 'front', 'L_side', 'back' ]
+                unfold_order = ["L_side", "front", "L_side", "back"]
                 new_subtensor = np.zeros(subtensor.shape)
 
                 patch_indices = {
-                'front': (slice(0, 6), slice(0, 4)),
-                'R_side': (slice(0, 6), slice(4, 6)),
-                'back': (slice(0, 6), slice(6, 10)),
-                'L_side': (slice(0, 6), slice(10, 12)), 
-            }
+                    "front": (slice(0, 6), slice(0, 4)),
+                    "R_side": (slice(0, 6), slice(4, 6)),
+                    "back": (slice(0, 6), slice(6, 10)),
+                    "L_side": (slice(0, 6), slice(10, 12)),
+                }
                 for segment in unfold_order:
-                    new_subtensor[patch_indices[segment]] = subtensor[patch_indices[segment]]
+                    new_subtensor[patch_indices[segment]] = subtensor[
+                        patch_indices[segment]
+                    ]
 
                 new_subtensor = subtensor
 
             subtensor = subtensor.reshape(1, 6, 16)
-            
 
         return subtensor
-
-
-
 
     def get_patches_name(self, bsps_64):
         """
@@ -842,7 +882,7 @@ class LoadDataset:
 
         return patches
 
-    def ECG_filtering(self, signal, fs, order = 2, f_low=3, f_high=30):
+    def ECG_filtering(self, signal, fs, order=2, f_low=3, f_high=30):
         """
         Frequency filtering of ECG-EGM.
         SR model: low-pass filtering, 4th-order Butterworth filter.
@@ -860,7 +900,7 @@ class LoadDataset:
 
         # Remove DC component
         sig_temp = remove_mean(signal)
-        #sig_temp = signal
+        # sig_temp = signal
 
         # Bandpass filtering
         b, a = sigproc.butter(
@@ -868,42 +908,34 @@ class LoadDataset:
         )
 
         proc_ECG_EGM = np.zeros(sig_temp.shape)
-        if sig_temp.ndim ==3:
-            for i in range(sig_temp.shape[1]):  
-                for j in range(sig_temp.shape[2]):  
-                    #for index in range(sig_temp.shape[0]):
+        if sig_temp.ndim == 3:
+            for i in range(sig_temp.shape[1]):
+                for j in range(sig_temp.shape[2]):
+                    # for index in range(sig_temp.shape[0]):
                     proc_ECG_EGM[:, i, j] = sigproc.filtfilt(b, a, sig_temp[:, i, j])
-        else: 
+        else:
             for index in range(0, sig_temp.shape[0]):
                 proc_ECG_EGM[index, :] = sigproc.filtfilt(b, a, sig_temp[index, :])
 
         return proc_ECG_EGM
 
-    
     def __call__(self, verbose=False, all=False):
-        """Calls the Load class.
-
-   
-        """
+        """Calls the Load class."""
         return self.load_data(
-        data_type=self.data_type, 
-        n_classes=self.n_classes,
-        SR=self.SR,
-        downsampling=self.downsampling,
-        fs_sub=self.fs_sub,
-        SNR_bsps=self.SNR_bsps,
-        SNR_em_noise=self.SNR_em_noise,
-        SNR_white_noise=self.SNR_white_noise,
-        norm=self.norm,
-        classification=self.classification,
-        sinusoid=self.sinusoid,
-        n_batch=self.n_batch,
-        patches_oclussion=self.patches_oclussion,
-        directory=self.directory,
-        unfold_code=self.unfold_code,
-        inference=self.inference,
+            data_type=self.data_type,
+            n_classes=self.n_classes,
+            SR=self.SR,
+            downsampling=self.downsampling,
+            fs_sub=self.fs_sub,
+            SNR_bsps=self.SNR_bsps,
+            SNR_em_noise=self.SNR_em_noise,
+            SNR_white_noise=self.SNR_white_noise,
+            norm=self.norm,
+            classification=self.classification,
+            sinusoid=self.sinusoid,
+            n_batch=self.n_batch,
+            patches_oclussion=self.patches_oclussion,
+            directory=self.directory,
+            unfold_code=self.unfold_code,
+            inference=self.inference,
         )
-
-    
-
-        
