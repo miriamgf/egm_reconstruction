@@ -34,17 +34,21 @@ plt.title('EGM')
 plt.subplot(2, 1, 2)
 plt.plot(bsps[0:1000, 0, 0])
 plt.title('BSPS')
-plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Inference/egm.png')
+os.makedirs('output/figures/Inference/', exist_ok=True)
+plt.savefig('output/figures/Inference/egm.png')
 plt.show()
 
 plt.figure()
 plt.imshow(egm)
-plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Inference/egm_interpolated.png')
+os.makedirs('output/figures/Inference/', exist_ok=True)
+plt.savefig('output/figures/Inference/egm_interpolated.png')
 plt.show()
 
 plt.figure()
 plt.imshow(bsps[0, :, :])
-plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Inference/bsps.png')
+os.makedirs('output/figures/Inference/', exist_ok=True)
+
+plt.savefig('output/figures/Inference/bsps.png')
 plt.show()
 
 # Batch generation
@@ -69,7 +73,7 @@ egm_batches = reshape(
         )
 
 #Load model
-model_path = '/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_CINC/20240827-112359_EXP_0/model_mo.h5'
+model_path = 'output/experiments/experiments_CINC/20240827-112359_EXP_0/model_mo.h5'
 model = load_model(model_path)
 #Inference
 prediction  = model.predict(bsps_batches, batch_size=1) # x_test=[#batches, batch_size, 12, 32, 1]
@@ -85,7 +89,9 @@ for node in range(0, 100):
     plt.plot(prediction[0:500, node], label = 'prediction')
     plt.plot(egm_flat[0:500, node], label ='real')
     plt.legend()
-    plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Validation_real//Prediction'+str(node)+'.png')
+    os.makedirs('output/figures/Inference/', exist_ok=True)
+
+    plt.savefig('output/figures/Validation_real//Prediction'+str(node)+'.png')
 
 plt.figure()
 plt.subplot(1, 2, 1)
@@ -96,7 +102,8 @@ plt.subplot(1, 2, 2)
 plt.imshow(egm_flat[0:500, :], label ='real', cmap = 'grey')
 plt.title('real')
 plt.legend()
-plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Validation_real/Prediction_2d.png')
+os.makedirs('output/figures/Inference/', exist_ok=True)
+plt.savefig('output/figures/Validation_real/Prediction_2d.png')
 
 
 
@@ -105,13 +112,11 @@ mse_test_ae,
 mse_test_regressor,
 mae_test_ae,
 mae_test_regressor) = model.evaluate(bsps_batches, [bsps_batches, egm_batches], batch_size=1)
-
 print('MSE: ', mse_test_regressor)
-
-
 
 corr = corr_pearson_cols(prediction, egm_flat)
 plt.figure()
 plt.boxplot(corr)
-plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Validation_real/corr.png')
+os.makedirs('output/figures/Inference/', exist_ok=True)
+plt.savefig('output/figures/Validation_real/corr.png')
 

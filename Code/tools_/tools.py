@@ -286,6 +286,7 @@ def load_data(
             plt.plot(y[0, 0:2000])
 
             plt.title(model_name)
+            os.makedirs('output/figures/input_output/', exist_ok=True)
             plt.savefig('output/figures/input_output/forward_problem.png')
 
             # RESAMPLING signal to fs= fs_sub
@@ -298,6 +299,7 @@ def load_data(
                 plt.figure(figsize=(20, 7))
                 plt.plot(x[0, 0:2000])
                 plt.title(model_name)
+                os.makedirs('output/figures/input_output/', exist_ok=True)
                 plt.savefig('output/figures/input_output/subsample.png')
                 
 
@@ -360,6 +362,7 @@ def load_data(
                 plt.plot(tensor_model[0:1000,   0, 0], label = 'Original')
                 plt.plot(tensor_model_filt[0:1000,   0, 0], label = 'Cleaned')
                 plt.legend()
+                os.makedirs('output/figures/Noise_module/', exist_ok=True)
                 plt.savefig('output/figures/Noise_module/filtered_vs_original.png')
 
                 #Turn off electrodes
@@ -375,6 +378,7 @@ def load_data(
                 plt.plot(x[0, 0:2000]) 
                 plt.plot(tensor_model[0:2000, 0, 0])
                 plt.title(model_name)
+                os.makedirs('output/figures/input_output/', exist_ok=True)
                 plt.savefig('output/figures/input_output/before_truncate.png')
 
                 # Truncate length to be divisible by the batch size
@@ -389,8 +393,8 @@ def load_data(
                 #plt.plot(x_sub[0, 0:2000]) 
                 #plt.plot(tensors_model[0:2000, 0, 0])
                 #plt.title(model_name)
-                #plt.savefig(model_name)
-
+    
+                #os.makedirs('output/figures/input_output/', exist_ok=True)
                 #plt.savefig('output/figures/input_output/saving_truncate.png')
 
             else:

@@ -173,7 +173,8 @@ class NoiseSimulation:
             plt.plot(noisy_signal_before[:, 0, 4], label='only EM')
             plt.plot(clean_signal[:, 0, 4], label='clean')
             plt.legend()
-            plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/phases_filtering1.png')
+            os.makedirs('output/figures/Noise_module/', exist_ok=True)
+            plt.savefig('output/figures/Noise_module/phases_filtering1.png')
         '''
         return noisy_signal, binary_map
 
@@ -201,7 +202,9 @@ class NoiseSimulation:
                 chunk_i = self.normalize_in_batches(chunk_i, batch_size = 10, high=5, low=-5, axis_n=0)
                 
                 #plt.plot(chunk_i, label = 'after norma')
-                #plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/norm.png')
+                os.makedirs('output/figures/Noise_module/', exist_ok=True)
+
+                #plt.savefig('output/figures/Noise_module/norm.png')
                 #plt.show()
 
             #if onset and chunk addition surpasses the clean signal length, then it tries to add it just after the last chunk
@@ -258,8 +261,8 @@ class NoiseSimulation:
         #plt.legend(loc='upper right')
         #plt.title('Zoom in first chunk inclusion')
         #plt.tight_layout()
-
-        #plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/clean_noisy.png')
+        #os.makedirs('output/figures/Noise_module/', exist_ok=True)
+        #plt.savefig('output/figures/Noise_module/clean_noisy.png')
 
         #plt.show()
 
@@ -408,7 +411,8 @@ class NoiseSimulation:
         plt.xlabel('Frecuencia [Hz]')
         plt.ylabel('Densidad espectral de potencia [V**2/Hz]')
         plt.grid(True)
-        plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/welch_noise.png')
+        os.makedirs('output/figures/Noise_module/', exist_ok=True)
+        plt.savefig('output/figures/Noise_module/welch_noise.png')
 
 
     def normalize_in_batches(self,array, batch_size=200, high=1, low=-1, axis_n=0):

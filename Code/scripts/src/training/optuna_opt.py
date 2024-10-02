@@ -1,6 +1,15 @@
-#import optuna
+# This script was developed Miriam Gutiérrez Fernández
+
+import optuna
 from tensorflow.keras.optimizers import Adam
 from models.multioutput import MultiOutput
+from tools_.load_dataset import LoadDataset
+from tools_.preprocess_data import Preprocess_Dataset
+from tools_.train_model import TrainModel
+from config import ParseHiperparams 
+from optuna.samplers import TPESampler
+
+
 class OptunaOpt:
     """
     The OptunaOpt class performs hyperparameter optimization using Optuna, given a declared search space and a specified sampling algorithm.
@@ -23,7 +32,7 @@ class OptunaOpt:
             Creates and saves visualizations for the Optuna optimization results.
     """
 
-    def __init__(self, search_space, x_train, y_train, x_val, y_val, parameters, callbacks):
+    def __init__(self, search_space, X_1channel, egm_tensor, AF_models, Y_model,dic_vars,Y, all_model_names,transfer_matrices,parameters, models_dir, experiment_dir):
         """
         Initializes an instance of the OptunaOpt class.
 
@@ -36,13 +45,35 @@ class OptunaOpt:
         """
         self.search_space = search_space
         self.parameters = parameters
-        self.x_train = x_train
-        self.y_train = y_train
-        self.x_val = x_val
-        self.y_val = y_val
-        self.callbacks = callbacks
-
+        self.X_1channel = X_1channel
+        self.egm_tensor = egm_tensor
+        self.AF_models = AF_models
+        self.Y_model = Y_model
+        self.dic_vars = dic_vars
+        self.Y = Y
+        self.all_model_names = all_model_names
+        self.transfer_matrices = transfer_matrices
+        self.models_dir = models_dir
+        self.experiment_dir = experiment_dir
+        self.hyperparams_path = ParseHiperparams.get_path()
     
+    def parse_search_space(self, trial):
+
+        search_space = ParseHiperparams.parse_optuna_hyperparams()
+        optuna_params = {}
+        for param_name, param_config in search_space.items():
+            if param_name == 'batch_size':
+                continue
+            elif param_name == 'tpe':
+                param_config = TPESampler()
+            optuna_params[param_name] = trial.suggest_categorical(param_name, param_config)
+
+            # Overwrite in dictionary
+            self.parameters[param_name] = optuna_params[param_name]
+           
+
+
+
 
     def hyperparameter_optimization_optuna(self) -> dict:
         """
@@ -51,6 +82,8 @@ class OptunaOpt:
         Returns:
             dict: Best hyperparameters obtained from the optimization.
         """
+
+    
 
         def objective(trial):
             """
@@ -62,42 +95,20 @@ class OptunaOpt:
             Returns:
                 float: Accuracy score of the model with the suggested hyperparameters.
             """
-            '''
-            # Automatically unpack dictionary into optuna params
-            optuna_params = {}
-            for param_name, param_config in self.search_space.items():
-                if param_name == 'batch_size':
-                    continue
-                elif param_name == 'tpe':
-                    param_config = TPESampler()
-                optuna_params[param_name] = trial.suggest_categorical(param_name, param_config)
-
-                # Overwrite in dictionary
-                self.parameters[param_name] = optuna_params[param_name]
-            '''
-            # Espacio de búsqueda de hiperparámetros
-            learning_rate = trial.suggest_loguniform('learning_rate', 1e-5, 1e-2)
-            #batch_size = trial.suggest_categorical('batch_size', [16, 32, 64, 128])
-            n_epochs = trial.suggest_int('n_epochs', 10, 100)
-
-            #TODO: Modify the load function for batch and downsampling outside
-
-            # Crear el modelo
-            optimizer = Adam(learning_rate=learning_rate)
-            model = MultiOutput().assemble_full_model(input_shape=self.x_train.shape[1:], n_nodes=self.y_train.shape[-1])
-            model.compile(optimizer=optimizer,
-                        loss=['mean_squared_error', 'mean_squared_error'],
-                        loss_weights=[1.0, 5.0],
-                        metrics=['mean_absolute_error'])
             
+            #Preprocess data
+            x_train, x_test, x_val, y_train, y_test, y_val, dic_vars, BSPM_train, BSPM_test, BSPM_val, AF_models_train, AF_models_test, AF_models_val, train_models, test_models, val_models = Preprocess_Dataset(
+                self.X_1channel,
+                self.egm_tensor,
+                self.AF_models,
+                self.Y_model, 
+                self.dic_vars, 
+                self.Y, self.all_model_names, self.transfer_matrices)()
 
-            # Entrenamiento
-            history = model.fit(x=self.x_train, y=[self.x_train, self.y_train], batch_size=batch_size, epochs=n_epochs,
-                                validation_data=(self.x_val, [self.x_val, self.y_val]),
-                                callbacks=self.callbacks, verbose=0)
+            model, history = TrainModel(x_train, x_test, x_val, y_train, y_test, y_val, self.models_dir, self.experiment_dir)()
 
-            # Devuelve la métrica que se quiere optimizar
-            val_loss = history.history['val_loss'][-1]
+            val_loss = history.val_loss
+
             return val_loss
         
         # Optimización
