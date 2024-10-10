@@ -9,7 +9,7 @@ setup(
 
     install_requires=[
         'tensorflow == 2.15.0',  # Will be installed by pip within the Conda environment
-        'numpy',
+        'numpy>=1.23.5,<2.0.0',
         'matplotlib',
         'scikit-learn',
         'optuna',
