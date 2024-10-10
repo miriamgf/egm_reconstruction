@@ -32,6 +32,82 @@ python setup.py install
 ## Additional Information
 - **Be aware:** Some packages may require manual installation. Check for any errors during installation and resolve them as needed.
 
+## Project tree
+
+.
+├── Figures --------------------------------------------------- Save here any figures you generate
+├── README.md 
+├── models ---------------------------------------------------- Folder with AI models backbones
+│   ├── __init__.py
+│   ├── autoencoder_model.py 
+│   ├── autoencoder_model_2D.py
+│   ├── config.py
+│   ├── multioutput.py
+│   ├── reconstruction_model.py
+│   └── reconstruction_model_2D.py
+├── noise_experiment_launcher.sh  ----------------------------- Launcher for automatic experiments
+├── noise_experiment_launcher_tk.sh --------------------------- Launcher for Tikhonov automatic experiments
+├── output ---------------------------------------------------- Save here any figures/ models you generate
+│   └── figures
+│   └── model
+├── scripts --------------------------------------------------- Scripts that run the pipelines
+│   ├── Model3.py
+│   ├── Tikhonov
+│   │   ├── Tikhonov_allmodels.ipynb
+│   │   ├── Tikhonov_interactive.ipynb
+│   │   ├── add_white_noise.py
+│   │   ├── data_load.py
+│   │   ├── filtering.py
+│   │   ├── forward_inverse_problem.py
+│   │   ├── freq_phase_analysis.py
+│   │   ├── main.py ------------------------------------------- This script runs the main pipeline for ZOT
+│   │   ├── metrics.py
+│   │   ├── precompute_matrix.py
+│   │   ├── tools.py
+│   │   └── tools_tikhonov.py
+│   ├── __init__.py
+│   ├── analysis_results.py
+│   ├── config.py ---------------------------------------------- file that configures paths and basic parameters 
+│   ├── data_analysis.py
+│   ├── evaluate_function.py
+│   ├── inference_validation.py
+│   ├── src 
+│   │   └── training
+│   │       └── optuna_opt.py
+│   ├── train.py
+│   ├── train_multioutput.py ----------------------------------- This file contains main pipeline to launch Training 
+│   ├── train_multioutput_optuna.py ---------------------------- Work in progress
+│   ├── visualization
+│   │   ├── __init__.py
+│   │   ├── plot_by_models.ipynb
+│   │   ├── vis_functions.py
+│   │   ├── visualization.py
+│   │   └── visualize_EGMS.ipynb
+│   ├── visualize_EGMS.ipynb
+├── setup.py
+├── tools ------------------------------------------------------ tools called during pipeline
+│   ├── __init__.py
+│   ├── add_white_noise.py
+│   ├── df_mapping.py
+│   ├── freq_phase_analysis.py
+│   ├── generators.py
+│   ├── load_dataset.py
+│   ├── noise_models
+│   │   ├── bw.dat
+│   │   ├── em.dat
+│   │   ├── em.hea
+│   │   ├── ma.dat
+│   ├── noise_simulation.py
+│   ├── oclusion.py
+│   ├── plots.py
+│   ├── preprocess_data.py
+│   ├── preprocessing_compression.py
+│   ├── preprocessing_network.py
+│   ├── tools.py
+│   ├── tools_1.py
+│   ├── tools_inference.py
+│   └── train_model.py
+
 
 
 
