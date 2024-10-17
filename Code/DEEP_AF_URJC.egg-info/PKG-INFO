@@ -1,0 +1,18 @@
+Metadata-Version: 2.1
+Name: DEEP_AF_URJC
+Version: 0.1
+Home-page: https://github.com/miriamgf/egm_reconstruction
+Author: Miriam Gutiérrez
+Requires-Python: >=3.10.13
+Requires-Dist: tensorflow==2.15.0
+Requires-Dist: numpy<2.0.0,>=1.23.5
+Requires-Dist: matplotlib
+Requires-Dist: scikit-learn
+Requires-Dist: optuna
+Requires-Dist: mlflow
+Requires-Dist: scipy
+Requires-Dist: pandas
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Requires-Dist: pickle; extra == "dev"
