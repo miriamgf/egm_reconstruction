@@ -1,7 +1,7 @@
 import sys
 
 sys.path.append("../Code")
-from tools_tikhonov import  load_data, load_egms_df, normalize_array
+from tools_tikhonov import load_data, load_egms_df, normalize_array
 import forward_inverse_problem as fip
 import filtering
 from sklearn.metrics import mean_squared_error
@@ -76,11 +76,15 @@ all_model_names = sorted(all_model_names)
 
 
 # parse args
-print('parsing')
+print("parsing")
 parser = argparse.ArgumentParser(description="Noise params")
-parser.add_argument('--SNR_em_noise', type=int, help='EM noise SNR', required=True)
-parser.add_argument('--SNR_white_noise', type=int, help='white noise SNR', required=True)
-parser.add_argument('--experiment_number', type=int,  help='number of experiment', required=True)
+parser.add_argument("--SNR_em_noise", type=int, help="EM noise SNR", required=True)
+parser.add_argument(
+    "--SNR_white_noise", type=int, help="white noise SNR", required=True
+)
+parser.add_argument(
+    "--experiment_number", type=int, help="number of experiment", required=True
+)
 
 
 args = parser.parse_args()
@@ -90,22 +94,22 @@ SNR_em_noise = args.SNR_em_noise
 SNR_white_noise = args.SNR_white_noise
 experiment_number = args.experiment_number
 
-#Run script IDE
+# Run script IDE
 
-'''
+"""
 SNR_em_noise=20
 SNR_white_noise=20
 patches_oclussion='PT'
 experiment_number=1
 unfold_code=1
-'''
+"""
 
-experiment_name='_EXP_' + str(experiment_number)
-experiment_dir='output/experiments/experiments_CINC/'+ experiment_name+'/'
+experiment_name = "_EXP_" + str(experiment_number)
+experiment_dir = "output/experiments/experiments_CINC/" + experiment_name + "/"
 
 if not os.path.exists(experiment_dir):
     os.makedirs(experiment_dir)
-    print("Directory for experiment", experiment_dir, 'created')
+    print("Directory for experiment", experiment_dir, "created")
 
 n_classes = 3  # 1: Rotor/no rotor ; 2: RA/LA/No rotor (2 classes) ; 3: 7 regions (3 classes) + no rotor (8 classes)
 
@@ -119,7 +123,7 @@ n_classes = 3  # 1: Rotor/no rotor ; 2: RA/LA/No rotor (2 classes) ; 3: 7 region
     AF_models,
     all_model_names,
     transfer_matrices,
-    AF_models_names
+    AF_models_names,
 ) = load_data(
     data_type="Flat",
     n_classes=n_classes,
@@ -128,9 +132,7 @@ n_classes = 3  # 1: Rotor/no rotor ; 2: RA/LA/No rotor (2 classes) ; 3: 7 region
     norm=False,
     SR=True,
     SNR=20,
-    data_dir =directory 
-
-
+    data_dir=directory,
 )
 
 
@@ -153,41 +155,45 @@ df = load_egms_df(directory, fs_sub=fs)
 
 for model in range(len(all_model_names)):
 
-    #if model ==2:
-        #continue
-    
-    print('Computing model ', model)
-    model_name= all_model_names[model]
+    # if model ==2:
+    # continue
+
+    print("Computing model ", model)
+    model_name = all_model_names[model]
     pos_model = np.where(np.array(AF_models_names) == model_name)
     pos_unique = np.unique(Y_model[pos_model])[0]  # Select only the first torso
 
     y = np.array(X_1channel[np.where(Y_model == pos_unique)])
-    #y = y[:, 0:]
-    af_signal_values = df.loc[df['id'] == model_name, 'AF_signal']
+    # y = y[:, 0:]
+    af_signal_values = df.loc[df["id"] == model_name, "AF_signal"]
     af_signal_list = af_signal_values.tolist()  # Para obtener una lista
     af_signal_array = np.array(af_signal_list)
-    x=af_signal_array[0]
+    x = af_signal_array[0]
     y = np.vstack(y).T
 
-    plt.figure(figsize = (20, 7))
+    plt.figure(figsize=(20, 7))
     plt.plot(y[0, :])
     plt.plot(x[0, :])
 
-    plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Tikhonov_rec/y.png')
+    plt.savefig(
+        "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Tikhonov_rec/y.png"
+    )
 
-    #Normalize
-    x= normalize_array(x, axis_n=1)
-    y= normalize_array(y, axis_n=1)
+    # Normalize
+    x = normalize_array(x, axis_n=1)
+    y = normalize_array(y, axis_n=1)
 
-    plt.figure(figsize = (20, 7))
+    plt.figure(figsize=(20, 7))
     plt.subplot(2, 1, 1)
     plt.plot(y[0, 0:2000])
     plt.subplot(2, 1, 2)
-    plt.plot(x[0,0:2000])
-    plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Tikhonov_rec/y_vs_x'+str(model_name)+'.png')
-
-
-
+    plt.plot(x[0, 0:2000])
+    plt.savefig(
+        "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Tikhonov_rec/y_vs_x"
+        + str(model_name)
+        + ".png"
+    )
+    
     A = np.array(transfer_matrices[0][0])  # Only one torso
     AA, L, LL = pre_m.precompute_matrix(A, atrial_model, order)
     # Classical Tikhonov-based inverse problem approach.
@@ -196,7 +202,7 @@ for model in range(len(all_model_names)):
     x_hat, lambda_opt, magnitude_term, error_term, maxcurve_index = (
         fip.classical_tikhonov_noiter_global(A, AA, L, LL, y)
     )
-    #DF_tikh, sig_k_tikh, phase_tikh = freq_pha.kuklik_DF_phase(x_hat, 500)
+    # DF_tikh, sig_k_tikh, phase_tikh = freq_pha.kuklik_DF_phase(x_hat, 500)
 
     # Classical Tikhonov-based inverse problem metrics
     # RDMSt_tikh, mRDMSt_tikh, stdRDMSt_tikh = metrics.RDMS_calc(x,x_hat)
@@ -204,14 +210,18 @@ for model in range(len(all_model_names)):
     x_hat = x_hat.T
 
     x_hat = np.array(x_hat)
-    plt.figure(figsize = (20, 7))
+    plt.figure(figsize=(20, 7))
     plt.plot(x_hat[:, 0])
-    plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Tikhonov_rec/x_hat.png')
+    plt.savefig(
+        "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Tikhonov_rec/x_hat.png"
+    )
     x_array = np.array(x).T
-    x_hat =  normalize_array(x_hat, axis_n=0)
-    plt.figure(figsize = (20, 7))
+    x_hat = normalize_array(x_hat, axis_n=0)
+    plt.figure(figsize=(20, 7))
     plt.plot(x_hat[:, 0])
-    plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Tikhonov_rec/x_hat_norm.png')
+    plt.savefig(
+        "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Tikhonov_rec/x_hat_norm.png"
+    )
 
     reconstruction_list.append(x_hat)
     x_real_list.append(x_array)
@@ -223,25 +233,27 @@ for model in range(len(all_model_names)):
     corr_list_mean.append(corr_mean)
     corr_list_std.append(corr_std)
 
-    plt.figure(figsize=(20,7))
-    plt.plot(x_hat[0:1000,0], label="rec")
-    plt.plot(x_array[0:1000,0], label="real")
+    plt.figure(figsize=(20, 7))
+    plt.plot(x_hat[0:1000, 0], label="rec")
+    plt.plot(x_array[0:1000, 0], label="real")
     plt.legend()
     plt.title(model_name)
-    plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Tikhonov_rec/x_hat_final.png')
+    plt.savefig(
+        "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Tikhonov_rec/x_hat_final.png"
+    )
 
-    #plt.show()
+    # plt.show()
 
     model_name = all_model_names[model]
     key = f"model{model_name}"
 
     new_dic[key] = {
-        "reconstruction": x_hat.tolist(),  
-        "label": x_array.tolist(),  
+        "reconstruction": x_hat.tolist(),
+        "label": x_array.tolist(),
     }
 
     rmse_list_node = []
-    #except:
+    # except:
     for node in range(0, x_hat.shape[1]):
 
         # RMSE
@@ -258,19 +270,19 @@ rmse_mean = np.mean(rmse_array, axis=1)
 rmse_std = np.std(rmse_array, axis=1)
 
 
-#print(new_dic)
-savemat(experiment_dir + "tikhonov_matlab.mat", new_dic )
+# print(new_dic)
+savemat(experiment_dir + "tikhonov_matlab.mat", new_dic)
 corr_dic = {
     "Correlation array": corr_list,
     "corr_list_mean": corr_list_mean,
     "corr_list_std": corr_list_std,
-    "RMSE": rmse_mean
+    "RMSE": rmse_mean,
 }
 print("mean", corr_list_mean)
 print("std", corr_list_std)
-print('MSE mean', np.mean(rmse_mean))
+print("MSE mean", np.mean(rmse_mean))
 
-file_name=experiment_dir + "correlation.txt"
+file_name = experiment_dir + "correlation.txt"
 with open(file_name, "w") as f:
     for key, value in corr_dic.items():
         f.write(f"{key}: {value}\n")

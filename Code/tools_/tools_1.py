@@ -5,7 +5,7 @@
 # @author: Miguel Ángel
 # """
 
-# This script contains general tools used transversally through all pipeline 
+# This script contains general tools used transversally through all pipeline
 
 
 import sys, os
@@ -49,18 +49,20 @@ from tools_.noise_simulation import NoiseSimulation
 from scripts.config import DataConfig
 from tools_.oclusion import Oclussion
 import time
-#from noise_simulation import *
+
+# from noise_simulation import *
 
 # %% Path Models
 # %% Path Models
 current = os.path.dirname(os.path.realpath(__file__))
 torsos_dir = "../../../Labeled_torsos/"
-#directory = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
+# directory = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
 torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
 
 fs = 500
 
 # %%
+
 
 # %% Add noise to signals
 def add_noise(X, SNR=20, fs=50):
@@ -73,6 +75,7 @@ def add_noise(X, SNR=20, fs=50):
     # X_noisy_normalized = (X_noisy - mm[np.newaxis,:]) / ss[np.newaxis,:]
     # X_noisy_normalized=  X_noisy
     return X_noisy
+
 
 def truncate_length_bsps(n_batch, tensors_model, length_list, x_sub):
     batch_size = n_batch
@@ -88,17 +91,17 @@ def truncate_length_bsps(n_batch, tensors_model, length_list, x_sub):
 
 def interpolate_2D_array(tensors_model):
     reshape_tensor = np.reshape(
-    tensors_model,
-    (
-        len(tensors_model),
-        tensors_model.shape[1],
-        tensors_model.shape[2],
-        1,
-    ),
+        tensors_model,
+        (
+            len(tensors_model),
+            tensors_model.shape[1],
+            tensors_model.shape[2],
+            1,
+        ),
     )
-    tensors_model = tf.keras.layers.UpSampling2D(
-        size=(2, 2), interpolation="bilinear"
-    )(reshape_tensor)
+    tensors_model = tf.keras.layers.UpSampling2D(size=(2, 2), interpolation="bilinear")(
+        reshape_tensor
+    )
     tensors_model = np.reshape(
         tensors_model,
         (
@@ -122,56 +125,56 @@ def plot_load_data(egms, x, bsps_64_noise, bsps_64_filt, bsps_64_or, n_model, bs
         print("Ploting...")
         y_50 = np.linspace(0, 4, 200, endpoint=False)
         y_500 = np.linspace(0, 4, 2000, endpoint=False)
-        #plt.figure(layout="tight")
-        #plt.subplot(4, 1, 1)
-        #plt.plot(y_500, egms[0, 0:2000], label="original")
-        #plt.plot(y_500, x[0, 0:2000], label="filtered")
-        #plt.xlabel("Seconds")
-        #plt.legend()
-        #plt.title("Original vs filtered EGM")
-        #plt.subplot(4, 1, 2)
-        #plt.plot(
-            #y_500,
-            #bsps_64_noise[0, 0:2000],
-            #alpha=0.75,
-            #label="2. BSPM noise added (20 db)",
-        #)
-        #plt.plot(y_500, bsps_64_filt[0, 0:2000], label="3. BSPM filtered")
-        #plt.plot(y_50, bsps_64[0, 0:200], label="4. BSPM subsampled to 50 Hz")
-        #plt.plot(y_500, bsps_64_or[0, 0:2000], alpha=0.75, label="1. BSPM original")
+        # plt.figure(layout="tight")
+        # plt.subplot(4, 1, 1)
+        # plt.plot(y_500, egms[0, 0:2000], label="original")
+        # plt.plot(y_500, x[0, 0:2000], label="filtered")
+        # plt.xlabel("Seconds")
+        # plt.legend()
+        # plt.title("Original vs filtered EGM")
+        # plt.subplot(4, 1, 2)
+        # plt.plot(
+        # y_500,
+        # bsps_64_noise[0, 0:2000],
+        # alpha=0.75,
+        # label="2. BSPM noise added (20 db)",
+        # )
+        # plt.plot(y_500, bsps_64_filt[0, 0:2000], label="3. BSPM filtered")
+        # plt.plot(y_50, bsps_64[0, 0:200], label="4. BSPM subsampled to 50 Hz")
+        # plt.plot(y_500, bsps_64_or[0, 0:2000], alpha=0.75, label="1. BSPM original")
 
-        #plt.title("BSPM in node 0")
-        #plt.xlabel("Seconds")
-        #plt.legend()
-        #plt.subplot(4, 1, 3)
-        #plt.plot(
+        # plt.title("BSPM in node 0")
+        # plt.xlabel("Seconds")
+        # plt.legend()
+        # plt.subplot(4, 1, 3)
+        # plt.plot(
         #    y_500,
         #    bsps_64_noise[20, 0:2000],
         #    alpha=0.75,
         #    label="2. BSPM noise added (20 db)",
-        #)
+        # )
         ##plt.plot(y_500, bsps_64_filt[20, 0:2000], label="3. BSPM filtered")
-        #plt.plot(y_50, bsps_64[20, 0:200], label="4. BSPM subsampled to 50 Hz")
-        #plt.plot(y_500, bsps_64_or[20, 0:2000], alpha=0.75, label="1. BSPM original")
+        # plt.plot(y_50, bsps_64[20, 0:200], label="4. BSPM subsampled to 50 Hz")
+        # plt.plot(y_500, bsps_64_or[20, 0:2000], alpha=0.75, label="1. BSPM original")
 
-        #plt.title("BSPM in node 20")
-        #plt.xlabel("Seconds")
-        #plt.legend()
-        #plt.subplot(4, 1, 4)
-        #plt.plot(
-            #y_500,
-            #bsps_64_noise[50, 0:2000],
-            #alpha=0.75,
-            #label="2. BSPM noise added (20 db)",
-        #)
-        #plt.plot(y_500, bsps_64_filt[50, 0:2000], label="3. BSPM filtered")
-        #plt.plot(y_50, bsps_64[50, 0:200], label="4. BSPM subsampled to 50 Hz")
-        #plt.plot(y_500, bsps_64_or[50, 0:2000], alpha=0.75, label="1. BSPM original")
+        # plt.title("BSPM in node 20")
+        # plt.xlabel("Seconds")
+        # plt.legend()
+        # plt.subplot(4, 1, 4)
+        # plt.plot(
+        # y_500,
+        # bsps_64_noise[50, 0:2000],
+        # alpha=0.75,
+        # label="2. BSPM noise added (20 db)",
+        # )
+        # plt.plot(y_500, bsps_64_filt[50, 0:2000], label="3. BSPM filtered")
+        # plt.plot(y_50, bsps_64[50, 0:200], label="4. BSPM subsampled to 50 Hz")
+        # plt.plot(y_500, bsps_64_or[50, 0:2000], alpha=0.75, label="1. BSPM original")
 
-        #plt.title("BSPM in node 50")
-        #plt.xlabel("Seconds")
-        #plt.legend()
-        #plt.show()
+        # plt.title("BSPM in node 50")
+        # plt.xlabel("Seconds")
+        # plt.legend()
+        # plt.show()
         print("close...")
 
 
@@ -185,6 +188,7 @@ def sinusoids_generator(n, m, fs=100):
         2 * np.pi * np.outer(t, freq) + phases
     )  # y = A*sin (2pi * f0 *t + phase)
     return sinusoids
+
 
 def remove_mean(signal):
     """
@@ -201,6 +205,7 @@ def remove_mean(signal):
         signotmean[index, :] = sigproc.detrend(signal[index, :], type="constant")
     return signotmean
 
+
 def replace_null_labels(labels):
     closest_i = labels[
         (labels != 0).argmax(axis=0)
@@ -211,6 +216,7 @@ def replace_null_labels(labels):
         else:
             labels[index] = closest_i
     return labels
+
 
 def plot_confusion_matrix(
     cm, classes, normalize=False, title="Confusion matrix", cmap=plt.cm.Blues
@@ -266,6 +272,7 @@ def normalize_array(array, high, low, axis_n=0):
     # if axis_n==1:
     # norm_array=norm_array.T
     return norm_array
+
 
 def normalize_by_models(data, Y_model):
     """
@@ -636,6 +643,7 @@ def interpolate_fun(array, n_models, final_nodes, sig=False):
 
     return array_interpol
 
+
 def reshape_tensor(tensor, n_dim_input, n_dim_output):
     """
     Reshapes the tensors used during pipeline, considering that the first two dimensions are (#n batches, batch size).
@@ -744,11 +752,12 @@ def array_to_dic_by_models(dic, model_list, AF_models, all_model_names):
 
     return new_dic
 
+
 def data_generator(data, batch_size=1):
     num_batches = data.shape[0]
     while True:
         for i in range(num_batches):
-            yield data[i:i + batch_size]
+            yield data[i : i + batch_size]
 
 
 def get_run_logdir():

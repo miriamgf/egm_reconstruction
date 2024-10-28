@@ -52,7 +52,9 @@ torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
 class NoiseSimulation:
 
     def __init__(
+            
         self,
+        params,
         SNR_em_noise=20,
         SNR_white_noise=20,
         oclusion=None,
@@ -66,6 +68,7 @@ class NoiseSimulation:
         self.SNR_em_noise = SNR_em_noise
         self.SNR_white_noise = SNR_white_noise
         self.random_order_chunks = True
+        self.params=params
 
     def configure_noise_database(
         self, len_target_signal, all_model_names, em=True, ma=False, gn=True
@@ -159,9 +162,9 @@ class NoiseSimulation:
             noisy_signal = clean_signal.copy()  # np.zeros(clean_signal.shape)
 
             # leads = clean_signal[:, indices[:, 0], indices[:, 1]]
-            if DataConfig.fs_sub == 100:
+            if self.params['fs_sub'] == 100:
                 num_chunks_per_clean_signal = 3
-            elif DataConfig.fs_sub == 200:
+            elif self.params['fs_sub'] == 200:
                 num_chunks_per_clean_signal = 3
 
             if (
@@ -186,7 +189,7 @@ class NoiseSimulation:
                         lead_i,
                         em_noise,
                         self.SNR_em_noise,
-                        num_chunks_per_clean_signal=num_chunks_per_clean_signal,
+                        num_chunks_per_clean_signal=n_noise_chunks_per_signal,
                         normalize_noise=False,
                     )
                     noisy_signal[:, column_i, row_i] = (
@@ -449,12 +452,15 @@ class NoiseSimulation:
         self.compute_periodogram_of_noise(noise_original)
 
         # resample to target signal fs
-        if self.fs > 360:
-            raise ValueError(
-                "Error: cannot add EM noise from MIT DB Database. Fs cannot match."
-            )
+        #if self.fs_sub > 360:
+            #raise ValueError(
+                #"Error: cannot add EM noise from MIT DB Database. Fs cannot match."
+            #)
+        # resample to extend the original noise fs = 360 to 500 Hz
+        #TODO: Revisar, ahora mismo se interpolar para aumentar la fs, pero ver si reubicar este módulo a preprocessing
 
-        noise = signal.resample_poly(noise, self.fs, 360)
+        noise = signal.resample_poly(noise, 500, 360)
+        noise = signal.resample_poly(noise, self.fs, 500)
 
         if noise_normalization:
             noise = self.normalize_in_batches(

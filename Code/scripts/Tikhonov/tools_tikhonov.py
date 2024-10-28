@@ -49,7 +49,7 @@ def add_noise(X, SNR=20, fs=50):
     return X_noisy
 
 
-def ECG_filtering(signal, fs, order = 1, f_low=3, f_high=30):
+def ECG_filtering(signal, fs, order=1, f_low=3, f_high=30):
     """
     Frequency filtering of ECG-EGM.
     SR model: low-pass filtering, 4th-order Butterworth filter.
@@ -66,7 +66,7 @@ def ECG_filtering(signal, fs, order = 1, f_low=3, f_high=30):
     """
 
     # Remove DC component
-    #sig_temp = remove_mean(signal)
+    # sig_temp = remove_mean(signal)
     sig_temp = signal
 
     # Bandpass filtering
@@ -75,12 +75,12 @@ def ECG_filtering(signal, fs, order = 1, f_low=3, f_high=30):
     )
 
     proc_ECG_EGM = np.zeros(sig_temp.shape)
-    if sig_temp.ndim ==3:
-        for i in range(sig_temp.shape[1]):  
-            for j in range(sig_temp.shape[2]):  
-                #for index in range(sig_temp.shape[0]):
+    if sig_temp.ndim == 3:
+        for i in range(sig_temp.shape[1]):
+            for j in range(sig_temp.shape[2]):
+                # for index in range(sig_temp.shape[0]):
                 proc_ECG_EGM[:, i, j] = sigproc.filtfilt(b, a, sig_temp[:, i, j])
-    else: 
+    else:
         for index in range(0, sig_temp.shape[0]):
             proc_ECG_EGM[index, :] = sigproc.filtfilt(b, a, sig_temp[index, :])
 
@@ -124,11 +124,10 @@ def load_data(
     norm=False,
     classification=False,
     transfer_matrices=None,
-    SNR_bsps = True,
+    SNR_bsps=True,
     SNR_em_noise=20,
     SNR_white_noise=20,
-    data_dir = directory
-
+    data_dir=directory,
 ):
     """
     Returns y values depends of the classification model
@@ -170,30 +169,42 @@ def load_data(
     # Load corrected transfer matrices
     transfer_matrices = load_transfer()
     AF_model_i = 1
-    AF_models_names=[]
+    AF_models_names = []
 
-    #Noise config
-    Noise_Simulation = NoiseSimulation(SNR_em_noise = SNR_em_noise,
-                                       SNR_white_noise=SNR_white_noise,
-                                       oclusion = None,
-                                       fs=DataConfig.fs_sub) #instance of class
+    # Noise config
+    Noise_Simulation = NoiseSimulation(
+        SNR_em_noise=SNR_em_noise,
+        SNR_white_noise=SNR_white_noise,
+        oclusion=None,
+        fs=DataConfig.fs_sub,
+    )  # instance of class
 
     len_target_signal = 2000
-    noise_database= Noise_Simulation.configure_noise_database(len_target_signal, all_model_names,
-                                                        em = True,
-                                                        ma = False,
-                                                        gn = True,
-                                                        )
-    test_models_deterministic = ['LA_PLAW_140711_arm', 'LA_RSPV_CAF_150115', 'Simulation_01_200212_001_  5',
-        'Simulation_01_200212_001_ 10', 'Simulation_01_200316_001_  3',
-        'Simulation_01_200316_001_  4', 'Simulation_01_200316_001_  8',
-        'Simulation_01_200428_001_004', 'Simulation_01_200428_001_008',
-        'Simulation_01_200428_001_010', 'Simulation_01_210119_001_001',
-        'Simulation_01_210208_001_002']
+    noise_database = Noise_Simulation.configure_noise_database(
+        len_target_signal,
+        all_model_names,
+        em=True,
+        ma=False,
+        gn=True,
+    )
+    test_models_deterministic = [
+        "LA_PLAW_140711_arm",
+        "LA_RSPV_CAF_150115",
+        "Simulation_01_200212_001_  5",
+        "Simulation_01_200212_001_ 10",
+        "Simulation_01_200316_001_  3",
+        "Simulation_01_200316_001_  4",
+        "Simulation_01_200316_001_  8",
+        "Simulation_01_200428_001_004",
+        "Simulation_01_200428_001_008",
+        "Simulation_01_200428_001_010",
+        "Simulation_01_210119_001_001",
+        "Simulation_01_210208_001_002",
+    ]
 
-    all_model_names=test_models_deterministic
-    
-    print('Loading data...')
+    all_model_names = test_models_deterministic
+
+    print("Loading data...")
     for model_name in all_model_names:
 
         # %% 1)  Compute EGM of the model
@@ -201,11 +212,11 @@ def load_data(
 
         # 1.1) Discard models <1500
         if len(egms[1]) < 1500:
-            #continue
+            # continue
             print("less than 1500:", model_name)
 
         # 1.2)  EGMs filtering.
-        #x = ECG_filtering(egms, fs)
+        # x = ECG_filtering(egms, fs)
         x = egms
 
         # 1.3 Normalize models
@@ -228,27 +239,30 @@ def load_data(
             plt.figure(figsize=(20, 7))
             plt.subplot(2, 1, 1)
             plt.plot(x[0, 0:2000])
-            plt.subplot(2,1,2)
+            plt.subplot(2, 1, 2)
             plt.plot(y[0, 0:2000])
-            plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/BSPS_vs_EGM_'+str(model_name)+'.png')
+            plt.savefig(
+                "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/BSPS_vs_EGM_"
+                + str(model_name)
+                + ".png"
+            )
             bsps_64 = y
             # bsps_64 = (y[matrix[1].ravel(),:])
             bsps_64_or = bsps_64
 
             # 3) Add NOISE and Filter
-            #if SNR != None:
-                #bsps_64 = add_noise(np.array(bsps_64), SNR=SNR, fs=fs)
+            # if SNR != None:
+            # bsps_64 = add_noise(np.array(bsps_64), SNR=SNR, fs=fs)
 
             ## 5) Filter AFTER adding noise
-            #if SNR_bsps == None:
+            # if SNR_bsps == None:
 
             # RESAMPLING signal to fs= fs_sub
             if subsampling & fs_sub != 500:
-                bsps_64 = signal.resample_poly(bsps_64,fs_sub,500, axis=1)
+                bsps_64 = signal.resample_poly(bsps_64, fs_sub, 500, axis=1)
                 x_sub = signal.resample_poly(x, fs_sub, 500, axis=1)
 
-
-            #bsps_64 = bsps_64_or #ECG_filtering(bsps_64_noise, fs)
+            # bsps_64 = bsps_64_or #ECG_filtering(bsps_64_noise, fs)
 
             Y.extend(np.full(len(x_sub), 0))
 
@@ -291,39 +305,42 @@ def load_data(
 
                 X.extend(tensor_model)
 
-            elif data_type == "Flat": 
+            elif data_type == "Flat":
 
                 if SNR_bsps != None:
 
+                    # New noise module
+                    # num_patches must be maximum 16 (for 64 electrodes)
+                    tensor_model_noisy, map_distribution_noise = (
+                        Noise_Simulation.add_noise(
+                            bsps_64,
+                            AF_model_i - 1,
+                            noise_database,
+                            num_patches=4,
+                            distribution_noise_mode=2,
+                            Tikhonov_data_loading=True,
+                        )
+                    )
 
-                    #New noise module
-                    #num_patches must be maximum 16 (for 64 electrodes)
-                    tensor_model_noisy, map_distribution_noise = Noise_Simulation.add_noise(bsps_64,
-                                                                                            AF_model_i-1,
-                                                                                            noise_database,
-                                                                                            num_patches = 4,
-                                                                                            distribution_noise_mode = 2, 
-                                                                                            Tikhonov_data_loading = True)
-                    
                     plt.figure()
                     plt.plot(map_distribution_noise[0, :])
-                    plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/1d_map.png')
-                    #plt.show()
-                
-                
-                    
+                    plt.savefig(
+                        "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/1d_map.png"
+                    )
+                    # plt.show()
+
                     # 5) Filter AFTER adding noise
 
-                    tensor_model_filt = ECG_filtering(tensor_model_noisy, order = 1, fs = fs_sub, f_low=3, f_high=30 )
-                    tensor_model=tensor_model_filt.T
+                    tensor_model_filt = ECG_filtering(
+                        tensor_model_noisy, order=1, fs=fs_sub, f_low=3, f_high=30
+                    )
+                    tensor_model = tensor_model_filt.T
                     X.extend(tensor_model)
 
                 else:
 
                     tensor_model = bsps_64.T
                     X.extend(bsps_64.T)
-
-
 
             if not classification:
                 y_model = np.full(len(tensor_model), n_model)
@@ -332,7 +349,7 @@ def load_data(
                 # Count AF Model
                 AF_model_i_array = np.full(len(tensor_model), AF_model_i)
                 AF_models.extend(AF_model_i_array)
-                AF_models_names.extend([model_name]*len(AF_model_i_array))
+                AF_models_names.extend([model_name] * len(AF_model_i_array))
             n_model += 1
 
         AF_model_i += 1
@@ -346,10 +363,8 @@ def load_data(
         AF_models,
         all_model_names,
         transfer_matrices,
-        AF_models_names
-
+        AF_models_names,
     )
-
 
 
 def sample(input, count):
@@ -369,7 +384,6 @@ def load_egms_df(data_dir, fs_sub, subsampling=True):
 
     df = pd.DataFrame(columns=["id", "AF_signal"])
 
-
     for model_name in all_model_names:
 
         # %% 1)  Compute EGM of the model
@@ -381,6 +395,7 @@ def load_egms_df(data_dir, fs_sub, subsampling=True):
         df.loc[len(df)] = [model_name, x]
 
     return df
+
 
 def load_egms(model_name):
     """

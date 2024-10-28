@@ -75,6 +75,7 @@ class Preprocess_Dataset:
 
     def __init__(
         self,
+        params,
         X_1channel,
         egm_tensor,
         AF_models,
@@ -84,7 +85,7 @@ class Preprocess_Dataset:
         all_model_names,
         transfer_matrices,
     ):
-
+        self.params = params
         self.X_1channel = X_1channel
         self.egm_tensor = egm_tensor
         self.AF_models = AF_models
@@ -93,8 +94,9 @@ class Preprocess_Dataset:
         self.Y = Y
         self.all_model_names = all_model_names
         self.transfer_matrices = transfer_matrices
+       
 
-    def preprocess_main(self, X_1channel, egm_tensor, AF_models, Y_model):
+    def preprocess_main(self):
         """
         This function defines the main steps to perform preprocessing over target signals
         1) Apply downsampling and truncate length according to batch size
@@ -105,40 +107,37 @@ class Preprocess_Dataset:
 
 
         """
+        
         # Downsampling and truncate
-        X_1channel, egm_tensor, AF_models, Y_model = self.preprocess_compression(
-            X_1channel,
-            egm_tensor,
-            AF_models,
-            Y_model,
-            fs_sub=DataConfig.fs_sub,
-            batch_size=TrainConfig_1.batch_size_1,
+        self.X_1channel, self.egm_tensor, self.AF_models, self.Y_model = self.preprocess_compression(
+            fs_sub=self.params['fs_sub'],
+            batch_size=self.params['batch_size'],
             downsampling=True,
         )
 
         # Normalize BSPS and EGM
-        X_1channel = normalize_by_models(X_1channel, Y_model)
-        egm_tensor = normalize_by_models(egm_tensor, Y_model)
-        X_1channel = np.nan_to_num(
-            X_1channel, nan=0.0
+        self.X_1channel = normalize_by_models(self.X_1channel, self.Y_model)
+        self.egm_tensor = normalize_by_models(self.egm_tensor, self.Y_model)
+        self.X_1channel = np.nan_to_num(
+            self.X_1channel, nan=0.0
         )  # Nans generated during noise addition
 
         plt.figure()
-        plt.plot(X_1channel[0:200, 0, 0], label="bsps")
-        plt.plot(egm_tensor[0:200, 0], label="egm")
+        plt.plot(self.X_1channel[0:200, 0, 0], label="bsps")
+        plt.plot(self.egm_tensor[0:200, 0], label="egm")
         plt.legend()
         os.makedirs("output/figures/input_output/", exist_ok=True)
         plt.savefig("output/figures/input_output/norm.png")
 
         new_items = {
-            "Original_X_1channel": X_1channel,
+            "Original_X_1channel": self.X_1channel,
             "Y": self.Y,
-            "Y_model": Y_model,
-            "egm_tensor": egm_tensor,
-            "AF_models": AF_models,
+            "Y_model": self.Y_model,
+            "egm_tensor": self.egm_tensor,
+            "AF_models": self.AF_models,
             "all_model_names": self.all_model_names,
             "transfer_matrices": self.transfer_matrices,
-            "X_1channel_norm": X_1channel,
+            "X_1channel_norm": self.X_1channel,
         }
         self.dic_vars.update(new_items)
 
@@ -159,10 +158,7 @@ class Preprocess_Dataset:
             BSPM_test,
             BSPM_val,
         ) = self.train_test_val_split_Autoencoder(
-            X_1channel,
-            AF_models,
-            Y_model,
-            self.all_model_names,
+            BSPM_Models=self.X_1channel,
             random_split=True,
             train_percentage=0.90,
             test_percentage=0.2,
@@ -189,20 +185,17 @@ class Preprocess_Dataset:
         self.dic_vars.update(new_items)
 
         x_train, x_test, x_val = self.preprocessing_autoencoder_input(
-            x_train, x_test, x_val, TrainConfig_1.batch_size_1
+            x_train, x_test, x_val, self.params['batch_size']
         )
 
         new_items = {"x_train": x_train, "x_test": x_test, "x_val": x_val}
         self.dic_vars.update(new_items)
 
         y_train, y_test, y_val = self.preprocessing_y(
-            egm_tensor,
-            Y_model,
-            AF_models,
             train_models,
             test_models,
             val_models,
-            TrainConfig_1.batch_size_1,
+            self.params['batch_size'],
             norm=False,
         )
 
@@ -234,10 +227,6 @@ class Preprocess_Dataset:
 
     def preprocess_compression(
         self,
-        X_1channel,
-        egm_tensor,
-        AF_models,
-        Y_model,
         fs_sub,
         batch_size,
         downsampling=True,
@@ -251,25 +240,25 @@ class Preprocess_Dataset:
 
         """
 
-        AF_models = np.array(AF_models)
+        self.AF_models = np.array(self.AF_models)
 
         new_X_1channel = []
         new_egm_tensor = []
         new_AF_models = []
         new_Y_model = []
 
-        for AF_model_i in np.unique(AF_models):
+        for AF_model_i in np.unique(self.AF_models):
 
-            X_1channel_from_model_i = X_1channel[np.where(AF_models == AF_model_i)]
-            egm_tensor_from_model_i = egm_tensor[np.where(AF_models == AF_model_i)]
-            AF_models_from_model_i = AF_models[np.where(AF_models == AF_model_i)]
-            Y_model_from_model_i = Y_model[np.where(AF_models == AF_model_i)]
+            X_1channel_from_model_i = self.X_1channel[np.where(self.AF_models == AF_model_i)]
+            egm_tensor_from_model_i = self.egm_tensor[np.where(self.AF_models == AF_model_i)]
+            AF_models_from_model_i = self.AF_models[np.where(self.AF_models == AF_model_i)]
+            Y_model_from_model_i = self.Y_model[np.where(self.AF_models == AF_model_i)]
 
             if downsampling:
-                # X_1channel_sub = signal.resample_poly(X_1channel, fs_sub, 500, axis=0)
-                # egm_tensor_sub = signal.resample_poly(egm_tensor, fs_sub, 500, axis=0)
-                # AF_models_sub = signal.resample_poly(AF_models, fs_sub, 500, axis=0)
-                # Y_model_sub = signal.resample_poly(Y_model, fs_sub, 500, axis=0)
+                # X_1channel_sub = signal.resample_poly(self.X_1channel, fs_sub, 500, axis=0)
+                # egm_tensor_sub = signal.resample_poly(self.egm_tensor, fs_sub, 500, axis=0)
+                # AF_models_sub = signal.resample_poly(self.AF_models, fs_sub, 500, axis=0)
+                # Y_model_sub = signal.resample_poly(self.Y_model, fs_sub, 500, axis=0)
                 downsampling_factor = int(500 / fs_sub)
                 X_1channel_sub = X_1channel_from_model_i[::downsampling_factor]
                 egm_tensor_sub = egm_tensor_from_model_i[::downsampling_factor]
@@ -403,8 +392,8 @@ class Preprocess_Dataset:
                 train_models,
                 test_models,
                 val_models,
-                Y_model,
-                egm_tensor,
+                self.Y_model,
+                self.egm_tensor,
                 dimension=5,
                 norm=True,
             )
@@ -417,25 +406,25 @@ class Preprocess_Dataset:
 
         # Split egm_tensor
         if random_split:
-            x_train = latent_space_n[np.in1d(AF_models, train_models)]
-            x_test = latent_space_n[np.in1d(AF_models, test_models)]
-            x_val = latent_space_n[np.in1d(AF_models, val_models)]
+            x_train = latent_space_n[np.in1d(self.AF_models, train_models)]
+            x_test = latent_space_n[np.in1d(self.AF_models, test_models)]
+            x_val = latent_space_n[np.in1d(self.AF_models, val_models)]
         else:
-            x_train = latent_space_n[np.where((Y_model >= 1) & (Y_model <= 200))]
-            x_test = latent_space_n[np.where((Y_model > 180) & (Y_model <= 244))]
-            x_val = latent_space_n[np.where((Y_model > 244) & (Y_model <= 286))]
+            x_train = latent_space_n[np.where((self.Y_model >= 1) & (self.Y_model <= 200))]
+            x_test = latent_space_n[np.where((self.Y_model > 180) & (self.Y_model <= 244))]
+            x_val = latent_space_n[np.where((self.Y_model > 244) & (self.Y_model <= 286))]
 
         # Split EGM (Label)
         if random_split:
-            y_train = egm_tensor_n[np.in1d(AF_models, train_models)]
-            y_test = egm_tensor_n[np.in1d(AF_models, test_models)]
-            y_val = egm_tensor_n[np.in1d(AF_models, val_models)]
+            y_train = egm_tensor_n[np.in1d(self.AF_models, train_models)]
+            y_test = egm_tensor_n[np.in1d(self.AF_models, test_models)]
+            y_val = egm_tensor_n[np.in1d(self.AF_models, val_models)]
 
         else:
 
-            y_train = egm_tensor_n[np.where((Y_model >= 1) & (Y_model <= 200))]
-            y_test = egm_tensor_n[np.where((Y_model > 180) & (Y_model <= 244))]
-            y_val = egm_tensor_n[np.where((Y_model > 244) & (Y_model <= 286))]
+            y_train = egm_tensor_n[np.where((self.Y_model >= 1) & (self.Y_model <= 200))]
+            y_test = egm_tensor_n[np.where((self.Y_model > 180) & (self.Y_model <= 244))]
+            y_val = egm_tensor_n[np.where((self.Y_model > 244) & (self.Y_model <= 286))]
 
         # %% Subsample EGM nodes
 
@@ -498,9 +487,6 @@ class Preprocess_Dataset:
 
     def preprocessing_y(
         self,
-        egm_tensor,
-        Y_model,
-        AF_models,
         train_models,
         test_models,
         val_models,
@@ -511,11 +497,11 @@ class Preprocess_Dataset:
         # Normalize
         if norm:
             egm_tensor_n = []
-            for model in np.unique(Y_model):
+            for model in np.unique(self.Y_model):
 
                 # 2. Normalize egm (output)
-                arr_to_norm_egm = egm_tensor[
-                    np.where((Y_model == model))
+                arr_to_norm_egm = self.egm_tensor[
+                    np.where((self.Y_model == model))
                 ]  # select window of signal belonging to model i
                 egm_tensor_norm = normalize_array(arr_to_norm_egm, 1, -1)
                 egm_tensor_n.extend(egm_tensor_norm)  # Add to new norm array
@@ -524,29 +510,29 @@ class Preprocess_Dataset:
 
         else:
 
-            egm_tensor_n = egm_tensor
+            egm_tensor_n = self.egm_tensor
 
         # Split EGM (Label)
         if random_split:
-            y_train = egm_tensor_n[np.in1d(AF_models, train_models)]
-            y_test = egm_tensor_n[np.in1d(AF_models, test_models)]
-            y_val = egm_tensor_n[np.in1d(AF_models, val_models)]
+            y_train = egm_tensor_n[np.in1d(self.AF_models, train_models)]
+            y_test = egm_tensor_n[np.in1d(self.AF_models, test_models)]
+            y_val = egm_tensor_n[np.in1d(self.AF_models, val_models)]
 
         else:
 
-            y_train = egm_tensor_n[np.where((Y_model >= 1) & (Y_model <= 200))]
-            y_test = egm_tensor_n[np.where((Y_model > 180) & (Y_model <= 244))]
-            y_val = egm_tensor_n[np.where((Y_model > 244) & (Y_model <= 286))]
+            y_train = egm_tensor_n[np.where((self.Y_model >= 1) & (self.Y_model <= 200))]
+            y_test = egm_tensor_n[np.where((self.Y_model > 180) & (self.Y_model <= 244))]
+            y_val = egm_tensor_n[np.where((self.Y_model > 244) & (self.Y_model <= 286))]
 
         # %% Subsample EGM nodes
 
-        if DataConfig.n_nodes_regression == 2048:
+        if self.params['n_nodes_regression'] == 2048:
             N = 1
-        elif DataConfig.n_nodes_regression == 1024:
+        elif self.params['n_nodes_regression'] == 1024:
             N = 2
-        elif DataConfig.n_nodes_regression == 682:
+        elif self.params['n_nodes_regression'] == 682:
             N = 3
-        elif DataConfig.n_nodes_regression == 512:
+        elif self.params['n_nodes_regression'] == 512:
             N = 4
 
         y_train_subsample = y_train[:, 0:2048:N]  #:, 0:2048:2] --> 1024
@@ -576,10 +562,7 @@ class Preprocess_Dataset:
 
     def train_test_val_split_Autoencoder(
         self,
-        X_1channel,
-        AF_models,
         BSPM_Models,
-        all_model_names,
         random_split,
         train_percentage,
         test_percentage,
@@ -622,12 +605,12 @@ class Preprocess_Dataset:
                 "200212",
             }  #
             indx = []
-            for i in range(0, len(all_model_names)):
+            for i in range(0, len(self.all_model_names)):
                 for s in set_models:
-                    if s in all_model_names[i]:
+                    if s in self.all_model_names[i]:
                         indx.append(i)
 
-        AF_models_unique = np.unique(AF_models)
+        AF_models_unique = np.unique(self.AF_models)
 
         # Random
         if random_split:
@@ -698,63 +681,63 @@ class Preprocess_Dataset:
 
                 train_models, test_models, val_models = [], [], []
                 for elemento in train_models_deterministic:
-                    if elemento in all_model_names:
-                        train_models.append(all_model_names.index(elemento))
+                    if elemento in self.all_model_names:
+                        train_models.append(self.all_model_names.index(elemento))
 
                 for elemento in test_models_deterministic:
-                    if elemento in all_model_names:
-                        test_models.append(all_model_names.index(elemento))
+                    if elemento in self.all_model_names:
+                        test_models.append(self.all_model_names.index(elemento))
 
                 for elemento in val_models_deterministic:
-                    if elemento in all_model_names:
-                        val_models.append(all_model_names.index(elemento))
+                    if elemento in self.all_model_names:
+                        val_models.append(self.all_model_names.index(elemento))
             else:
 
                 if caution_split:
                     train_models = random.sample(
                         list(AF_models_unique),
-                        int(np.floor(AF_models[-1] * train_percentage - len(indx))),
+                        int(np.floor(self.AF_models[-1] * train_percentage - len(indx))),
                     )
                     train_models = train_models + indx
                 else:
                     train_models = random.sample(
                         list(AF_models_unique),
-                        int(np.floor(AF_models[-1] * train_percentage)),
+                        int(np.floor(self.AF_models[-1] * train_percentage)),
                     )
 
                 aux_models = [x for x in AF_models_unique if x not in train_models]
                 test_models = random.sample(
-                    list(aux_models), int(np.floor(AF_models[-1] * test_percentage))
+                    list(aux_models), int(np.floor(self.AF_models[-1] * test_percentage))
                 )
                 val_models = [x for x in aux_models if x not in test_models]
 
-            x_train = X_1channel[np.in1d(AF_models, train_models)]
-            x_test = X_1channel[np.in1d(AF_models, test_models)]
-            x_val = X_1channel[np.in1d(AF_models, val_models)]
+            x_train = self.X_1channel[np.in1d(self.AF_models, train_models)]
+            x_test = self.X_1channel[np.in1d(self.AF_models, test_models)]
+            x_val = self.X_1channel[np.in1d(self.AF_models, val_models)]
 
             print("TRAIN MODELS:", train_models)
             print("TEST MODELS:", test_models)
             print("VAL MODELS:", val_models)
 
-            BSPM_train = BSPM_Models[np.in1d(AF_models, train_models)]
-            BSPM_test = BSPM_Models[np.in1d(AF_models, test_models)]
-            BSPM_val = BSPM_Models[np.in1d(AF_models, val_models)]
+            BSPM_train = BSPM_Models[np.in1d(self.AF_models, train_models)]
+            BSPM_test = BSPM_Models[np.in1d(self.AF_models, test_models)]
+            BSPM_val = BSPM_Models[np.in1d(self.AF_models, val_models)]
 
-            AF_models_arr = np.array(AF_models)
-            AF_models_train = AF_models_arr[np.in1d(AF_models, train_models)]
-            AF_models_test = AF_models_arr[np.in1d(AF_models, test_models)]
-            AF_models_val = AF_models_arr[np.in1d(AF_models, val_models)]
+            AF_models_arr = np.array(self.AF_models)
+            AF_models_train = AF_models_arr[np.in1d(self.AF_models, train_models)]
+            AF_models_test = AF_models_arr[np.in1d(self.AF_models, test_models)]
+            AF_models_val = AF_models_arr[np.in1d(self.AF_models, val_models)]
 
         else:
 
-            x_train = X_1channel[np.where((Y_model >= 1) & (Y_model <= 200))]
-            x_test = X_1channel[np.where((Y_model > 180) & (Y_model <= 244))]
-            x_val = X_1channel[np.where((Y_model > 244) & (Y_model <= 286))]
+            x_train = self.X_1channel[np.where((self.Y_model >= 1) & (self.Y_model <= 200))]
+            x_test = self.X_1channel[np.where((self.Y_model > 180) & (self.Y_model <= 244))]
+            x_val = self.X_1channel[np.where((self.Y_model > 244) & (self.Y_model <= 286))]
 
         # Save the model names in train, test and val
-        test_model_name = [all_model_names[index] for index in AF_models_test]
-        val_model_name = [all_model_names[index] for index in AF_models_val]
-        train_model_name = [all_model_names[index] for index in AF_models_train]
+        test_model_name = [self.all_model_names[index] for index in AF_models_test]
+        val_model_name = [self.all_model_names[index] for index in AF_models_val]
+        train_model_name = [self.all_model_names[index] for index in AF_models_train]
 
         return (
             x_train,
@@ -835,21 +818,16 @@ class Preprocess_Dataset:
         # Normalize
         if norm:
 
-            latent_space_n = normalize_by_models(latent_space, Y_model)
-            egm_tensor_n = normalize_by_models(egm_tensor, Y_model)
+            latent_space_n = normalize_by_models(latent_space, self.Y_model)
+            egm_tensor_n = normalize_by_models(self.egm_tensor, self.Y_model)
 
         else:
 
             latent_space_n = latent_space
-            egm_tensor_n = egm_tensor
+            egm_tensor_n = self.egm_tensor
 
         return latent_space_n, egm_tensor_n
 
     def __call__(self, verbose=False, all=False):
         """Calls the Preprocess class."""
-        return self.preprocess_main(
-            self.X_1channel,
-            self.egm_tensor,
-            self.AF_models,
-            self.Y_model,
-        )
+        return self.preprocess_main()

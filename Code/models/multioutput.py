@@ -12,6 +12,9 @@ class MultiOutput:
     regression from Bsps to EGMs.
     """
 
+    def __init__(self, params):
+        self.params = params
+
     def build_encoder_module(self, inputs, input_shape):
         """
         Used to optimize the BSPS feature extraction
@@ -26,7 +29,7 @@ class MultiOutput:
             activation="leaky_relu",
             input_shape=input_shape[2:],
             kernel_initializer=initializer,
-            kernel_regularizer=tf.keras.regularizers.l2(l=0.1),
+            kernel_regularizer=tf.keras.regularizers.l2(l=self.params["l2_reg_encoder_1"]),
         )(inputs)
         encoder = layers.Conv3D(
             64, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
@@ -41,7 +44,7 @@ class MultiOutput:
             strides=1,
             padding="same",
             activation="leaky_relu",
-            kernel_regularizer=tf.keras.regularizers.l2(l=0.1),
+            kernel_regularizer=tf.keras.regularizers.l2(l=self.params["l2_reg_encoder_2"]),
         )(encoder)
         encoder = layers.MaxPooling3D((1, 2, 2))(encoder)
         encoder = layers.Conv3D(
@@ -70,7 +73,7 @@ class MultiOutput:
             strides=1,
             padding="same",
             activation="linear",
-            kernel_regularizer=tf.keras.regularizers.l2(l=0.1),
+            kernel_regularizer=tf.keras.regularizers.l2(l=self.params["l2_reg_decoder_1"]),
             name="Autoencoder_output",
         )(decoder)
 
@@ -92,7 +95,7 @@ class MultiOutput:
             padding="same",
             activation="leaky_relu",
             input_shape=input_shape[1:],
-            kernel_regularizer=tf.keras.regularizers.l2(l=0.1),
+            kernel_regularizer=tf.keras.regularizers.l2(l=self.params["l2_reg_rec_1"]),
             kernel_initializer=initializer,
         )(encoder)
         x = layers.UpSampling3D((1, 2, 2))(x)
@@ -102,16 +105,17 @@ class MultiOutput:
             strides=(1, 1, 1),
             padding="same",
             activation="leaky_relu",
-            kernel_regularizer=tf.keras.regularizers.l2(l=0.1),
+            kernel_regularizer=tf.keras.regularizers.l2(l=self.params["l2_reg_rec_2"]),
         )(x)
         x = layers.UpSampling3D((1, 2, 2))(x)
         # Ajusta el kernel temporal a 1 para evitar cambio en la dimensión temporal
-        x = layers.Conv3D(3, (5, 3, 3), strides=(1, 1, 1),
-                        padding="same", activation="leaky_relu")(x)
+        x = layers.Conv3D(
+            3, (5, 3, 3), strides=(1, 1, 1), padding="same", activation="leaky_relu"
+        )(x)
         x = layers.TimeDistributed(layers.Flatten())(x)
         x = BatchNormalization(axis=1)(x)
-        x = layers.LSTM(50, return_sequences=True)(x)
-        x = layers.Dropout(0.3)(x)
+        x = layers.LSTM(self.params["LSTM_units"], return_sequences=True)(x)
+        x = layers.Dropout(self.params["dropout"])(x)
         x = layers.Dense(n_nodes, activation="leaky_relu", name="Regressor_output")(x)
 
         return x

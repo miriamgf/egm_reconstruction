@@ -1,5 +1,5 @@
 # This script was developed by Miguel Ángel Cámara Vázquez and Miriam Gutiérrez Fernández
-# """
+
 
 import os
 from tools_.noise_simulation import *
@@ -45,7 +45,6 @@ from scripts.config import DataConfig
 from tools_.oclusion import Oclussion
 import time
 
-# from noise_simulation import *
 
 # %% Path Models
 # %% Path Models
@@ -54,26 +53,22 @@ torsos_dir = "../../../Labeled_torsos/"
 # directory = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
 torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
 
-fs = 500
-
 
 class LoadDataset:
     """
     The LoadDataset class loads signals from original format (.mat), performs basic preprocessing in EGMs
     and BSPs and creates variables that store metadata for tracking during the training and validation process.
     Also basic preprocessing applicable and fixed for all data is performed, like EGM filtering or interpolation
-
-
-
     """
 
     def __init__(
         self,
+        params,
         data_type,
         n_classes=2,
         SR=True,
         downsampling=True,
-        fs_sub=50,
+        fs=500,
         SNR_bsps=True,
         SNR_em_noise=20,
         SNR_white_noise=20,
@@ -86,12 +81,12 @@ class LoadDataset:
         unfold_code=1,
         inference=True,
     ):
-
+        self.params = params
         self.data_type = data_type
         self.n_classes = n_classes
         self.SR = SR
         self.downsampling = downsampling
-        self.fs_sub = fs_sub
+        self.fs = fs
         self.SNR_bsps = SNR_bsps
         self.SNR_em_noise = SNR_em_noise
         self.SNR_white_noise = SNR_white_noise
@@ -136,12 +131,10 @@ class LoadDataset:
                         '2' ->  RA/LA/No rotor (2 classes)
                         '3' ->  7 regions (3 classes) + no rotor (8 classes)
             SR: If Sinus Ryhthm Model is included (True/False)
-            downsampling: if downsampling from fs= 500Hz to a lower fs_sub is done (True/False)
-            fs_sub: Freq sampl to downsample the signal from its original fs= 500Hz
+            
             norm: if normalizing is performed to models when loading them (True/False)
             classification: if classification task is performed
             sinusoid: if a database of sinusoids is generated (True/False)
-            n_batch: batch size (number of samples/batch)
 
 
         Returns:
@@ -185,16 +178,13 @@ class LoadDataset:
 
         AF_model_i = 0
 
-        # SNR_em_noise = 10
-        # SNR_white_noise=20
-
-        # hacer una estimación de la longitud del array de BSPMs
-        len_target_signal = 2000
+        len_target_signal = 2000  # configure_noise_database: hacer una estimación de la longitud del array de BSPMs
         Noise_Simulation = NoiseSimulation(
+            params = self.params,
             SNR_em_noise=self.SNR_em_noise,
             SNR_white_noise=self.SNR_white_noise,
             oclusion=None,
-            fs=DataConfig.fs_sub,
+            fs=self.fs,
         )  # instance of class
 
         test_models_deterministic = [
@@ -237,7 +227,7 @@ class LoadDataset:
             # continue
 
             # 1.2)  EGMs filtering.
-            x = self.ECG_filtering(egms, 500)
+            x = self.ECG_filtering(egms, fs=self.fs)
 
             # 1.3 Normalize EGMS
             if self.norm:
@@ -340,7 +330,7 @@ class LoadDataset:
                     # 5) Filter AFTER adding noise
 
                     tensor_model_filt = self.ECG_filtering(
-                        tensor_model_noisy, order=3, fs=self.fs_sub, f_low=3, f_high=30
+                        tensor_model_noisy, order=3, fs=500, f_low=3, f_high=30
                     )
                     tensor_model = tensor_model_filt
 
@@ -466,7 +456,7 @@ class LoadDataset:
         """
         if sinusoid:
 
-            EG = sinusoids_generator(2048, 2500, fs=500).T
+            EG = sinusoids_generator(2048, 2500, fs=self.fs).T
         else:
 
             try:
@@ -904,7 +894,7 @@ class LoadDataset:
 
         # Bandpass filtering
         b, a = sigproc.butter(
-            order, [f_low / round((fs / 2)), f_high / round((fs / 2))], btype="bandpass"
+            order, [f_low / round((self.fs / 2)), f_high / round((self.fs / 2))], btype="bandpass"
         )
 
         proc_ECG_EGM = np.zeros(sig_temp.shape)
@@ -926,7 +916,6 @@ class LoadDataset:
             n_classes=self.n_classes,
             SR=self.SR,
             downsampling=self.downsampling,
-            fs_sub=self.fs_sub,
             SNR_bsps=self.SNR_bsps,
             SNR_em_noise=self.SNR_em_noise,
             SNR_white_noise=self.SNR_white_noise,
