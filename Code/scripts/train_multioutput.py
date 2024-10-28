@@ -71,7 +71,7 @@ experiment_name=datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '_EXP_' + st
 
 root_logdir = 'output/logs/'
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-data_dir = '/home/profes/miriamgf/tesis/Autoencoders/Data/'
+data_dir = '/home/profes/miriamgf/tesis/Autoencoders/Data_short/'
 torsos_dir = '../../../../Labeled_torsos/'
 figs_dir = 'output/figures/'
 models_dir = 'output/model/'
@@ -360,7 +360,7 @@ for i in range(0, 60):
     plt.show()
 
 time_instant = random.randint(0, TrainConfig_1.batch_size_1)
-batch=random.randrange(0, x_test.shape[0]-1, 1)
+batch=random.randrange(0, x_test.shape[0]-2, 1)
 
 #Reconstrauction Autoencoders
 for i in range(0, 5):   
@@ -569,7 +569,7 @@ with open(dict_results_dir + 'dict_results_autoencoder_MO.pkl', 'wb') as fp:
 savemat(dict_results_dir + "dict_results_autoencoder.mat", results_autoencoder)
 savemat(dict_results_dir + "dict_results_reconstruction.mat",results_regressor)
 
-print(dic_vars)
+
 
      
 # %%
@@ -586,7 +586,8 @@ with open(file_path, "w") as f:
         f.write(f"{key}: {value}\n")
 
 print((end - start) / 60, 'Mins of execution')
-print("-------------EXPERIMENT RED MULTIOUPUT'--------------", experiment_name)
+print("------------- Finished -------------->", experiment_name)
+
 
 
 

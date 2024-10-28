@@ -1,0 +1,13 @@
+# Ignore all __pycache__ directories
+__pycache__/
+
+# Ignore all __pycache__ directories
+.conda/
+
+# Ignore all .png files
+*.png
+
+# Ignore all .h5 files
+*.h5
+*.pyc
+

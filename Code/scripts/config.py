@@ -25,7 +25,7 @@ class DataConfig(object):
     mlflow_url = os.environ.get("MLFLOW_URL")
     mlflow_port = os.environ.get("MLFLOW_PORT")
     fs = 500
-    fs_sub = 200
+    fs_sub = 100
     SNR = 20
     n_classes = 3  # this is specific for classification. # 1: Rotor/no rotor ; 2: RA/LA/No rotor (2 classes) ; 3: 7 regions (3 classes) + no rotor (8 classes)
     DF_Mapping = False
