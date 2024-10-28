@@ -1,0 +1,13 @@
+tensorflow==2.15.0
+numpy<2.0.0,>=1.23.5
+matplotlib
+scikit-learn
+optuna
+mlflow
+scipy
+pandas
+
+[dev]
+pytest
+black
+pickle
