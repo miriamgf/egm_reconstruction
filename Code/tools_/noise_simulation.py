@@ -45,8 +45,10 @@ from scripts.config import DataConfig
 # %% Path Models
 current = os.path.dirname(os.path.realpath(__file__))
 torsos_dir = "../../../Labeled_torsos/"
-directory = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
-torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
+#directory = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
+directory = "../../Data_short/"
+#torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
+torsos_dir = "../../Labeled_torsos/"
 
 class NoiseSimulation:
 
@@ -377,7 +379,7 @@ class NoiseSimulation:
         
         '''
         record_name = type_noise  # Nombre del registro
-        path_noise_models = 'tools_/noise_models'
+        path_noise_models = '../tools_/noise_models'
         record = wfdb.rdrecord(f'{path_noise_models}/{record_name}', sampfrom=0, channels=[0])
 
         noise = record.p_signal
@@ -408,7 +410,7 @@ class NoiseSimulation:
         plt.xlabel('Frecuencia [Hz]')
         plt.ylabel('Densidad espectral de potencia [V**2/Hz]')
         plt.grid(True)
-        plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/welch_noise.png')
+        plt.savefig('../output/figures/Noise_module/welch_noise.png')
 
 
     def normalize_in_batches(self,array, batch_size=200, high=1, low=-1, axis_n=0):

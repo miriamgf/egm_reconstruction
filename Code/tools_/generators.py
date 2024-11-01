@@ -13,7 +13,11 @@ import keras
 import numpy as np
 from sklearn.model_selection import train_test_split
 from numpy.random import default_rng
-from keras.preprocessing.image import ImageDataGenerator
+if keras.__version__ > '2.15.0':
+    from keras.src.legacy.preprocessing.image import ImageDataGenerator
+else:
+    from keras.preprocessing.image import ImageDataGenerator
+
 from scipy import stats
 from sklearn.utils import shuffle
 

@@ -26,7 +26,8 @@ class MultiOutput:
             activation="leaky_relu",
             input_shape=input_shape[2:],
             kernel_initializer=initializer,
-            kernel_regularizer=tf.keras.regularizers.l2(l=0.1),
+            kernel_regularizer=tf.keras.regularizers.l2(0.1)
+            #kernel_regularizer=tf.keras.regularizers.l2(l=0.1),
         )(inputs)
         encoder = layers.Conv3D(
             64, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
@@ -41,7 +42,7 @@ class MultiOutput:
             strides=1,
             padding="same",
             activation="leaky_relu",
-            kernel_regularizer=tf.keras.regularizers.l2(l=0.1),
+            kernel_regularizer=tf.keras.regularizers.l2(0.1),
         )(encoder)
         encoder = layers.MaxPooling3D((1, 2, 2))(encoder)
         encoder = layers.Conv3D(
@@ -70,7 +71,7 @@ class MultiOutput:
             strides=1,
             padding="same",
             activation="linear",
-            kernel_regularizer=tf.keras.regularizers.l2(l=0.1),
+            kernel_regularizer=tf.keras.regularizers.l2(0.1),
             name="Autoencoder_output",
         )(decoder)
 
@@ -92,7 +93,7 @@ class MultiOutput:
             padding="same",
             activation="leaky_relu",
             input_shape=input_shape[1:],
-            kernel_regularizer=tf.keras.regularizers.l2(l=0.1),
+            kernel_regularizer=tf.keras.regularizers.l2(0.1),
             kernel_initializer=initializer,
         )(encoder)
         x = layers.UpSampling3D((1, 2, 2))(x)
@@ -102,7 +103,7 @@ class MultiOutput:
             strides=(1, 1, 1),
             padding="same",
             activation="leaky_relu",
-            kernel_regularizer=tf.keras.regularizers.l2(l=0.1),
+            kernel_regularizer=tf.keras.regularizers.l2(0.1),
         )(x)
         x = layers.UpSampling3D((1, 2, 2))(x)
         # Ajusta el kernel temporal a 1 para evitar cambio en la dimensión temporal

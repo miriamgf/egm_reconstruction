@@ -54,7 +54,8 @@ import time
 current = os.path.dirname(os.path.realpath(__file__))
 torsos_dir = "../../../Labeled_torsos/"
 #directory = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
-torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
+#torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
+torsos_dir = "../../Labeled_torsos/"
 
 fs = 500
 

@@ -1,5 +1,9 @@
+#%% Import modules
 import sys
 sys.path.append('../Code')
+sys.path.append('../')
+sys.path.append('../tools_')
+sys.path.append('../models')
 import matplotlib.pyplot as plt
 from config import TrainConfig_1
 from config import DataConfig
@@ -60,6 +64,10 @@ print(type(patches_oclussion))
 #Run script IDE
 
 '''
+
+#%% Some definitions
+
+#Here it is defined which dataset to use
 SNR_em_noise=1
 SNR_white_noise=20
 patches_oclussion='P1'
@@ -71,7 +79,8 @@ experiment_name=datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + '_EXP_' + st
 
 root_logdir = 'output/logs/'
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-data_dir = '/home/profes/miriamgf/tesis/Autoencoders/Data_short/'
+#data_dir = '/home/profes/miriamgf/tesis/Autoencoders/Data_short/'
+data_dir = '../../Data_short/'
 torsos_dir = '../../../../Labeled_torsos/'
 figs_dir = 'output/figures/'
 models_dir = 'output/model/'
@@ -124,13 +133,14 @@ print(all_model_names)
 mlflow.set_tracking_uri(uri="http://10.110.100.78:5000")
 mlflow.autolog()
 
-# Load data
+#%% Load data
 
 if DataConfig.fs == DataConfig.fs_sub:
     DataConfig.fs = DataConfig.fs_sub
 
 Transfer_model = False  # Transfer learning from sinusoids
 sinusoids = False
+
 
 print('Loading dATA')
 #Load data
@@ -205,13 +215,13 @@ plt.plot(y_train[0, :,0], label = 'egm')
 plt.legend()
 plt.savefig('output/figures/input_output/preprocessing.png')
 
-# 1. AUTOENCODER
+#%% 1. AUTOENCODER
 print('Training model...')
 
 optimizer = Adam(learning_rate=TrainConfig_1.learning_rate_1)
 
 tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=models_dir + 'regressor' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
+cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=models_dir + 'regressor' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")+".weights.h5",
                                                  save_weights_only=True,
                                                  verbose=1)
 early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=50)
@@ -220,6 +230,11 @@ early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', p
 #Configure GPU for paralellism 
 strategy = tf.distribute.MirroredStrategy()
 
+#OJKI 01_11_2024 I change here TrainConfig_1.inference_pretrained_model to false so we do not 
+#load a model that we do not have right now
+
+#TODO: change this as needed in the config file instead of by hand here
+TrainConfig_1.inference_pretrained_model = False
 
 if TrainConfig_1.parallelism:
     with strategy.scope():
@@ -234,7 +249,7 @@ if TrainConfig_1.parallelism:
                                     callbacks=[early_stopping_callback, cp_callback])
 else:
     if TrainConfig_1.inference_pretrained_model:
-        model = load_model('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_CINC/20240827-112359_EXP_0/model_mo.h5')
+        model = load_model('../Code/output/experiments/experiments_CINC/20240827-112359_EXP_0/model_mo.h5')
 
     else:
         model = MultiOutput().assemble_full_model(input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1])
@@ -497,7 +512,7 @@ print('Saving variables...')
 new_correlation_array = interpolate_fun(correlation_array, len(correlation_array), y_train.shape[2])
 new_rmse_array = interpolate_fun(rmse_array, len(rmse_array), y_train.shape[2])
 
-# %%
+nst# %%
 # Save the model names in train, test and val
 test_model_name= [all_model_names[index] for index in AF_models_test]
 val_model_name= [all_model_names[index] for index in AF_models_val]
