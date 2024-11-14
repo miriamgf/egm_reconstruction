@@ -151,9 +151,10 @@ class TrainModel:
             + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
             save_weights_only=True,
             verbose=1,
+            save_best_only=True
         )
         early_stopping_callback = tf.keras.callbacks.EarlyStopping(
-            monitor="val_loss", patience=50
+            monitor="val_mse_regression", patience=50
         )
 
        
@@ -176,13 +177,15 @@ class TrainModel:
             loss=[multi_output_model.vae_loss(), 'mse'])
             '''
 
-            MultiOutput_VAE_TF_model = MultiOutput_VAE_TF(self.params, input_shape_=x_train.shape[1:], n_nodes=y_train.shape[-1])
+            # Create an instance of your model
+            model = MultiOutput_VAE_TF(self.params, input_shape_=x_train.shape[1:], n_nodes=y_train.shape[-1])
 
-            # Ensambla el modelo completo
-            model = MultiOutput_VAE_TF_model.assemble_full_model(input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1])
+            # The model is built during initialization; you can now call summary() 
+            print(model.model.summary())  # Access the actual Keras model for summary
 
-            # Compila el modelo ensamblado
+            # Compile the model
             model.compile(optimizer=tf.keras.optimizers.Adam())
+
 
             #model = MultiOutput_VAE_TF_model.assemble_full_model(input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1])
             #model.compile(optimizer=tf.keras.optimizers.Adam())#, loss=MultiOutput_VAE_TF_model.vae_loss())
@@ -194,7 +197,7 @@ class TrainModel:
             loss=["mean_squared_error", "mean_squared_error"]
 
 
-        print(model.summary())
+        print(model.model.summary())
 
         # Train the model
         history = model.fit(
@@ -208,22 +211,22 @@ class TrainModel:
 
         # Plot and save training and validation curves
         plt.figure()
-        plt.plot(history.history["val_loss"], label="Global loss (Validation)")
+        plt.plot(history.history["val_total_loss"], label="Global loss (Validation)")
         plt.plot(
-            history.history["val_Autoencoder_output_loss"],
+            history.history["val_loss_autoencoder"],
             label="Autoencoder loss (Validation)",
         )
         plt.plot(
-            history.history["val_Regressor_output_loss"],
+            history.history["val_mse_regression"],
             label="Regressor loss (Validation)",
         )
-        plt.plot(history.history["loss"], label="Global loss (Train)")
+        plt.plot(history.history["total_loss"], label="Global loss (Train)")
         plt.plot(
-            history.history["Autoencoder_output_loss"],
+            history.history["loss_autoencoder"],
             label="Autoencoder loss (Train)",
         )
         plt.plot(
-            history.history["Regressor_output_loss"],
+            history.history["mse_regression"],
             label="Regressor loss (Train)",
         )
         plt.legend(loc="upper left")

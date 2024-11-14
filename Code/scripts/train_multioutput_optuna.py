@@ -81,7 +81,7 @@ unfold_code = 1
 experiment_name = (
     datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "_EXP_" + str(experiment_number)
 )  # + '_' + str(SNR_white_noise)+ '_' + str(patches_oclussion)+ '_' + str(unfold_code)
-
+experiment_name='pruebas_VAE'
 
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -91,16 +91,16 @@ figs_dir = "output/figures/"
 models_dir = "output/model/"
 dict_var_dir = "output/variables/"
 dict_results_dir = "output/results/"
-experiment_dir = "output/experiments/experiments_CINC/" + experiment_name + "/"
+experiment_dir = "output/experiments/experiments_VAE/" + experiment_name + "/"
 
 
 if not os.path.exists(experiment_dir):
     os.makedirs(experiment_dir)
     print("Directory for experiment", experiment_dir, "created")
-else:
-    experiment_dir = experiment_dir + "_1"
+#else:
+    #experiment_dir = experiment_dir 
     print(
-        "Existing directory, name changed for avoiding rewriting information to:",
+        "Existing directory, CHANGE NAME TO AVOID rewriting information to:",
         experiment_dir,
     )
 
@@ -235,7 +235,7 @@ plt.savefig('output/figures/input_output/before_norm.png')
 
 model, history = TrainModel(
     params, x_train, x_test, x_val, y_train, y_test, y_val, models_dir, experiment_dir
-)()
+)()   
 
 
 
@@ -310,7 +310,7 @@ estimate_egms_test = reconstruction_flat_test
 # normalize
 estimate_egm_test_r = estimate_egms_test
 estimate_egms_n = reconstruction_flat_test
-estimate_egms_n = normalize_by_models(reconstruction_flat_test, BSPM_test)
+estimate_egms_n = normalize_by_models(reconstruction_flat_test, AF_models_test)
 
 pred_test_egm_fl = reshape(
     pred_test_egm,
@@ -362,11 +362,11 @@ for i in range(0, 60):
     plt.show()
 
 time_instant = random.randint(0, params['batch_size'])
-batch = random.randrange(0, x_test.shape[0] - 10, 1)
+batch = random.randrange(0, x_test.shape[0] - 20, 1)
 
 # Reconstrauction Autoencoders
-for i in range(0, 5):
-    batch = batch + 1
+for i in range(0, 10):
+    batch = batch + i
     plt.figure(tight_layout=True)
     plt.subplot(3, 1, 1)
     plt.imshow(x_test[batch, 0, :, :, 0])
@@ -381,7 +381,7 @@ for i in range(0, 5):
     plt.imshow(difference)
     plt.title("Error")
     plt.colorbar(label="Colorbar Label")  # Add a colorbar with a label
-    plt.savefig(experiment_dir + "Autoencoder_reconstructions.png")
+    plt.savefig(experiment_dir + "Autoencoder_reconstructions"+str(i)+".png")
     plt.show()
 
 # 2D EGM plots
@@ -479,12 +479,13 @@ plt.savefig(experiment_dir + "PSD.png")
 
 
 # DF mapping: Calculate DF Maps and Phase maps from reconstruction and labels --> Plot 3D in Matlab
+'''
 if params['DF_mapping']:
     print("Computing DF Mapping...")
     DF_mapping(
         y_test, pred_test_egm, BSPM_test, AF_models_test, experiment_dir, norm=True
     )
-
+'''
 # Calculate metrics DTW, RMSE and Correlation BY AF MODELS: Meand and std
 # *This metrics are calculated appart because thay are not computed in evaluate_function, (...)
 # (...) as they cannot be included in the tensorflow metric callback
@@ -523,9 +524,9 @@ new_items = {
 }
 dic_vars.update(new_items)
 
-results = pd.DataFrame(
-    columns=["MSE AE", "DTW AE", "MSE Reconstruction", "TWD Reconstruction"]
-)
+#results = pd.DataFrame(
+    #columns=["MSE AE", "DTW AE", "MSE Reconstruction", "TWD Reconstruction"]
+#)
 
 # Interpolation for mapping in 3D
 estimate_egms_reshaped = reshape(
@@ -582,6 +583,11 @@ savemat(
     dic_by_models,
 )
 savemat(dict_var_dir + "/variables.mat", variables)
+dic_latent_space_test={'Latent_space_test': pred_test_autoencoder }
+savemat(experiment_dir + "/autoencoder.mat", dic_latent_space_test)
+
+
+
 
 # Write dictionary string representation to text file
 file_path = experiment_dir + "metrics.txt"
@@ -603,14 +609,23 @@ if sinusoids:
         + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     )
 else:
-    model.save(models_dir + "output/model/model_multioutput.h5")
-    model.save(experiment_dir + "model_mo.h5")
+    try:
+        model.save(models_dir + "output/model/model_multioutput.h5")
+        model.save(experiment_dir + "model_mo.h5")
+    except:
+        model.save_weights(models_dir + "output/model/model_multioutput.h5")
+        model.save_weights(experiment_dir + "model_mo.h5")   
 
-
-model.save(
-    "output/model/model_multioutput.h5"
-    + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-)
+try:
+    model.save(
+        "output/model/model_multioutput.h5"
+        + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    )
+except:
+    model.save_weights(
+        "output/model/model_multioutput.h5"
+        + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    )
 # Crear un archivo para guardar el summary
 
 file_name = experiment_dir + "model_summary.txt"
@@ -645,25 +660,18 @@ with open(dict_results_dir + "dict_results_autoencoder_MO.pkl", "wb") as fp:
 # savemat(dict_var_dir + "dic_vars.mat", dic_vars) #TODO: cannot be saved to .mat because now is saving a keras model
 savemat(dict_results_dir + "dict_results_autoencoder.mat", results_autoencoder)
 savemat(dict_results_dir + "dict_results_reconstruction.mat", results_regressor)
-print(dic_vars)
 
 
 # %%
 end = time.time()
-hyperparams = {
-    "lr": params['learning_rate_1'],
-    "fs": params['fs_sub'],
-    "epochs": params['n_epoch_1'],
-    "batch_size": params['batch_size'],
-    "execution time": (end - start) / 60,
-}
 
+params['execution_time']=(end - start) / 60
 # Specify the file path
 file_path = experiment_dir + "hyperparams.txt"
 
 # Write dictionary string representation to text file
 with open(file_path, "w") as f:
-    for key, value in hyperparams.items():
+    for key, value in params.items():
         f.write(f"{key}: {value}\n")
 
 print((end - start) / 60, "Mins of execution")

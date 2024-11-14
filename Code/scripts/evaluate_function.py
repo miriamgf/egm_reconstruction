@@ -63,48 +63,80 @@ def evaluate_function_multioutput(
     -------
 
     """
+    try:
+        (
+            global_loss_test,
+            mse_test_ae,
+            mse_test_regressor,
+            mae_test_ae,
+            mae_test_regressor,
+        ) = model.evaluate(x_test, [x_test, y_test], batch_size=batch_size)
+        (
+            global_loss_train,
+            mse_train_ae,
+            mse_train_regressor,
+            mae_train_ae,
+            mae_train_regressor,
+        ) = model.evaluate(x_train, [x_train, y_train], batch_size=batch_size)
 
-    (
-        global_loss_test,
-        mse_test_ae,
-        mse_test_regressor,
-        mae_test_ae,
-        mae_test_regressor,
-    ) = model.evaluate(x_test, [x_test, y_test], batch_size=batch_size)
-    (
-        global_loss_train,
-        mse_train_ae,
-        mse_train_regressor,
-        mae_train_ae,
-        mae_train_regressor,
-    ) = model.evaluate(x_train, [x_train, y_train], batch_size=batch_size)
+        dtw_test, dtw_train = [
+            0,
+            0,
+        ]  # DynamicTimeWarping(y_train, pred_train, y_test, pred_test, model)
 
-    dtw_test, dtw_train = [
-        0,
-        0,
-    ]  # DynamicTimeWarping(y_train, pred_train, y_test, pred_test, model)
+        results_autoencoder = {
+            "mse test": mse_test_ae,
+            "mse train": mse_train_ae,
+            "mae test": mae_test_ae,
+            "mae train": mae_train_ae,
+            "dtw_test": dtw_test,
+            "dtw_train": dtw_train,
+            "global_loss_test": global_loss_test,
+            "global_loss_train": global_loss_train,
+        }
 
-    results_autoencoder = {
-        "mse test": mse_test_ae,
-        "mse train": mse_train_ae,
-        "mae test": mae_test_ae,
-        "mae train": mae_train_ae,
-        "dtw_test": dtw_test,
-        "dtw_train": dtw_train,
-        "global_loss_test": global_loss_test,
-        "global_loss_train": global_loss_train,
-    }
+        results_regressor = {
+            "mse test": mse_test_regressor,
+            "mse train": mse_train_regressor,
+            "mae test": mae_test_regressor,
+            "mae train": mae_train_regressor,
+            "dtw_test": dtw_test,
+            "dtw_train": dtw_train,
+            "global_loss_test": global_loss_test,
+            "global_loss_train": global_loss_train,
+        }
+    except:
+        total_loss_test, loss_autoencoder_test, mse_autoencoder_test, mse_regression_test = model.evaluate(x_test,
+                                                                                                            [x_test, y_test],
+                                                                                                            batch_size=batch_size)
+        
+        total_loss_train, loss_autoencoder_train, mse_autoencoder_train, mse_regression_train = model.evaluate(x_train,
+                                                                                                            [x_train, y_train],
+                                                                                                            batch_size=batch_size)
+        dtw_test, dtw_train = [
+            0,
+            0,
+        ]  # DynamicTimeWarping(y_train, pred_train, y_test, pred_test, model)
 
-    results_regressor = {
-        "mse test": mse_test_regressor,
-        "mse train": mse_train_regressor,
-        "mae test": mae_test_regressor,
-        "mae train": mae_train_regressor,
-        "dtw_test": dtw_test,
-        "dtw_train": dtw_train,
-        "global_loss_test": global_loss_test,
-        "global_loss_train": global_loss_train,
-    }
+        results_autoencoder = {
+            "total_loss_test": total_loss_test,
+            "total_loss_train": total_loss_train,
+            "loss_autoencoder_test": loss_autoencoder_test,
+            "loss_autoencoder_train": loss_autoencoder_train,
+            "mse_autoencoder_test": mse_autoencoder_test,
+            "mse_autoencoder_train": mse_autoencoder_train,
+            "dtw_test": dtw_test,
+            "dtw_train": dtw_train,
+        }
+
+        results_regressor= {
+            "total_loss_test": total_loss_test,
+            "total_loss_train": total_loss_train,
+            "dtw_train": dtw_train,
+            "dtw_train": dtw_train,
+            "mse_regression_test": mse_regression_test,
+            "mse_regression_train": mse_regression_train,
+        }
 
     return results_autoencoder, results_regressor
 
