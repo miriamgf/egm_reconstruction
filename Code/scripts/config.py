@@ -9,7 +9,7 @@ import time
 
 class TrainConfig_1(object): #Multioutput
     learning_rate_1 = 0.001
-    batch_size_1 = 400
+    batch_size_1 = 100
     n_epoch_1 = 100
     use_generator = False 
     parallelism = False

@@ -52,10 +52,10 @@ import time
 # %% Path Models
 # %% Path Models
 current = os.path.dirname(os.path.realpath(__file__))
-torsos_dir = "../../../Labeled_torsos/"
+#torsos_dir = "../../../Labeled_torsos/"
 #directory = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
-#torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
-torsos_dir = "../../Labeled_torsos/"
+torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
+#torsos_dir = "../../Labeled_torsos/"
 
 fs = 500
 
@@ -332,8 +332,7 @@ def load_data(
             elif data_type == "1channelTensor":
 
                 tensor_model = get_tensor_model(bsps_64, tensor_type="1channel", unfold_code=unfold_code)
-                
-                # Interpo was here *
+
 
                 # Noise 
                 start_time = time.time()
@@ -393,11 +392,12 @@ def load_data(
 
                 #plt.savefig('output/figures/input_output/saving_truncate.png')
 
-            else:
-                X.extend(bsps_64.T)
+            elif data_type == "Flat":
+
+                tensor_model=bsps_64.T
+                tensor_model, length_list, x_sub = truncate_length_bsps(n_batch, tensor_model, length_list, x_sub)
+                X.extend(tensor_model)
                 egm_tensor.extend(x_sub.T)
-
-
 
             if not classification:
                 y_model = np.full(len(tensor_model), n_model)
@@ -423,11 +423,18 @@ def load_data(
     )
 
 def truncate_length_bsps(n_batch, tensors_model, length_list, x_sub):
+    
     batch_size = n_batch
     if tensors_model.shape[0] % batch_size != 0:
         trunc_val = np.floor_divide(tensors_model.shape[0], batch_size)
-        tensors_model = tensors_model[0 : batch_size * trunc_val, :, :]
+        # Check the number of dimensions and slice accordingly
+        if tensors_model.ndim == 3:
+            tensors_model = tensors_model[0 : batch_size * trunc_val, :, :]
+        else:
+            tensors_model = tensors_model[0 : batch_size * trunc_val, :]
+
         x_sub = x_sub[:, 0 : batch_size * trunc_val]
+
 
     length_list.append(tensors_model.shape[0])
 
