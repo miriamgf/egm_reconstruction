@@ -76,7 +76,7 @@ experiment_name = (
 
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
+data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data_short/"
 torsos_dir = "../../../../Labeled_torsos/"
 figs_dir = "output/figures/"
 models_dir = "output/model/"

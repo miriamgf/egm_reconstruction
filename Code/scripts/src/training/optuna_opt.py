@@ -131,6 +131,7 @@ class OptunaOpt:
             A dictionary containing the suggested hyperparameters for the current trial.
         """
         search_space = ParseHiperparams().parse_optuna_hyperparams()
+        print('Search space:', search_space)
         optuna_params = {}
 
         # Take sampler
@@ -217,6 +218,8 @@ class OptunaOpt:
                 The validation loss after training the model with the trial's suggested hyperparameters.
             """
             self.params = self.parse_search_space(trial)
+            print('Trial number', trial)
+            
 
             # Preprocess data
             (

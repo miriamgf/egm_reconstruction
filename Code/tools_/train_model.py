@@ -16,9 +16,9 @@ from evaluate_function import *
 from numpy import *
 import pickle
 from models.multioutput import MultiOutput
-from models.multioutput_VAE import MultiOutput_VAE
 from models.multioutput_skip import MultiOutput_skip
-from models.multioutput_VAE_tf import MultiOutput_VAE_TF
+from models.multioutput_VAE import MultiOutput_VAE
+from models.multioutput_VAE_skip import MultiOutput_VAE_skip
 import mlflow
 import random
 import argparse
@@ -33,6 +33,12 @@ from tensorflow.keras.models import load_model
 from tools_.preprocessing_compression import *
 from tools_.load_dataset import LoadDataset
 from tools_.preprocess_data import Preprocess_Dataset
+tf.config.optimizer.set_jit(False)
+tf.config.experimental_run_functions_eagerly(True)
+tf.config.set_visible_devices([], 'GPU')
+
+
+
 
 class TrainModel:
     """
@@ -154,50 +160,56 @@ class TrainModel:
             save_best_only=True
         )
         early_stopping_callback = tf.keras.callbacks.EarlyStopping(
-            monitor="val_mse_regression", patience=50
+            monitor="mse_regression", patience=30
         )
 
        
         #Choose algorithm {OMAMI, OMAMI_VAE, OMAMI_ski, OMAMI_VAE_ski}
+
         if self.params["algorithm"] == "OMAMI":
 
             model = MultiOutput(params = self.params).assemble_full_model(
-                input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1]
-            )
-            loss=["mean_squared_error", "mean_squared_error"]
+                input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1])
+            model.compile(optimizer=tf.keras.optimizers.Adam(), loss=["mean_squared_error", "mean_squared_error"])
+
+        if self.params["algorithm"] == "OMAMI_ski":
+
+            model = MultiOutput_skip(params = self.params).assemble_full_model(
+                input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1])
+            model.compile(optimizer=tf.keras.optimizers.Adam(), loss=["mean_squared_error", "mean_squared_error"])
 
         elif self.params["algorithm"] == "OMAMI_VAE":
 
-            '''
-            multi_output_model = MultiOutput_VAE(self.params)
-            model = multi_output_model.assemble_full_model(input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1])
-
-            # Compilar el modelo
-            model.compile(optimizer='adam', 
-            loss=[multi_output_model.vae_loss(), 'mse'])
-            '''
-
             # Create an instance of your model
-            model = MultiOutput_VAE_TF(self.params, input_shape_=x_train.shape[1:], n_nodes=y_train.shape[-1])
+            model = MultiOutput_VAE(self.params,
+                                    input_shape_=x_train.shape[1:],
+                                    n_nodes=y_train.shape[-1], 
+                                    tensorboard_logs=self.experiment_dir+'tb_logs/')
 
-            # The model is built during initialization; you can now call summary() 
-            print(model.model.summary())  # Access the actual Keras model for summary
+            print(model.model.summary())  
+
+            # Compile the model
+            model.compile(optimizer=tf.keras.optimizers.Adam())
+
+        elif self.params["algorithm"] == "OMAMI_VAE_ski":
+             # Create an instance of your model
+            model = MultiOutput_VAE_skip(self.params,
+                                    input_shape_=x_train.shape[1:],
+                                    n_nodes=y_train.shape[-1], 
+                                    tensorboard_logs=self.experiment_dir+'tb_logs/')
+
+            print(model.model.summary())  
 
             # Compile the model
             model.compile(optimizer=tf.keras.optimizers.Adam())
 
 
-            #model = MultiOutput_VAE_TF_model.assemble_full_model(input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1])
-            #model.compile(optimizer=tf.keras.optimizers.Adam())#, loss=MultiOutput_VAE_TF_model.vae_loss())
-
-        elif self.params["algorithm"] == "OMAMI_skip":
-            model = MultiOutput_skip(params = self.params).assemble_full_model(
-                input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1]
-            )
-            loss=["mean_squared_error", "mean_squared_error"]
+        try:
+            print(model.model.summary())
+        except:
+            print(model.summary())
 
 
-        print(model.model.summary())
 
         # Train the model
         history = model.fit(
@@ -368,6 +380,8 @@ class TrainModel:
                 plt.show()
 
         return model, history
+    
+   
 
     def __call__(self, verbose=False, all=False):
         """
@@ -395,3 +409,4 @@ class TrainModel:
             y_test=self.y_test,
             y_val=self.y_val,
         )
+

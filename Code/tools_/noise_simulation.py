@@ -200,11 +200,15 @@ class NoiseSimulation:
                 noisy_signal = noisy_signal.reshape(
                     clean_signal.shape[0], clean_signal.shape[1] * clean_signal.shape[2]
                 ).T
+        else:
+            noisy_signal=clean_signal
+            binary_map = None
 
-        """
+        
         if self.SNR_white_noise != None:
             noisy_signal_before = noisy_signal.copy()
-            noisy_signal = self.add_white_noise(noisy_signal, SNR=self.SNR_white_noise, fs=self.fs)
+            noisy_signal = self.add_white_noise(noisy_signal_before, SNR=self.SNR_white_noise, fs=self.fs)
+            
             plt.figure(figsize =(20,5))
             plt.plot(noisy_signal[:, 0, 4], label='EM + WN')
             plt.plot(noisy_signal_before[:, 0, 4], label='only EM')
@@ -212,7 +216,8 @@ class NoiseSimulation:
             plt.legend()
             os.makedirs('output/figures/Noise_module/', exist_ok=True)
             plt.savefig('output/figures/Noise_module/phases_filtering1.png')
-        """
+            
+        
         return noisy_signal, binary_map
 
     def insert_noise_in_signal(

@@ -113,7 +113,7 @@ class MultiOutput:
             3, (5, 3, 3), strides=(1, 1, 1), padding="same", activation="leaky_relu"
         )(x)
         x = layers.TimeDistributed(layers.Flatten())(x)
-        x = BatchNormalization(axis=1)(x)
+        #x = BatchNormalization(axis=-1)(x)
         x = layers.LSTM(self.params["LSTM_units"], return_sequences=True)(x)
         x = layers.Dropout(self.params["dropout"])(x)
         x = layers.Dense(n_nodes, activation="leaky_relu", name="Regressor_output")(x)

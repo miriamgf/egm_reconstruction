@@ -162,7 +162,7 @@ class Preprocess_Dataset:
             random_split=True,
             train_percentage=0.90,
             test_percentage=0.2,
-            deterministic=False,
+            deterministic=True,
         )
 
         print("TRAIN SHAPE:", x_train.shape, "models:", train_models)

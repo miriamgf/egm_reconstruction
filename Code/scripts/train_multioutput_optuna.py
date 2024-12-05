@@ -72,17 +72,52 @@ print(type(patches_oclussion))
 #Run script IDE
 
 """
-SNR_em_noise = 1
-SNR_white_noise = 20
-patches_oclussion = "P1"
+
+params = ParseHiperparams().parse_default_hyperparams()
+
+
+try:
+    # parse args
+    print('parsing')
+    parser = argparse.ArgumentParser(description="Noise params")
+    parser.add_argument('--algorithm', type=str, help='experiment name', required=True)
+    parser.add_argument('--optuna', type=str, help='True or False', required=False)
+    parser.add_argument('--LSTM', type=str, help='True or False', required=False)
+
+    args = parser.parse_args()
+    algorithm = args.algorithm
+    optuna = args.optuna
+    LSTM = args.LSTM
+
+    if optuna == 'True':
+        params['optuna_optimization']=True
+   
+except:
+    algorithm=params['algorithm']
+    pass
+
+
+
+SNR_em_noise = None
+SNR_white_noise = 100
+patches_oclussion = 'PT'
 experiment_number = 0
 unfold_code = 1
 
 experiment_name = (
     datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "_EXP_" + str(experiment_number)
 )  # + '_' + str(SNR_white_noise)+ '_' + str(patches_oclussion)+ '_' + str(unfold_code)
-experiment_name='pruebas_VAE'
+experiment_name=algorithm
+try:
+    if optuna:
+        experiment_name= f"{experiment_name}_optuna"
+        #if LSTM == 'True':
+            #experiment_name=f"{experiment_name}_lstm"
+except:
+    pass
 
+
+experiment_name=f"{experiment_name}_lstm"
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data_short/"
@@ -139,8 +174,6 @@ print(all_model_names)
 mlflow.set_tracking_uri(uri="http://10.110.100.78:5000")
 mlflow.autolog()
 
-params = ParseHiperparams().parse_default_hyperparams()
-
 # Load data
 if params['fs'] == params['fs_sub']:
     params['fs'] = params['fs_sub']
@@ -170,7 +203,7 @@ sinusoids = False
     n_batch=params['batch_size'],
     sinusoid=sinusoids,
     SNR_em_noise=SNR_em_noise,
-    SNR_white_noise=SNR_em_noise,
+    SNR_white_noise=SNR_white_noise,
     patches_oclussion=patches_oclussion,
     unfold_code=unfold_code,
     inference=False,
@@ -179,6 +212,7 @@ sinusoids = False
 
 
 if params['optuna_optimization']:
+    print('Starting Optuna optimization...')
     params = OptunaOpt(
         params=params,
         X_1channel=X_1channel,
@@ -232,7 +266,7 @@ plt.savefig('output/figures/input_output/before_norm.png')
     transfer_matrices,
 )()
 
-
+print('Algorithm selected:', params['algorithm'])
 model, history = TrainModel(
     params, x_train, x_test, x_val, y_train, y_test, y_val, models_dir, experiment_dir
 )()   
@@ -366,7 +400,7 @@ batch = random.randrange(0, x_test.shape[0] - 20, 1)
 
 # Reconstrauction Autoencoders
 for i in range(0, 10):
-    batch = batch + i
+    batch = batch + 1
     plt.figure(tight_layout=True)
     plt.subplot(3, 1, 1)
     plt.imshow(x_test[batch, 0, :, :, 0])
@@ -596,36 +630,7 @@ with open(file_path, "w") as f:
     for key, value in variables.items():
         f.write(f"{key}: {value}\n")
 
-# Save models
-if sinusoids:
-    model.save(
-        models_dir
-        + "sinusoid_pretrained/model_reconstruction.h5"
-        + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    )
-    model.save(
-        models_dir
-        + "sinusoid_pretrained/model_autoencoder.h5"
-        + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    )
-else:
-    try:
-        model.save(models_dir + "output/model/model_multioutput.h5")
-        model.save(experiment_dir + "model_mo.h5")
-    except:
-        model.save_weights(models_dir + "output/model/model_multioutput.h5")
-        model.save_weights(experiment_dir + "model_mo.h5")   
 
-try:
-    model.save(
-        "output/model/model_multioutput.h5"
-        + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    )
-except:
-    model.save_weights(
-        "output/model/model_multioutput.h5"
-        + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    )
 # Crear un archivo para guardar el summary
 
 file_name = experiment_dir + "model_summary.txt"
