@@ -8,7 +8,6 @@ Created on Mon Jun 18 10:22:24 2018
 import numpy as np
 from scipy import signal as sigproc
 from scipy.interpolate import interp1d
-import matplotlib.pyplot as plt
 
 
 def remove_mean(signal):

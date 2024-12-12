@@ -1,4 +1,4 @@
-Code/output/model/checkpoint
+Code/output/model/checkpoint/
 Code/scripts/__pycache__/config.cpython-310.pyc
 Code/scripts/__pycache__/evaluate_function.cpython-310.pyc
 Code/tools_/__pycache__/add_white_noise.cpython-310.pyc
@@ -10,3 +10,12 @@ Code/tools_/__pycache__/tools.cpython-310.pyc
 Code/__pycache__/add_white_noise.cpython-310.pyc
 Code/__pycache__/generators.cpython-310.pyc
 Code/__pycache__/
+Code/output/model/checkpoint/
+Code/mlflow/
+Code/Figures/
+Code/.conda/
+Code/mlartifacts/
+*.png
+*.pyc
+Code/output/model/
+

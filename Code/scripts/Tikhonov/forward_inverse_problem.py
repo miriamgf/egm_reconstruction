@@ -5,9 +5,9 @@ Created on Tue Jun 19 14:17:08 2018
 @author: Miguel Ángel
 """
 
-import numpy as np
-from scipy import signal as sigproc
 import time
+
+import numpy as np
 
 
 def forward_problem(EGMs, MTransfer):
@@ -586,7 +586,7 @@ def constrained_tikhonov_i(A, AA, L, LL, D, y, x_ref, n_iterations=50):
         x_hat (matrix): epicardial potentials reconstruction.
         lambda_opt: regularization parameters.
     """
-    tic = time.time()
+    time.time()
 
     # Split signal in n chunks of 1 sample.
     n_chunks = y.shape[1]
@@ -714,7 +714,7 @@ def constrained_tikhonov_i(A, AA, L, LL, D, y, x_ref, n_iterations=50):
     # Rebuild x_hat from list
     x_hat = np.hstack(x_hat_list)
 
-    toc = time.time()
+    time.time()
     # print('Constrained Tikhonov. Elapsed time is',round(toc-tic,2), 'seconds')
 
     return x_hat, lambda_opt
@@ -740,7 +740,7 @@ def constrained_tikhonov_noiter(A, AA, L, LL, D, y, x_ref):
         lambda_opt: regularization parameters.
     """
 
-    tic = time.time()
+    time.time()
 
     n_lambda_test = 128
     lambda_test_1 = np.logspace(-3, -5, n_lambda_test)
@@ -812,7 +812,7 @@ def constrained_tikhonov_noiter(A, AA, L, LL, D, y, x_ref):
     )
     x_hat = np.matmul(inv_term, sec_term)
 
-    toc = time.time()
+    time.time()
     # print('Constrained Tikhonov. Elapsed time is',round(toc-tic,2), 'seconds')
 
     return x_hat, lambda_opt, error_term_1, error_term_2, magnitude_term, maxcurve_index

@@ -1,6 +1,7 @@
-from numpy import *
-from fastdtw import fastdtw
+#from fastdtw import fastdtw
+
 from tools_.tools import reshape_tensor
+#import fastdtw
 
 
 def evaluate_function(
@@ -106,13 +107,19 @@ def evaluate_function_multioutput(
             "global_loss_train": global_loss_train,
         }
     except:
-        total_loss_test, loss_autoencoder_test, mse_autoencoder_test, mse_regression_test = model.evaluate(x_test,
-                                                                                                            [x_test, y_test],
-                                                                                                            batch_size=batch_size)
-        
-        total_loss_train, loss_autoencoder_train, mse_autoencoder_train, mse_regression_train = model.evaluate(x_train,
-                                                                                                            [x_train, y_train],
-                                                                                                            batch_size=batch_size)
+        (
+            total_loss_test,
+            loss_autoencoder_test,
+            mse_autoencoder_test,
+            mse_regression_test,
+        ) = model.evaluate(x_test, [x_test, y_test], batch_size=batch_size)
+
+        (
+            total_loss_train,
+            loss_autoencoder_train,
+            mse_autoencoder_train,
+            mse_regression_train,
+        ) = model.evaluate(x_train, [x_train, y_train], batch_size=batch_size)
         dtw_test, dtw_train = [
             0,
             0,
@@ -129,7 +136,7 @@ def evaluate_function_multioutput(
             "dtw_train": dtw_train,
         }
 
-        results_regressor= {
+        results_regressor = {
             "total_loss_test": total_loss_test,
             "total_loss_train": total_loss_train,
             "dtw_train": dtw_train,

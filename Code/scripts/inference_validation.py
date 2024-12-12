@@ -4,11 +4,12 @@ sys.path.append("../Code")
 import os
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from tools_.tools_inference import *
-from tools_.tools import corr_pearson_cols
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
+
 from scripts.evaluate_function import *
+from tools_.tools import corr_pearson_cols
+from tools_.tools_inference import *
 
 batch_size = 400
 

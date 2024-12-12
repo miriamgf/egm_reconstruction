@@ -12,46 +12,27 @@ def get_run_logdir():
     return os.path.join(root_logdir, run_id)
 
 
+import datetime
 # %%
 import os
-import time
-import tensorflow as tf
-import keras
-from keras import models, layers
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split, StratifiedKFold
-from sklearn.metrics import confusion_matrix, f1_score
-from itertools import product
-from tools import *
-from Architectures import *
-from tensorflow.keras import datasets, layers, models, losses, Model
-import pickle
-from generators import *
-import sys
-from numpy import reshape
-from sklearn import preprocessing
-from sklearn.preprocessing import StandardScaler
-import cv2
-import glob
-from PIL import Image
-import matplotlib.image
-import time
 import random
+import time
 
-# from fastdtw import fastdtw
-from scipy.spatial.distance import euclidean
-from scipy.io import savemat
-from Plots import *
-from tensorflow.keras.optimizers import Adam
-import datetime
-from scipy.interpolate import interp1d
-import signal as sg
-from sklearn.metrics import mean_absolute_error
-from sklearn.metrics import mean_squared_error
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+from Architectures import *
 from fastdtw import fastdtw
-
+from generators import *
+from numpy import reshape
+from Plots import *
+from scipy.io import savemat
+# from fastdtw import fastdtw
+from sklearn.metrics import (mean_absolute_error, mean_squared_error)
+from tensorflow.keras import Model, losses
+from tensorflow.keras.optimizers import Adam
+from tools import *
 
 # GPU Configuration
 physical_devices = tf.config.list_physical_devices("GPU")
@@ -1034,7 +1015,6 @@ plt.show()
 
 
 # plot_Welch_reconstruction(latent_vector_test, estimate_egms_n, fs, n_nodes,y_test_subsample, nperseg_value=100)
-import signal as sg
 
 LS_signal = x_test
 output_signal = estimate_egms_n

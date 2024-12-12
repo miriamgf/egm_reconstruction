@@ -1,5 +1,5 @@
-from scipy import signal
 import numpy as np
+from scipy import signal
 
 
 def preprocess_compression(

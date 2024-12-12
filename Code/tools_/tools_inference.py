@@ -1,15 +1,15 @@
-import numpy as np
+import os
+import sys
+
 import h5py
-from scipy.io import loadmat
-from scipy import signal as sigproc
-from scipy import signal
-import sys, os
+import numpy as np
 import scipy
-from scipy.interpolate import interp1d
-from tools_.tools import truncate_length_bsps, interpolate_2D_array
-
-
 from numpy import reshape
+from scipy import signal
+from scipy import signal as sigproc
+from scipy.interpolate import interp1d
+
+from tools_.tools import interpolate_2D_array, truncate_length_bsps
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 

@@ -1,14 +1,9 @@
-import matplotlib.pyplot as plt
-import pickle
-from preprocessing_network import *
+
 from plots import *
-from scripts.config import TrainConfig_1
-from scripts.config import TrainConfig_2
-from scripts.config import DataConfig
-import random
+from tools_.preprocessing_network import *
+
 from scripts.evaluate_function import reshape_tensor
 from tools_ import freq_phase_analysis as freq_pha
-
 
 dict_var_dir = "../output/variables/"
 dict_results_dir = "../output/results/"
@@ -23,7 +18,6 @@ def DF_mapping(y_test, pred_test, BSPM_test, AF_models_test, path_save, norm=Tru
     )
 
     y_test_subsample = y_test_flat
-    estimate_egms_test = reconstruction_flat_test
     estimate_egms_n = normalize_by_models(reconstruction_flat_test, BSPM_test)
 
     # Normalize (por muestras)

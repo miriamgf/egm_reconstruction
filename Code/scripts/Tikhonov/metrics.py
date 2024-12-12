@@ -6,7 +6,6 @@ Created on Tue Jul 17 10:59:02 2018
 """
 
 import numpy as np
-from scipy import signal as sigproc
 from scipy import stats
 
 

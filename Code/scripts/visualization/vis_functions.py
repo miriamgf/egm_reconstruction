@@ -1,8 +1,8 @@
-import scipy.io
-import matplotlib.pyplot as plt
-from scipy import signal
-import numpy as np
 import sys
+
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.io
 
 sys.path.append("../Code")
 from tools_.tools import *

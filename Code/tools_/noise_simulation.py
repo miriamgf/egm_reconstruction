@@ -1,45 +1,19 @@
-import sys, os
+import os
+import sys
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from scipy.io import loadmat
-import numpy as np
-from random import randint
-import matplotlib.pyplot as plt
-from itertools import product
-from numpy.random import default_rng
-import scipy.io
-import h5py
-from scipy import signal as sigproc
-from scipy.interpolate import interp1d
-from math import floor
-from scipy import signal
-from add_white_noise import *
-from fastdtw import fastdtw
-from scipy.spatial.distance import euclidean
-import tensorflow as tf
 import random
-import math
-from sklearn.metrics import mean_squared_error
-from fastdtw import fastdtw
-import time
-import keras
-from keras import models, layers
-import pandas as pd
-from sklearn.model_selection import train_test_split, StratifiedKFold
-from tensorflow.keras import datasets, layers, models, losses, Model
-from generators import *
-from numpy import reshape
-import matplotlib.image
-from scipy.io import savemat
-from plots import *
-from scipy.stats import pearsonr
-from scipy.stats import spearmanr
-from datetime import time
-import wfdb
-from tools_.tools import *
-from scipy.signal import welch
-from scripts.config import DataConfig
 
+import matplotlib.pyplot as plt
+import numpy as np
+import wfdb
+from add_white_noise import *
+from generators import *
+from plots import *
+from scipy import signal
+from scipy.signal import welch
+
+from tools_.tools import *
 
 # %% Path Models
 # %% Path Models
@@ -52,7 +26,6 @@ torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
 class NoiseSimulation:
 
     def __init__(
-            
         self,
         params,
         SNR_em_noise=20,
@@ -68,7 +41,7 @@ class NoiseSimulation:
         self.SNR_em_noise = SNR_em_noise
         self.SNR_white_noise = SNR_white_noise
         self.random_order_chunks = True
-        self.params=params
+        self.params = params
 
     def configure_noise_database(
         self, len_target_signal, all_model_names, em=True, ma=False, gn=True
@@ -162,10 +135,10 @@ class NoiseSimulation:
             noisy_signal = clean_signal.copy()  # np.zeros(clean_signal.shape)
 
             # leads = clean_signal[:, indices[:, 0], indices[:, 1]]
-            if self.params['fs_sub'] == 100:
-                num_chunks_per_clean_signal = 3
-            elif self.params['fs_sub'] == 200:
-                num_chunks_per_clean_signal = 3
+            if self.params["fs_sub"] == 100:
+                pass
+            elif self.params["fs_sub"] == 200:
+                pass
 
             if (
                 Tikhonov_data_loading
@@ -201,23 +174,24 @@ class NoiseSimulation:
                     clean_signal.shape[0], clean_signal.shape[1] * clean_signal.shape[2]
                 ).T
         else:
-            noisy_signal=clean_signal
+            noisy_signal = clean_signal
             binary_map = None
 
-        
         if self.SNR_white_noise != None:
             noisy_signal_before = noisy_signal.copy()
-            noisy_signal = self.add_white_noise(noisy_signal_before, SNR=self.SNR_white_noise, fs=self.fs)
-            
-            plt.figure(figsize =(20,5))
-            plt.plot(noisy_signal[:, 0, 4], label='EM + WN')
-            plt.plot(noisy_signal_before[:, 0, 4], label='only EM')
-            plt.plot(clean_signal[:, 0, 4], label='clean')
+            noisy_signal = self.add_white_noise(
+                noisy_signal_before, SNR=self.SNR_white_noise, fs=self.fs
+            )
+
+            plt.figure(figsize=(20, 5))
+            plt.plot(noisy_signal[:, 0, 4], label="EM + WN")
+            plt.plot(noisy_signal_before[:, 0, 4], label="only EM")
+            plt.plot(clean_signal[:, 0, 4], label="clean")
             plt.legend()
-            os.makedirs('output/figures/Noise_module/', exist_ok=True)
-            plt.savefig('output/figures/Noise_module/phases_filtering1.png')
-            
-        
+            os.makedirs("output/figures/Noise_module/", exist_ok=True)
+            plt.savefig("output/figures/Noise_module/phases_filtering1.png")
+            plt.close()
+
         return noisy_signal, binary_map
 
     def insert_noise_in_signal(
@@ -457,12 +431,12 @@ class NoiseSimulation:
         self.compute_periodogram_of_noise(noise_original)
 
         # resample to target signal fs
-        #if self.fs_sub > 360:
-            #raise ValueError(
-                #"Error: cannot add EM noise from MIT DB Database. Fs cannot match."
-            #)
+        # if self.fs_sub > 360:
+        # raise ValueError(
+        # "Error: cannot add EM noise from MIT DB Database. Fs cannot match."
+        # )
         # resample to extend the original noise fs = 360 to 500 Hz
-        #TODO: Revisar, ahora mismo se interpolar para aumentar la fs, pero ver si reubicar este módulo a preprocessing
+        # TODO: Revisar, ahora mismo se interpolar para aumentar la fs, pero ver si reubicar este módulo a preprocessing
 
         noise = signal.resample_poly(noise, 500, 360)
         noise = signal.resample_poly(noise, self.fs, 500)
@@ -488,6 +462,7 @@ class NoiseSimulation:
         plt.grid(True)
         os.makedirs("output/figures/Noise_module/", exist_ok=True)
         plt.savefig("output/figures/Noise_module/welch_noise.png")
+        plt.close()
 
     def normalize_in_batches(self, array, batch_size=200, high=1, low=-1, axis_n=0):
         """

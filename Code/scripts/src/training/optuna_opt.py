@@ -1,19 +1,18 @@
-import optuna
-from tensorflow.keras.optimizers import Adam
-from models.multioutput import MultiOutput
-from tools_.load_dataset import LoadDataset
-from tools_.preprocess_data import Preprocess_Dataset
-from tools_.train_model import TrainModel
-from config import ParseHiperparams
-from optuna.samplers import TPESampler, RandomSampler, NSGAIISampler
-
 import json
 from pathlib import Path
 
+import optuna
+from config import ParseHiperparams
+from optuna.samplers import NSGAIISampler, RandomSampler, TPESampler
+
+from tools_.preprocess_data import Preprocess_Dataset
+from tools_.train_model import TrainModel
+
+
 class OptunaOpt:
     """
-    A class to perform hyperparameter optimization using Optuna. It orchestrates the 
-    entire process of searching for the best hyperparameters, training the model, and 
+    A class to perform hyperparameter optimization using Optuna. It orchestrates the
+    entire process of searching for the best hyperparameters, training the model, and
     storing the optimal hyperparameters for future reference.
 
     Attributes:
@@ -42,12 +41,12 @@ class OptunaOpt:
         Path to the directory where experiment outputs (e.g., results, plots) will be stored.
     hyperparams_path : str
         Path to the configuration file containing the hyperparameters to be optimized.
-    
+
     Methods:
     --------
     __init__(self, params, X_1channel, egm_tensor, AF_models, Y_model, dic_vars, Y, all_model_names, transfer_matrices, models_dir, experiment_dir)
         Initializes the OptunaOpt class with the provided data and paths.
-        
+
     parse_search_space(self, trial)
         Parses the search space for hyperparameters and returns a dictionary of hyperparameter suggestions using Optuna's trial object.
 
@@ -131,7 +130,7 @@ class OptunaOpt:
             A dictionary containing the suggested hyperparameters for the current trial.
         """
         search_space = ParseHiperparams().parse_optuna_hyperparams()
-        print('Search space:', search_space)
+        print("Search space:", search_space)
         optuna_params = {}
 
         # Take sampler
@@ -142,59 +141,70 @@ class OptunaOpt:
                 param_config = RandomSampler()
             elif param_name == "genetic":
                 param_config = NSGAIISampler()
-            optuna_params[param_name]=param_config
-    
-        # Sample 
+            optuna_params[param_name] = param_config
+
+        # Sample
         for param_name, param_config in search_space.items():
             if param_config[0] == "range":
                 if param_name == "lr" or param_name == "learning_rate":
-                    optuna_params[param_name] = trial.suggest_float(param_name, param_config[1], param_config[2], log=True)
+                    optuna_params[param_name] = trial.suggest_float(
+                        param_name, param_config[1], param_config[2], log=True
+                    )
                     # Overwrite in dictionary
                     self.params[param_name] = optuna_params[param_name]
 
-                else:  
+                else:
                     if type(param_config[1]) == int:
-                        #with step explicited
-                        if len(param_config) >3:
-                            optuna_params[param_name] = trial.suggest_int(param_name, param_config[1], param_config[2], step = param_config[3] )
-                            # Overwrite in dictionary
-                            self.params[param_name] = optuna_params[param_name]
-
-                        else: 
-                            optuna_params[param_name] = trial.suggest_int(param_name, param_config[1], param_config[2])
-                            # Overwrite in dictionary
-                            self.params[param_name] = optuna_params[param_name]
-
-
-                    elif type(param_config[1]) == float:
-                        if len(param_config) >3:
-                            optuna_params[param_name] = trial.suggest_float(param_name, param_config[1], param_config[2], step = param_config[3])
+                        # with step explicited
+                        if len(param_config) > 3:
+                            optuna_params[param_name] = trial.suggest_int(
+                                param_name,
+                                param_config[1],
+                                param_config[2],
+                                step=param_config[3],
+                            )
                             # Overwrite in dictionary
                             self.params[param_name] = optuna_params[param_name]
 
                         else:
-                            optuna_params[param_name] = trial.suggest_float(param_name, param_config[1], param_config[2])
+                            optuna_params[param_name] = trial.suggest_int(
+                                param_name, param_config[1], param_config[2]
+                            )
                             # Overwrite in dictionary
                             self.params[param_name] = optuna_params[param_name]
 
+                    elif type(param_config[1]) == float:
+                        if len(param_config) > 3:
+                            optuna_params[param_name] = trial.suggest_float(
+                                param_name,
+                                param_config[1],
+                                param_config[2],
+                                step=param_config[3],
+                            )
+                            # Overwrite in dictionary
+                            self.params[param_name] = optuna_params[param_name]
+
+                        else:
+                            optuna_params[param_name] = trial.suggest_float(
+                                param_name, param_config[1], param_config[2]
+                            )
+                            # Overwrite in dictionary
+                            self.params[param_name] = optuna_params[param_name]
 
             elif param_config[0] == "grid":
                 optuna_params[param_name] = trial.suggest_categorical(
                     param_name, param_config[1]
-                
                 )
                 # Overwrite in dictionary
                 self.params[param_name] = optuna_params[param_name]
 
-
-        
         return self.params
 
     def hyperparameter_optimization_optuna(self) -> dict:
         """
         Executes the hyperparameter optimization process using Optuna.
 
-        This method defines an objective function which is used by Optuna to search 
+        This method defines an objective function which is used by Optuna to search
         for the best hyperparameters based on the model's performance on validation data.
 
         Returns:
@@ -218,8 +228,7 @@ class OptunaOpt:
                 The validation loss after training the model with the trial's suggested hyperparameters.
             """
             self.params = self.parse_search_space(trial)
-            print('Trial number', trial)
-            
+            print("Trial number", trial)
 
             # Preprocess data
             (
@@ -297,7 +306,7 @@ class OptunaOpt:
             self.params[param_name] = best_params[param_name]
 
         # Save to JSON
-        with open(Path(self.experiment_dir, 'best_params.json'), "w") as outfile:
+        with open(Path(self.experiment_dir, "best_params.json"), "w") as outfile:
             json.dump(self.params, outfile)
 
         return self.params

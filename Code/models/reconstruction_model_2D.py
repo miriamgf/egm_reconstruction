@@ -1,5 +1,5 @@
 import tensorflow as tf
-from keras import models, layers
+from keras import layers, models
 from keras.layers import BatchNormalization
 from tensorflow.keras import layers, models
 

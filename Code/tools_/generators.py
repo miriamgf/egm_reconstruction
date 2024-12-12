@@ -5,16 +5,15 @@ Created on Tue Feb 16 18:18:11 2021
 @author: Miguel Ángel
 """
 
-import sys, os
+import os
+import sys
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import tensorflow as tf
-import keras
 import numpy as np
-from sklearn.model_selection import train_test_split
+import tensorflow as tf
 from numpy.random import default_rng
-from keras.preprocessing.image import ImageDataGenerator
 from scipy import stats
+from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 
 # %% Path Models
@@ -497,7 +496,6 @@ def generator_batches_autoencoder(
     train_list = []
     val_list = []
     test_list = []
-    count = 0
 
     # Check length of signals
     len_sig = X.shape[0]

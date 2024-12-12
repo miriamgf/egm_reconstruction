@@ -8,47 +8,29 @@
 # This script contains general tools used transversally through all pipeline
 
 
-import sys, os
+import os
+import sys
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from scipy.io import loadmat
-import numpy as np
-from random import randint
-import matplotlib.pyplot as plt
-from itertools import product
-from numpy.random import default_rng
-import scipy.io
-import h5py
-from scipy import signal as sigproc
-from scipy.interpolate import interp1d
-from math import floor
-from scipy import signal
-from add_white_noise import *
-from fastdtw import fastdtw
-from scipy.spatial.distance import euclidean
-import tensorflow as tf
-import random
 import math
-from sklearn.metrics import mean_squared_error
-from fastdtw import fastdtw
 import time
-import keras
-from keras import models, layers
-import pandas as pd
-from sklearn.model_selection import train_test_split, StratifiedKFold
-from tensorflow.keras import datasets, layers, models, losses, Model
+from datetime import time
+from itertools import product
+from math import floor
+
+import matplotlib.image
+import matplotlib.pyplot as plt
+import numpy as np
+import tensorflow as tf
+from add_white_noise import *
 from generators import *
 from numpy import reshape
-import matplotlib.image
-from scipy.io import savemat
 from plots import *
-from scipy.stats import pearsonr
-from scipy.stats import spearmanr
-from datetime import time
-from tools_.noise_simulation import NoiseSimulation
-from scripts.config import DataConfig
-from tools_.oclusion import Oclussion
-import time
+from scipy import signal as sigproc
+from scipy.interpolate import interp1d
+from scipy.stats import pearsonr, spearmanr
+from sklearn.metrics import mean_squared_error
+
 
 # from noise_simulation import *
 

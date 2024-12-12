@@ -2,34 +2,34 @@ import sys
 
 sys.path.append("../Code")
 import matplotlib.pyplot as plt
-from config import TrainConfig_1
-from config import DataConfig
+from config import DataConfig, TrainConfig_1
 from tensorflow.keras.optimizers import Adam
 
 print("importing tools")
-from tools_.preprocessing_network import *
-from tools_.tools import *
-from tools_.df_mapping import *
-import tensorflow as tf
-import os
-import scipy
 import datetime
+import os
+import pickle
+import random
 import time
+
+import mlflow
+import scipy
+import tensorflow as tf
 from evaluate_function import *
 from numpy import *
-import pickle
+
 from models.multioutput import MultiOutput
-import mlflow
-import random
-import argparse
+from tools_.df_mapping import *
+from tools_.preprocessing_network import *
+from tools_.tools import *
 
 tf.random.set_seed(42)
-import argparse
-from tensorflow.keras import backend as K
-import mlflow
-import tensorflow as tf
 import datetime
 import time
+
+import mlflow
+import tensorflow as tf
+from tensorflow.keras import backend as K
 from tensorflow.keras.models import load_model
 
 print("end imports")
@@ -780,13 +780,6 @@ print(dic_vars)
 
 # %%
 end = time.time()
-hyperparams = {
-    "lr": TrainConfig_1.learning_rate_1,
-    "fs": DataConfig.fs_sub,
-    "epochs": TrainConfig_1.n_epoch_1,
-    "batch_size": TrainConfig_1.batch_size_1,
-    "execution time": (end - start) / 60,
-}
 
 # Specify the file path
 file_path = experiment_dir + "hyperparams.txt"

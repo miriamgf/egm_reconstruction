@@ -1,15 +1,15 @@
 import sys
 
 sys.path.append("../Code")
-import matplotlib.pyplot as plt
 import pickle
-from tools_.preprocessing_network import *
-from tools_.plots import *
-from config import TrainConfig_1
-from config import TrainConfig_2
-from config import DataConfig
 import random
+
+import matplotlib.pyplot as plt
+from config import TrainConfig_1, TrainConfig_2
 from evaluate_function import reshape_tensor
+
+from tools_.plots import *
+from tools_.preprocessing_network import *
 
 fs = 50
 figs_dir = "output/figures/20240410-192639"

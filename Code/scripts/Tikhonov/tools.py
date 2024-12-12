@@ -5,41 +5,29 @@
 # @author: Miguel Ángel
 # """
 
-import sys, os
+import os
+import sys
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from scipy.io import loadmat
-import numpy as np
-from random import randint
-import matplotlib.pyplot as plt
+import math
+import random
 from itertools import product
-from numpy.random import default_rng
-import scipy.io
-import h5py
-from scipy import signal as sigproc
-from scipy.interpolate import interp1d
 from math import floor
-from scipy import signal
+
+import h5py
+import matplotlib.image
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.io
+import tensorflow as tf
 from add_white_noise import *
 from fastdtw import fastdtw
-from scipy.spatial.distance import euclidean
-import tensorflow as tf
-import random
-import math
+from numpy.random import default_rng
+from scipy import signal
+from scipy import signal as sigproc
+from scipy.io import loadmat
+from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics import mean_squared_error
-from fastdtw import fastdtw
-import time
-import keras
-from keras import models, layers
-import pandas as pd
-from sklearn.model_selection import train_test_split, StratifiedKFold
-from tensorflow.keras import datasets, layers, models, losses, Model
-from numpy import reshape
-import matplotlib.image
-from scipy.io import savemat
-from scipy.stats import pearsonr
-from scipy.stats import spearmanr
-
 
 # %% Path Models
 # %% Path Models
@@ -169,15 +157,14 @@ def load_data(
             maxs = np.max(x, axis=0)
             rng = maxs - mins
 
-            bsps_64_n = high - (((high - low) * (maxs - x)) / rng)
+            high - (((high - low) * (maxs - x)) / rng)
 
         # 2) Compute the Forward problem with each of the transfer matrices
         for matrix in transfer_matrices:
 
             # Forward problem
-            y = forward_problem(x, matrix[0])
+            forward_problem(x, matrix[0])
             # bsps_64 = (y[matrix[1].ravel(),:])
-            bsps_64_or = bsps_64
 
             # 3) Add NOISE and Filter
             if SNR != None:
@@ -241,7 +228,7 @@ def load_data(
             if classification:
 
                 y_labels = get_labels(n_classes, model_name)
-                y_labels_list = y_labels.tolist()
+                y_labels.tolist()
 
                 # RESAMPLING labels to fs= fs_sub
                 if subsampling:

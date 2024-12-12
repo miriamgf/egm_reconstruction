@@ -5,10 +5,10 @@ Created on Tue Jul  3 10:54:43 2018
 @author: Miguel Ángel
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy import signal as sigproc
 from scipy import stats
-import matplotlib.pyplot as plt
 
 
 def freq_response_plot(b, a, fs):

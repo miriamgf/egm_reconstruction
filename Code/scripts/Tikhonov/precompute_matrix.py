@@ -5,13 +5,12 @@ Created on Tue Jun 19 14:17:08 2018
 @author: Miguel Ángel
 """
 
-import numpy as np
-from scipy import signal as sigproc
-import data_load as dl
-
 import os
-import scipy.io
+
+import data_load as dl
 import h5py
+import numpy as np
+import scipy.io
 
 data_path = os.getcwd() + "/data/"
 data_path_real = os.getcwd() + "/data/Real/"

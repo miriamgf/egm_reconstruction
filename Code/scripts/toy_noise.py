@@ -1,32 +1,16 @@
 # %%
 import sys
-import os
-import sys, os
-import sys
 
 sys.path.append("../Code")
-import matplotlib.pyplot as plt
-from sklearn.metrics import mean_absolute_error
-from tensorflow.keras.optimizers import Adam
-import tools_.freq_phase_analysis as freq_pha
-import tools_.plots
-from tools_.preprocessing_network import *
-from tools_.tools import *
-from tools_.df_mapping import *
-from tools_.noise_simulation import NoiseSimulation
-
+import datetime
 
 import tensorflow as tf
-import os
-import scipy
-import datetime
-import time
 from numpy import *
-import pickle
-from models.multioutput import MultiOutput
-import mlflow
-import random
 
+from tools_.df_mapping import *
+from tools_.noise_simulation import NoiseSimulation
+from tools_.preprocessing_network import *
+from tools_.tools import *
 
 tf.random.set_seed(42)
 

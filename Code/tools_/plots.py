@@ -1,9 +1,11 @@
-import sys, os
+import os
+import sys
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from tools_ import *
 from generators import *
 from scipy import *
+
+from tools_ import *
 
 
 def define_image(time_instant, Tensor):
@@ -120,7 +122,7 @@ def plot_Welch_periodogram(x_test, latent_vector, decoded_imgs, fs=50):
             plt.plot(f, Pxx_den, linewidth=0.5)
             plt.xlabel("frequency [Hz]")
             plt.ylabel("PSD")
-            titlee = "PSD of input signal. nodes ({} , {})".format(height, width)
+            "PSD of input signal. nodes ({} , {})".format(height, width)
             plt.title("Input signal")
     plt.show()
 
@@ -140,7 +142,7 @@ def plot_Welch_periodogram(x_test, latent_vector, decoded_imgs, fs=50):
             plt.plot(f, Pxx_den, linewidth=0.5)
             plt.xlabel("frequency [Hz]")
             plt.ylabel("PSD")
-            titlee = "PSD of output signal. nodes ({} , {})".format(height, width)
+            "PSD of output signal. nodes ({} , {})".format(height, width)
             plt.title("Output signal")
     plt.show()
 
@@ -163,7 +165,7 @@ def plot_Welch_periodogram(x_test, latent_vector, decoded_imgs, fs=50):
                 plt.plot(f, Pxx_den, linewidth=0.5)
                 plt.xlabel("frequency [Hz]")
                 plt.ylabel("PSD")
-                titlee = "PSD of Latent Space signal. nodes ( - )".format(height, width)
+                "PSD of Latent Space signal. nodes ( - )".format(height, width)
                 plt.title("latent Space")
 
     plt.savefig("Figures/Periodogram_AE.png")
@@ -247,7 +249,7 @@ def plot_Welch_reconstruction(
         plt.plot(f, Pxx_den, linewidth=0.5)
         plt.xlabel("frequency [Hz]")
         plt.ylabel("PSD [V**2/Hz]")
-        titlee = "PSD Welch of EGM signal estimation. node {}".format(height)
+        "PSD Welch of EGM signal estimation. node {}".format(height)
         plt.title("EGM signals Real")
         # plt.ylim([0,0.2])
     plt.savefig("Figures/Periodogram_rec.png")

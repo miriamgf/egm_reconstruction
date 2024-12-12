@@ -1,54 +1,22 @@
 import sys
 
 sys.path.append("../Code")
-from tools_tikhonov import load_data, load_egms_df, normalize_array
-import forward_inverse_problem as fip
-import filtering
-from sklearn.metrics import mean_squared_error
-
-# import data_load as dl
-import precompute_matrix as pre_m
-import metrics
-import freq_phase_analysis as freq_pha
-import sys, os
-from scipy.io import loadmat
-import data_load as dl
-from scipy.stats import pearsonr
-from scipy.stats import spearmanr
-import os
-import time
-import tensorflow as tf
-import keras
-from keras import models, layers
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split, StratifiedKFold
-from sklearn.utils import class_weight
-from sklearn.metrics import confusion_matrix, f1_score
-from sklearn.utils import shuffle
-from itertools import product
-from tensorflow.keras import datasets, layers, models, losses, Model
-import pickle
-import sys
-from numpy import reshape
-from sklearn import preprocessing
-from sklearn.preprocessing import StandardScaler
-import glob
-from PIL import Image
-import matplotlib.image
-import time
-import random
-import pandas as pd
-from fastdtw import fastdtw
-from scipy.spatial.distance import euclidean
-from scipy.io import savemat
-import forward_inverse_problem as fip
-from tools import corr_spearman_cols
-from tools import array_to_dic_by_models
 import argparse
 import math
+import os
+import sys
+import time
 
+import forward_inverse_problem as fip
+import matplotlib.pyplot as plt
+import numpy as np
+# import data_load as dl
+import precompute_matrix as pre_m
+import tensorflow as tf
+from scipy.io import savemat
+from sklearn.metrics import mean_squared_error
+from tools import corr_spearman_cols
+from tools_tikhonov import load_data, load_egms_df, normalize_array
 
 directory = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
 
@@ -193,7 +161,7 @@ for model in range(len(all_model_names)):
         + str(model_name)
         + ".png"
     )
-    
+
     A = np.array(transfer_matrices[0][0])  # Only one torso
     AA, L, LL = pre_m.precompute_matrix(A, atrial_model, order)
     # Classical Tikhonov-based inverse problem approach.

@@ -4,31 +4,21 @@ sys.path.append(
     "/home/profes/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/"
 )
 
-from models.autoencoder_model import autoencoder
-from models.autoencoder_model import autoencoder
-from models.autoencoder_model import autoencoder
-from models.reconstruction_model import reconstruction
-from config import TrainConfig_1
-from config import TrainConfig_2
-from config import DataConfig
-from sklearn.metrics import mean_absolute_error
-from tensorflow.keras.optimizers import Adam
-from tools_ import freq_phase_analysis as freq_pha
-from tools_ import plots
-from tools_.preprocessing_network import *
-from tools_.tools import *
-from tools_.df_mapping import *
-import tensorflow as tf
-import os
-import scipy
 import datetime
+import itertools
+import os
+import sys
 import time
+
+import mlflow
+import tensorflow as tf
+from config import DataConfig
 from evaluate_function import *
 from numpy import *
-import pickle
-import sys
-import mlflow
-import itertools
+
+from tools_.df_mapping import *
+from tools_.preprocessing_network import *
+from tools_.tools import *
 
 sys.path.append("/code")
 tf.random.set_seed(42)

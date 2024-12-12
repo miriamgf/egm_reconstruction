@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import os
+
+import h5py
 import numpy as np
 import scipy.io
-import h5py
 
 data_path = "/home/mgutierrez/Desktop/Autoencoders/Data4/"
 data_path_real = "/home/mgutierrez/Desktop/Autoencoders/Data4/"

@@ -5,31 +5,28 @@
 # @author: Miguel Ángel
 # """
 
-import sys, os
+import os
+import sys
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from scipy.io import loadmat
-import numpy as np
-from random import randint
-import matplotlib.pyplot as plt
-from itertools import product
-from numpy.random import default_rng
-import scipy.io
-import h5py
-from scipy import signal as sigproc
-from scipy.interpolate import interp1d
-from math import floor
-from scipy import signal
-from add_white_noise import *
-from fastdtw import fastdtw
-from scipy.spatial.distance import euclidean
-import tensorflow as tf
 import random
-import pandas as pd
-from tools_.noise_simulation import *
-from scripts.config import DataConfig
-from tools_.oclusion import Oclussion
+from itertools import product
+from math import floor
 
+import h5py
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import scipy.io
+import tensorflow as tf
+from add_white_noise import *
+from numpy.random import default_rng
+from scipy import signal
+from scipy import signal as sigproc
+from scipy.io import loadmat
+
+from scripts.config import DataConfig
+from tools_.noise_simulation import *
 
 # %% Path Models
 # %% Path Models
@@ -228,7 +225,7 @@ def load_data(
             maxs = np.max(x, axis=0)
             rng = maxs - mins
 
-            bsps_64_n = high - (((high - low) * (maxs - x)) / rng)
+            high - (((high - low) * (maxs - x)) / rng)
 
         # 2) Compute the Forward problem with each of the transfer matrices
         for matrix in transfer_matrices:
@@ -248,7 +245,6 @@ def load_data(
             )
             bsps_64 = y
             # bsps_64 = (y[matrix[1].ravel(),:])
-            bsps_64_or = bsps_64
 
             # 3) Add NOISE and Filter
             # if SNR != None:

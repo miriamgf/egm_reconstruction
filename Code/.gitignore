@@ -1,5 +1,10 @@
 *.png
-.mlflow/
+mlflow/
 .conda/
 *.pyc
 __pycache__/
+mlartifacts/
+output/
+Figures/
+build/
+./conda

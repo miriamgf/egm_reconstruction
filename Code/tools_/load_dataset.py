@@ -2,49 +2,28 @@
 
 
 import os
+import sys
+
 from tools_.noise_simulation import *
-import sys, os
 from tools_.tools_1 import *
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from scipy.io import loadmat
-import numpy as np
-from random import randint
-import matplotlib.pyplot as plt
-from itertools import product
-from numpy.random import default_rng
-import scipy.io
-import h5py
-from scipy import signal as sigproc
-from scipy.interpolate import interp1d
-from math import floor
-from scipy import signal
-from add_white_noise import *
-from fastdtw import fastdtw
-from scipy.spatial.distance import euclidean
-import tensorflow as tf
-import random
-import math
-from sklearn.metrics import mean_squared_error
-from fastdtw import fastdtw
-import time
-import keras
-from keras import models, layers
-import pandas as pd
-from sklearn.model_selection import train_test_split, StratifiedKFold
-from tensorflow.keras import datasets, layers, models, losses, Model
-from generators import *
-from numpy import reshape
-import matplotlib.image
-from scipy.io import savemat
-from plots import *
-from scipy.stats import pearsonr, spearmanr
-from datetime import time
-from tools_.noise_simulation import NoiseSimulation
-from scripts.config import DataConfig
-from tools_.oclusion import Oclussion
 import time
 
+import h5py
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.io
+from add_white_noise import *
+from generators import *
+from numpy.random import default_rng
+from plots import *
+from scipy import signal
+from scipy import signal as sigproc
+from scipy.io import loadmat
+
+from tools_.noise_simulation import NoiseSimulation
+from tools_.oclusion import Oclussion
 
 # %% Path Models
 # %% Path Models
@@ -131,7 +110,7 @@ class LoadDataset:
                         '2' ->  RA/LA/No rotor (2 classes)
                         '3' ->  7 regions (3 classes) + no rotor (8 classes)
             SR: If Sinus Ryhthm Model is included (True/False)
-            
+
             norm: if normalizing is performed to models when loading them (True/False)
             classification: if classification task is performed
             sinusoid: if a database of sinusoids is generated (True/False)
@@ -146,7 +125,6 @@ class LoadDataset:
             all_model_names -> Name of all AF models loaded
             transfer_matrices -> All transfer matrices used for Forward Problem (*for using them for Tikhonov later)
         """
-        fs = 500
 
         # % Check models in directory
         all_model_names = []
@@ -180,7 +158,7 @@ class LoadDataset:
 
         len_target_signal = 2000  # configure_noise_database: hacer una estimación de la longitud del array de BSPMs
         Noise_Simulation = NoiseSimulation(
-            params = self.params,
+            params=self.params,
             SNR_em_noise=self.SNR_em_noise,
             SNR_white_noise=self.SNR_white_noise,
             oclusion=None,
@@ -239,7 +217,7 @@ class LoadDataset:
                 maxs = np.max(x, axis=0)
                 rng = maxs - mins
 
-                bsps_64_n = high - (((high - low) * (maxs - x)) / rng)
+                high - (((high - low) * (maxs - x)) / rng)
 
             # 2) Compute the Forward problem with each of the transfer matrices
             for matrix in transfer_matrices:
@@ -255,10 +233,12 @@ class LoadDataset:
                 plt.plot(x[0, 0:2000])
                 plt.subplot(2, 1, 2)
                 plt.plot(y[0, 0:2000])
+                plt.close()
 
                 plt.title(model_name)
                 os.makedirs("output/figures/Noise_module/", exist_ok=True)
                 plt.savefig("output/figures/input_output/forward_problem.png")
+                plt.close()
 
                 # RESAMPLING signal to fs= fs_sub
                 if self.downsampling:
@@ -271,6 +251,7 @@ class LoadDataset:
                     plt.plot(x[0, 0:2000])
                     plt.title(model_name)
                     plt.savefig("output/figures/input_output/subsample.png")
+                    plt.close()
 
                 else:
 
@@ -280,7 +261,7 @@ class LoadDataset:
                 if self.classification:
 
                     y_labels = self.get_labels(self.n_classes, model_name)
-                    y_labels_list = y_labels.tolist()
+                    y_labels.tolist()
 
                     # RESAMPLING labels to fs= fs_sub
                     if self.downsampling:
@@ -311,7 +292,7 @@ class LoadDataset:
                     )
 
                     # Noise
-                    start_time = time.time()
+                    time.time()
 
                     if self.SNR_bsps != None:
                         # New noise module
@@ -340,6 +321,7 @@ class LoadDataset:
                     plt.plot(tensor_model_filt[0:1000, 0, 0], label="Cleaned")
                     plt.legend()
                     plt.savefig("output/figures/Noise_module/filtered_vs_original.png")
+                    plt.close()
 
                     # Turn off electrodes
                     if self.patches_oclussion != "PT":
@@ -356,6 +338,7 @@ class LoadDataset:
                     plt.plot(tensor_model[0:2000, 0, 0])
                     plt.title(model_name)
                     plt.savefig("output/figures/input_output/before_truncate.png")
+                    plt.close()
 
                     # Truncate length to be divisible by the batch size
                     # tensor_model, length_list, x_sub = truncate_length_bsps(self.n_batch, tensor_model, length_list, x_sub)
@@ -894,7 +877,9 @@ class LoadDataset:
 
         # Bandpass filtering
         b, a = sigproc.butter(
-            order, [f_low / round((self.fs / 2)), f_high / round((self.fs / 2))], btype="bandpass"
+            order,
+            [f_low / round((self.fs / 2)), f_high / round((self.fs / 2))],
+            btype="bandpass",
         )
 
         proc_ECG_EGM = np.zeros(sig_temp.shape)

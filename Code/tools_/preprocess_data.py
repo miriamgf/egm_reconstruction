@@ -1,54 +1,25 @@
 # This script was developed Miriam Gutiérrez Fernández
 # """
 import os
+import sys
+
 from tools_.noise_simulation import *
-import sys, os
 from tools_.tools_1 import *
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from scripts.config import TrainConfig_1
 import os
-from tools_.noise_simulation import *
-import sys, os
-from tools_.tools_1 import *
-from scipy.io import loadmat
-import numpy as np
-from random import randint
-import matplotlib.pyplot as plt
-from itertools import product
-from numpy.random import default_rng
-import scipy.io
-import h5py
-from scipy import signal as sigproc
-from scipy.interpolate import interp1d
-from math import floor
-from scipy import signal
-from add_white_noise import *
-from fastdtw import fastdtw
-from scipy.spatial.distance import euclidean
-import tensorflow as tf
 import random
-import math
-from sklearn.metrics import mean_squared_error
-from fastdtw import fastdtw
-import time
-import keras
-from keras import models, layers
-import pandas as pd
-from sklearn.model_selection import train_test_split, StratifiedKFold
-from tensorflow.keras import datasets, layers, models, losses, Model
+import sys
+
+import matplotlib.pyplot as plt
+import numpy as np
+from add_white_noise import *
 from generators import *
 from numpy import reshape
-import matplotlib.image
-from scipy.io import savemat
 from plots import *
-from scipy.stats import pearsonr
-from scipy.stats import spearmanr
-from datetime import time
-from tools_.noise_simulation import NoiseSimulation
-from scripts.config import DataConfig
-from tools_.oclusion import Oclussion
-import time
+
+from tools_.noise_simulation import *
+from tools_.tools_1 import *
 
 # from noise_simulation import *
 
@@ -94,7 +65,6 @@ class Preprocess_Dataset:
         self.Y = Y
         self.all_model_names = all_model_names
         self.transfer_matrices = transfer_matrices
-       
 
     def preprocess_main(self):
         """
@@ -107,12 +77,14 @@ class Preprocess_Dataset:
 
 
         """
-        
+
         # Downsampling and truncate
-        self.X_1channel, self.egm_tensor, self.AF_models, self.Y_model = self.preprocess_compression(
-            fs_sub=self.params['fs_sub'],
-            batch_size=self.params['batch_size'],
-            downsampling=True,
+        self.X_1channel, self.egm_tensor, self.AF_models, self.Y_model = (
+            self.preprocess_compression(
+                fs_sub=self.params["fs_sub"],
+                batch_size=self.params["batch_size"],
+                downsampling=True,
+            )
         )
 
         # Normalize BSPS and EGM
@@ -142,7 +114,6 @@ class Preprocess_Dataset:
         self.dic_vars.update(new_items)
 
         # Train/Test/Val Split
-        random_split = True
         print("Splitting...")
         (
             x_train,
@@ -185,7 +156,7 @@ class Preprocess_Dataset:
         self.dic_vars.update(new_items)
 
         x_train, x_test, x_val = self.preprocessing_autoencoder_input(
-            x_train, x_test, x_val, self.params['batch_size']
+            x_train, x_test, x_val, self.params["batch_size"]
         )
 
         new_items = {"x_train": x_train, "x_test": x_test, "x_val": x_val}
@@ -195,7 +166,7 @@ class Preprocess_Dataset:
             train_models,
             test_models,
             val_models,
-            self.params['batch_size'],
+            self.params["batch_size"],
             norm=False,
         )
 
@@ -249,9 +220,15 @@ class Preprocess_Dataset:
 
         for AF_model_i in np.unique(self.AF_models):
 
-            X_1channel_from_model_i = self.X_1channel[np.where(self.AF_models == AF_model_i)]
-            egm_tensor_from_model_i = self.egm_tensor[np.where(self.AF_models == AF_model_i)]
-            AF_models_from_model_i = self.AF_models[np.where(self.AF_models == AF_model_i)]
+            X_1channel_from_model_i = self.X_1channel[
+                np.where(self.AF_models == AF_model_i)
+            ]
+            egm_tensor_from_model_i = self.egm_tensor[
+                np.where(self.AF_models == AF_model_i)
+            ]
+            AF_models_from_model_i = self.AF_models[
+                np.where(self.AF_models == AF_model_i)
+            ]
             Y_model_from_model_i = self.Y_model[np.where(self.AF_models == AF_model_i)]
 
             if downsampling:
@@ -410,9 +387,15 @@ class Preprocess_Dataset:
             x_test = latent_space_n[np.in1d(self.AF_models, test_models)]
             x_val = latent_space_n[np.in1d(self.AF_models, val_models)]
         else:
-            x_train = latent_space_n[np.where((self.Y_model >= 1) & (self.Y_model <= 200))]
-            x_test = latent_space_n[np.where((self.Y_model > 180) & (self.Y_model <= 244))]
-            x_val = latent_space_n[np.where((self.Y_model > 244) & (self.Y_model <= 286))]
+            x_train = latent_space_n[
+                np.where((self.Y_model >= 1) & (self.Y_model <= 200))
+            ]
+            x_test = latent_space_n[
+                np.where((self.Y_model > 180) & (self.Y_model <= 244))
+            ]
+            x_val = latent_space_n[
+                np.where((self.Y_model > 244) & (self.Y_model <= 286))
+            ]
 
         # Split EGM (Label)
         if random_split:
@@ -422,8 +405,12 @@ class Preprocess_Dataset:
 
         else:
 
-            y_train = egm_tensor_n[np.where((self.Y_model >= 1) & (self.Y_model <= 200))]
-            y_test = egm_tensor_n[np.where((self.Y_model > 180) & (self.Y_model <= 244))]
+            y_train = egm_tensor_n[
+                np.where((self.Y_model >= 1) & (self.Y_model <= 200))
+            ]
+            y_test = egm_tensor_n[
+                np.where((self.Y_model > 180) & (self.Y_model <= 244))
+            ]
             y_val = egm_tensor_n[np.where((self.Y_model > 244) & (self.Y_model <= 286))]
 
         # %% Subsample EGM nodes
@@ -520,26 +507,30 @@ class Preprocess_Dataset:
 
         else:
 
-            y_train = egm_tensor_n[np.where((self.Y_model >= 1) & (self.Y_model <= 200))]
-            y_test = egm_tensor_n[np.where((self.Y_model > 180) & (self.Y_model <= 244))]
+            y_train = egm_tensor_n[
+                np.where((self.Y_model >= 1) & (self.Y_model <= 200))
+            ]
+            y_test = egm_tensor_n[
+                np.where((self.Y_model > 180) & (self.Y_model <= 244))
+            ]
             y_val = egm_tensor_n[np.where((self.Y_model > 244) & (self.Y_model <= 286))]
 
         # %% Subsample EGM nodes
 
-        if self.params['n_nodes_regression'] == 2048:
+        if self.params["n_nodes_regression"] == 2048:
             N = 1
-        elif self.params['n_nodes_regression'] == 1024:
+        elif self.params["n_nodes_regression"] == 1024:
             N = 2
-        elif self.params['n_nodes_regression'] == 682:
+        elif self.params["n_nodes_regression"] == 682:
             N = 3
-        elif self.params['n_nodes_regression'] == 512:
+        elif self.params["n_nodes_regression"] == 512:
             N = 4
 
         y_train_subsample = y_train[:, 0:2048:N]  #:, 0:2048:2] --> 1024
         y_test_subsample = y_test[:, 0:2048:N]
         y_val_subsample = y_val[:, 0:2048:N]
 
-        n_nodes = y_train_subsample.shape[1]
+        y_train_subsample.shape[1]
 
         y_train = reshape(
             y_train_subsample,
@@ -696,7 +687,9 @@ class Preprocess_Dataset:
                 if caution_split:
                     train_models = random.sample(
                         list(AF_models_unique),
-                        int(np.floor(self.AF_models[-1] * train_percentage - len(indx))),
+                        int(
+                            np.floor(self.AF_models[-1] * train_percentage - len(indx))
+                        ),
                     )
                     train_models = train_models + indx
                 else:
@@ -707,7 +700,8 @@ class Preprocess_Dataset:
 
                 aux_models = [x for x in AF_models_unique if x not in train_models]
                 test_models = random.sample(
-                    list(aux_models), int(np.floor(self.AF_models[-1] * test_percentage))
+                    list(aux_models),
+                    int(np.floor(self.AF_models[-1] * test_percentage)),
                 )
                 val_models = [x for x in aux_models if x not in test_models]
 
@@ -730,14 +724,20 @@ class Preprocess_Dataset:
 
         else:
 
-            x_train = self.X_1channel[np.where((self.Y_model >= 1) & (self.Y_model <= 200))]
-            x_test = self.X_1channel[np.where((self.Y_model > 180) & (self.Y_model <= 244))]
-            x_val = self.X_1channel[np.where((self.Y_model > 244) & (self.Y_model <= 286))]
+            x_train = self.X_1channel[
+                np.where((self.Y_model >= 1) & (self.Y_model <= 200))
+            ]
+            x_test = self.X_1channel[
+                np.where((self.Y_model > 180) & (self.Y_model <= 244))
+            ]
+            x_val = self.X_1channel[
+                np.where((self.Y_model > 244) & (self.Y_model <= 286))
+            ]
 
         # Save the model names in train, test and val
-        test_model_name = [self.all_model_names[index] for index in AF_models_test]
-        val_model_name = [self.all_model_names[index] for index in AF_models_val]
-        train_model_name = [self.all_model_names[index] for index in AF_models_train]
+        [self.all_model_names[index] for index in AF_models_test]
+        [self.all_model_names[index] for index in AF_models_val]
+        [self.all_model_names[index] for index in AF_models_train]
 
         return (
             x_train,

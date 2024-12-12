@@ -1,51 +1,56 @@
 # This script was developed Miriam Gutiérrez Fernández
 
-
 import sys
-
 sys.path.append("../Code")
-import matplotlib.pyplot as plt
-from config import TrainConfig_1
-from config import DataConfig
-from tensorflow.keras.optimizers import Adam
-from tools_.preprocessing_network import *
-from tools_.tools import *
-from tools_.df_mapping import *
-import tensorflow as tf
-import os
-import scipy
-import datetime
-import time
-from evaluate_function import *
-from numpy import *
-import pickle
-from models.multioutput import MultiOutput
-import mlflow
-import random
 import argparse
+import datetime
+import os
+import pickle
+import random
+import time
+
+import matplotlib.pyplot as plt
+#import mlflow
+import scipy
+import tensorflow as tf
+import tools_
+import tools_.oclusion
+from evaluate_function import evaluate_function_multioutput, evaluate_function_multioutput
+from numpy import *
+
+import tools_
+import tools_.tools
+from scipy.io import savemat
+
+
+from tools_.df_mapping import *
+from tools_.preprocessing_network import preprocessing_autoencoder_input
+
+
+from tools_.tools import *
 
 tf.random.set_seed(42)
 import argparse
-from tensorflow.keras import backend as K
-import mlflow
-import tensorflow as tf
 import datetime
 import time
-from tensorflow.keras.models import load_model
 
-from tools_.preprocessing_compression import *
+import tensorflow as tf
+from config import ParseHiperparams
+from src.training.optuna_opt import OptunaOpt
+from keras import backend as K
+
 from tools_.load_dataset import LoadDataset
 from tools_.preprocess_data import Preprocess_Dataset
+from tools_.preprocessing_compression import *
 from tools_.train_model import TrainModel
-from src.training.optuna_opt import OptunaOpt
-from config import ParseHiperparams
-
 
 print("end imports")
 # Clear GPU
 K.clear_session()
 tf.keras.backend.clear_session()
 tf.compat.v1.reset_default_graph()
+#os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices=false'
+#tf.config.experimental_run_functions_eagerly(True)
 
 
 """
@@ -78,49 +83,47 @@ params = ParseHiperparams().parse_default_hyperparams()
 
 try:
     # parse args
-    print('parsing')
+    print("parsing")
     parser = argparse.ArgumentParser(description="Noise params")
-    parser.add_argument('--algorithm', type=str, help='experiment name', required=True)
-    parser.add_argument('--optuna', type=str, help='True or False', required=False)
-    parser.add_argument('--LSTM', type=str, help='True or False', required=False)
+    parser.add_argument("--algorithm", type=str, help="experiment name", required=True)
+    parser.add_argument("--optuna", type=str, help="True or False", required=False)
+    parser.add_argument("--LSTM", type=str, help="True or False", required=False)
 
     args = parser.parse_args()
     algorithm = args.algorithm
     optuna = args.optuna
     LSTM = args.LSTM
 
-    if optuna == 'True':
-        params['optuna_optimization']=True
-   
-except:
-    algorithm=params['algorithm']
-    pass
+    if optuna == "True":
+        params["optuna_optimization"] = True
 
+except:
+    algorithm = params["algorithm"]
 
 
 SNR_em_noise = None
 SNR_white_noise = 100
-patches_oclussion = 'PT'
+patches_oclussion = "PT"
 experiment_number = 0
 unfold_code = 1
 
 experiment_name = (
     datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "_EXP_" + str(experiment_number)
 )  # + '_' + str(SNR_white_noise)+ '_' + str(patches_oclussion)+ '_' + str(unfold_code)
-experiment_name=algorithm
+experiment_name = algorithm
 try:
     if optuna:
-        experiment_name= f"{experiment_name}_optuna"
-        #if LSTM == 'True':
-            #experiment_name=f"{experiment_name}_lstm"
+        experiment_name = f"{experiment_name}_optuna"
+        # if LSTM == 'True':
+        # experiment_name=f"{experiment_name}_lstm"
 except:
     pass
 
 
-experiment_name=f"{experiment_name}_lstm"
+experiment_name = f"{experiment_name}_lstm_no_ls"
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data_short/"
+data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
 torsos_dir = "../../../../Labeled_torsos/"
 figs_dir = "output/figures/"
 models_dir = "output/model/"
@@ -132,8 +135,8 @@ experiment_dir = "output/experiments/experiments_VAE/" + experiment_name + "/"
 if not os.path.exists(experiment_dir):
     os.makedirs(experiment_dir)
     print("Directory for experiment", experiment_dir, "created")
-#else:
-    #experiment_dir = experiment_dir 
+    # else:
+    # experiment_dir = experiment_dir
     print(
         "Existing directory, CHANGE NAME TO AVOID rewriting information to:",
         experiment_dir,
@@ -171,12 +174,12 @@ all_model_names = sorted(all_model_names)
 print(all_model_names)
 
 
-mlflow.set_tracking_uri(uri="http://10.110.100.78:5000")
-mlflow.autolog()
+#mlflow.set_tracking_uri(uri="http://10.110.100.78:5000")
+#mlflow.autolog()
 
 # Load data
-if params['fs'] == params['fs_sub']:
-    params['fs'] = params['fs_sub']
+if params["fs"] == params["fs_sub"]:
+    params["fs"] = params["fs_sub"]
 
 Transfer_model = False  # Transfer learning from sinusoids
 sinusoids = False
@@ -195,12 +198,12 @@ sinusoids = False
     params,
     directory=directory,
     data_type="1channelTensor",
-    n_classes=params['n_classes'],
+    n_classes=params["n_classes"],
     downsampling=False,
-    fs=params['fs'],
+    fs=params["fs"],
     norm=False,
     SR=True,
-    n_batch=params['batch_size'],
+    n_batch=params["batch_size"],
     sinusoid=sinusoids,
     SNR_em_noise=SNR_em_noise,
     SNR_white_noise=SNR_white_noise,
@@ -210,9 +213,8 @@ sinusoids = False
 )()
 
 
-
-if params['optuna_optimization']:
-    print('Starting Optuna optimization...')
+if params["optuna_optimization"]:
+    print("Starting Optuna optimization...")
     params = OptunaOpt(
         params=params,
         X_1channel=X_1channel,
@@ -224,7 +226,7 @@ if params['optuna_optimization']:
         all_model_names=all_model_names,
         transfer_matrices=transfer_matrices,
         models_dir=models_dir,
-        experiment_dir=experiment_dir
+        experiment_dir=experiment_dir,
     )()
 
 """
@@ -266,11 +268,12 @@ plt.savefig('output/figures/input_output/before_norm.png')
     transfer_matrices,
 )()
 
-print('Algorithm selected:', params['algorithm'])
+
+
+print("Algorithm selected:", params["algorithm"])
 model, history = TrainModel(
     params, x_train, x_test, x_val, y_train, y_test, y_val, models_dir, experiment_dir
-)()   
-
+)()
 
 
 # Evaluate
@@ -279,7 +282,7 @@ pred_test = model.predict(
     x_test, batch_size=1
 )  # x_test=[#batches, batch_size, 12, 32, 1]
 
-if params['use_generator']:
+if params["use_generator"]:
     pred_train = model.predict(
         data_generator(x_train), steps=x_train.shape[0], batch_size=1
     )
@@ -287,13 +290,13 @@ if params['use_generator']:
     print("Generator")
 else:
     try:
-        if params['parallelism']:
+        if params["parallelism"]:
             with strategy.scope():
                 pred_train = model.predict(x_train, batch_size=1)  # (44, 50, 12, 32, 1)
         else:
             pred_train = model.predict(x_train, batch_size=1)  # (44, 50, 12, 32, 1)
     except:
-        if params['parallelism']:
+        if params["parallelism"]:
             with strategy.scope():
 
                 x_train = x_train[0:50, :, :, :, :]
@@ -394,8 +397,9 @@ for i in range(0, 60):
     plt.savefig(experiment_dir + "EGM_Reconstructions_" + str(i) + ".png")
 
     plt.show()
+    plt.close()
 
-time_instant = random.randint(0, params['batch_size'])
+time_instant = random.randint(0, params["batch_size"])
 batch = random.randrange(0, x_test.shape[0] - 20, 1)
 
 # Reconstrauction Autoencoders
@@ -415,8 +419,9 @@ for i in range(0, 10):
     plt.imshow(difference)
     plt.title("Error")
     plt.colorbar(label="Colorbar Label")  # Add a colorbar with a label
-    plt.savefig(experiment_dir + "Autoencoder_reconstructions"+str(i)+".png")
+    plt.savefig(experiment_dir + "Autoencoder_reconstructions" + str(i) + ".png")
     plt.show()
+    plt.close()
 
 # 2D EGM plots
 plt.figure(layout="tight", figsize=(15, 10))
@@ -444,12 +449,13 @@ plt.ylabel("nodes")
 plt.colorbar(orientation="horizontal", pad=0.2)
 plt.savefig(experiment_dir + "2D_EGM_predictions.png")
 plt.show()
+plt.close()
 
 # PSD
-nperseg_value = 2 * params['fs_sub']
+nperseg_value = 2 * params["fs_sub"]
 fig = plt.figure(layout="tight", figsize=(10, 6))
 plt.subplot(3, 1, 3)
-fs = params['fs_sub']
+fs = params["fs_sub"]
 # EGM reconstruction
 for height in range(0, estimate_egms_n.shape[1], 5):
     f, Pxx_den = scipy.signal.welch(
@@ -510,16 +516,17 @@ for height in range(0, y_fl.shape[1], 5):
 
 fig.suptitle("Welch Periodogram (window size=200 samples)", fontsize=15)
 plt.savefig(experiment_dir + "PSD.png")
+plt.close()
 
 
 # DF mapping: Calculate DF Maps and Phase maps from reconstruction and labels --> Plot 3D in Matlab
-'''
+"""
 if params['DF_mapping']:
     print("Computing DF Mapping...")
     DF_mapping(
         y_test, pred_test_egm, BSPM_test, AF_models_test, experiment_dir, norm=True
     )
-'''
+"""
 # Calculate metrics DTW, RMSE and Correlation BY AF MODELS: Meand and std
 # *This metrics are calculated appart because thay are not computed in evaluate_function, (...)
 # (...) as they cannot be included in the tensorflow metric callback
@@ -558,9 +565,9 @@ new_items = {
 }
 dic_vars.update(new_items)
 
-#results = pd.DataFrame(
-    #columns=["MSE AE", "DTW AE", "MSE Reconstruction", "TWD Reconstruction"]
-#)
+# results = pd.DataFrame(
+# columns=["MSE AE", "DTW AE", "MSE Reconstruction", "TWD Reconstruction"]
+# )
 
 # Interpolation for mapping in 3D
 estimate_egms_reshaped = reshape(
@@ -617,10 +624,8 @@ savemat(
     dic_by_models,
 )
 savemat(dict_var_dir + "/variables.mat", variables)
-dic_latent_space_test={'Latent_space_test': pred_test_autoencoder }
+dic_latent_space_test = {"Latent_space_test": pred_test_autoencoder}
 savemat(experiment_dir + "/autoencoder.mat", dic_latent_space_test)
-
-
 
 
 # Write dictionary string representation to text file
@@ -670,7 +675,7 @@ savemat(dict_results_dir + "dict_results_reconstruction.mat", results_regressor)
 # %%
 end = time.time()
 
-params['execution_time']=(end - start) / 60
+params["execution_time"] = (end - start) / 60
 # Specify the file path
 file_path = experiment_dir + "hyperparams.txt"
 

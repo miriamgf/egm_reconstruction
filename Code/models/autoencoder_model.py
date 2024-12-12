@@ -1,10 +1,7 @@
-from keras import models, layers
-import time
+
 import tensorflow as tf
-import keras
-from keras.models import load_model
-from keras.layers import BatchNormalization
-from tensorflow.keras import datasets, layers, models, losses, Model
+from keras import layers, models
+from tensorflow.keras import layers, models
 
 
 def autoencoder(x_train):
