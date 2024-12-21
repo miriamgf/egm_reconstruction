@@ -1,0 +1,9 @@
+model_version v21
+id_model 150113_EG_LSPV
+singular_point_location left_atrium
+nearest_point LSPV
+rotor_frequency 7,8
+rest_frequency 6,5
+fibrosis 50
+rotor_restyle 100
+rest_restyle 50

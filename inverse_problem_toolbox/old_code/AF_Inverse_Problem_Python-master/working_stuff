@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu May 30 13:27:35 2019
+
+@author: obarquero
+"""
+import matplotlib.pyplot as plt
+
+plt.figure()
+
+a = True
+ii = 0
+
+for ii in range(x.shape[0]):
+    plt.clf()
+    plt.plot(x[ii,:])
+    plt.title(str(ii))
+    plt.pause(.01)
+
+
+x = np.load('egms_total.npy')
+
+
+pxx = []
+
+for i in range(x.shape[0]):
+    f,pxx_aux = signal.welch(x[i,:],fs = 500,nfft=2048,nperseg=512)
+    pxx.append(pxx_aux)
+    
+
+pxx = np.asarray(pxx)
+
+plt.figure()
+plt.plot(f,pxx.T,':',linewidth = 0.1,color = 'gray')
+plt.xlim((0,50))
+plt.plot(f,np.mean(pxx,axis=0))
+#look at the frequency content of the data from the models
+
+xx = np.max(pxx,axis=1)
+pxx_n = pxx/xx[:,np.newaxis]
+
+plt.figure()
+plt.plot(f,pxx_n.T,':',linewidth = 0.1,color = 'gray')
+plt.xlim((0,50))
+plt.plot(f,np.mean(pxx_n,axis=0))

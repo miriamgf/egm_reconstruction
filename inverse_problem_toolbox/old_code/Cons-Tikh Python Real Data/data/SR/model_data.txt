@@ -1,0 +1,9 @@
+model_version v21
+id_model 150629_Sinusal
+singular_point_location none
+nearest_point none
+rotor_frequency none
+rest_frequency 1,2
+fibrosis 0
+rotor_restyle 0
+rest_restyle 0

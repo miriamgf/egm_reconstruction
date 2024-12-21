@@ -1,0 +1,9 @@
+model_version v21
+id_model 141216_EG_RAA
+singular_point_location right_atrium
+nearest_point RAA
+rotor_frequency 5
+rest_frequency 3,1
+fibrosis 0
+rotor_restyle 100
+rest_restyle 0

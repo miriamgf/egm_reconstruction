@@ -1,0 +1,9 @@
+model_version v21
+id_model 140730_RA
+singular_point_location right_atrium
+nearest_point FRAW
+rotor_frequency 7,3
+rest_frequency 4,7
+fibrosis 0
+rotor_restyle 100
+rest_restyle 0/100

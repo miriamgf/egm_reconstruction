@@ -1,0 +1,9 @@
+model_version v21
+id_model 150115_RSPV
+singular_point_location left_atrium
+nearest_point RSPV
+rotor_frequency 6,8
+rest_frequency 5,4
+fibrosis 25
+rotor_restyle 100
+rest_restyle 0
