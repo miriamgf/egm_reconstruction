@@ -344,8 +344,9 @@ class MultiOutput_VAE_skip(Model):
         )
 
         # Total loss
-        total_loss = loss_autoencoder + loss_regression
-
+        total_loss = (
+                        self.params["loss_weight_2"]*loss_autoencoder + self.params["loss_weight_2"]*loss_regression
+                    ) 
         # Return losses for tracking
         return {
             "total_loss": total_loss,

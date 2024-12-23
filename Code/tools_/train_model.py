@@ -13,16 +13,13 @@ from models.multioutput import MultiOutput
 from models.multioutput_skip import MultiOutput_skip
 from models.multioutput_VAE import MultiOutput_VAE
 from models.multioutput_VAE_skip import MultiOutput_VAE_skip
+from keras.callbacks import TensorBoard
 
 tf.random.set_seed(42)
 import datetime
 
 import tensorflow as tf
 from keras.models import load_model
-
-
-
-
 
 class TrainModel:
     """
@@ -145,15 +142,24 @@ class TrainModel:
 
         # Callbacks
         cp_callback = tf.keras.callbacks.ModelCheckpoint(
-            filepath=self.models_dir
+            filepath=self.experiment_dir
             + "regressor.weights.h5",
             save_weights_only=True,
             verbose=1,
             save_best_only=True,
         )
-        early_stopping_callback = tf.keras.callbacks.EarlyStopping(
-            monitor="mse_regression", patience=30
-        )
+        if self.params["algorithm"] == "OMAMI" or self.params["algorithm"] == "OMAMI_ski":
+            early_stopping_callback = tf.keras.callbacks.EarlyStopping(
+                monitor="val_loss", patience=20
+            )
+        else:
+            early_stopping_callback = tf.keras.callbacks.EarlyStopping(
+                monitor="val_total_loss", patience=20
+            )
+        tensorboard_callback = TensorBoard(log_dir='output/tensorboard/logs/'+self.params['algorithm'], histogram_freq=1)
+        #ssh -L 6006:localhost:6006 miriamgf@10.110.100.78 en terminal LOCAL
+        #tensorboard --logdir=output/tensorboard/logs/
+
 
         # Choose algorithm {OMAMI, OMAMI_VAE, OMAMI_ski, OMAMI_VAE_ski}
 
@@ -163,8 +169,9 @@ class TrainModel:
                 input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1]
             )
             model.compile(
-                optimizer=tf.keras.optimizers.Adam(),
+                optimizer=optimizer,
                 loss=["mean_squared_error", "mean_squared_error"],
+                loss_weights=[1.0, 5.0],
                 metrics=["mean_absolute_error"]
                 
             )
@@ -175,8 +182,9 @@ class TrainModel:
                 input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1]
             )
             model.compile(
-                optimizer=tf.keras.optimizers.Adam(),
+                optimizer=optimizer,
                 loss=["mean_squared_error", "mean_squared_error"],
+                loss_weights=[1.0, 5.0],
                 metrics=["mean_absolute_error"]
 
                 
@@ -222,7 +230,7 @@ class TrainModel:
             batch_size=1,
             epochs=self.params["n_epochs"],
             validation_data=(x_val, [x_val, y_val]),
-            callbacks=[early_stopping_callback, cp_callback],
+            callbacks=[early_stopping_callback, cp_callback, tensorboard_callback],
         )
 
         # Plot and save training and validation curves
@@ -283,136 +291,7 @@ class TrainModel:
     
         return model, history
 
-    def train_main_parallelism(self, x_train, x_test, x_val, y_train, y_test, y_val):
-        """
-        Executes the model training process.
-
-        This method trains a multi-output model, with the ability to perform training either in a parallel setting
-        (using multiple GPUs) or in a standard setting. It also includes callbacks for early stopping and checkpointing.
-
-        Args:
-        -----
-        x_train : numpy.array
-            Training input data.
-        x_test : numpy.array
-            Testing input data.
-        x_val : numpy.array
-            Validation input data.
-        y_train : numpy.array
-            Training output labels.
-        y_test : numpy.array
-            Testing output labels.
-        y_val : numpy.array
-            Validation output labels.
-
-        Returns:
-        --------
-        model : keras.Model
-            The trained Keras model.
-        history : keras.callbacks.History
-            The history object generated during model training, containing metrics like loss and accuracy.
-        """
-        print("Training model...")
-
-        # Optimizer configuration
-        optimizer = Adam(learning_rate=self.params["learning_rate"])
-
-        # Callbacks
-        cp_callback = tf.keras.callbacks.ModelCheckpoint(
-            filepath=self.models_dir
-            + "regressor"
-            + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"),
-            save_weights_only=True,
-            verbose=1,
-        )
-        early_stopping_callback = tf.keras.callbacks.EarlyStopping(
-            monitor="val_loss", patience=50
-        )
-
-        # Strategy for multi-GPU parallelism
-        strategy = tf.distribute.MirroredStrategy()
-
-        # Training logic for parallel or single-GPU setting
-        if self.params["parallelism"]:
-            with strategy.scope():
-                # Assemble the multi-output model
-                model = MultiOutput(params=self.params).assemble_full_model(
-                    input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1]
-                )
-                model.compile(
-                    optimizer="adam",
-                    loss=["mean_squared_error", "mean_squared_error"],
-                    metrics=["mean_absolute_error"],
-                    loss_weights=[1.0, 5.0],
-                )
-                print(model.summary())
-
-                # Train the model
-                history = model.fit(
-                    x=x_train,
-                    y=[x_train, y_train],
-                    batch_size=1,
-                    epochs=self.params["n_epochs"],
-                    validation_data=(x_val, [x_val, y_val]),
-                    callbacks=[early_stopping_callback, cp_callback],
-                )
-        else:
-            # Load pretrained model for inference or train from scratch
-            if self.params["inference_pretrained_model"]:
-                model = load_model(
-                    "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_CINC/20240827-112359_EXP_0/model_mo.h5"
-                )
-            else:
-                # Assemble and compile model
-                model = MultiOutput(params=self.params).assemble_full_model(
-                    input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1]
-                )
-                model.compile(
-                    optimizer="adam",
-                    loss=["mean_squared_error", "mean_squared_error"],
-                    loss_weights=[1.0, 5.0],
-                    metrics=["mean_absolute_error"],
-                )
-                print(model.summary())
-
-                # Train the model
-                history = model.fit(
-                    x=x_train,
-                    y=[x_train, y_train],
-                    batch_size=1,
-                    epochs=self.params["n_epochs"],
-                    validation_data=(x_val, [x_val, y_val]),
-                    callbacks=[early_stopping_callback, cp_callback],
-                )
-
-                # Plot and save training and validation curves
-                plt.figure()
-                plt.plot(history.history["val_loss"], label="Global loss (Validation)")
-                plt.plot(
-                    history.history["val_Autoencoder_output_loss"],
-                    label="Autoencoder loss (Validation)",
-                )
-                plt.plot(
-                    history.history["val_Regressor_output_loss"],
-                    label="Regressor loss (Validation)",
-                )
-                plt.plot(history.history["loss"], label="Global loss (Train)")
-                plt.plot(
-                    history.history["Autoencoder_output_loss"],
-                    label="Autoencoder loss (Train)",
-                )
-                plt.plot(
-                    history.history["Regressor_output_loss"],
-                    label="Regressor loss (Train)",
-                )
-                plt.legend(loc="upper left")
-                plt.title("Model Loss During Training and Validation")
-                plt.ylabel("Mean Squared Error (MSE)")
-                plt.xlabel("Epoch")
-                plt.savefig(self.experiment_dir + "Learning_curves.png")
-                plt.show()
-
-        return model, history
+    
 
     def __call__(self, verbose=False, all=False):
         """

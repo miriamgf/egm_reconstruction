@@ -1,21 +1,17 @@
 import tensorflow as tf
-from tensorflow import keras
 from keras import layers
-from keras.layers import BatchNormalization  # Uncomment this line if you need BatchNormalization directly
-from keras import Model  # Import Model from tensorflow.keras
-
+from keras.layers import BatchNormalization
+from tensorflow.keras import layers, Model
 
 # referencia: https://towardsdatascience.com/building-a-multi-output-convolutional-neural-network-with-keras-ed24c7bc1178
-
 
 class MultiOutput:
     """
     Used to generate our multi-output model. This CNN contains 2 branches, one for autoencoder, other for
     regression from Bsps to EGMs.
     """
-
     def __init__(self, params):
-        self.params = params
+        self.params=params
 
     def build_encoder_module(self, inputs, input_shape):
         """
@@ -31,7 +27,8 @@ class MultiOutput:
             activation="leaky_relu",
             input_shape=input_shape[2:],
             kernel_initializer=initializer,
-            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg_encoder_1"]),
+            kernel_regularizer=tf.keras.regularizers.l2(0.1)
+            #kernel_regularizer=tf.keras.regularizers.l2(l=0.1),
         )(inputs)
         encoder = layers.Conv3D(
             64, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
@@ -46,8 +43,7 @@ class MultiOutput:
             strides=1,
             padding="same",
             activation="leaky_relu",
-            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg_encoder_1"]),
-
+            kernel_regularizer=tf.keras.regularizers.l2(0.1),
         )(encoder)
         encoder = layers.MaxPooling3D((1, 2, 2))(encoder)
         encoder = layers.Conv3D(
@@ -76,8 +72,7 @@ class MultiOutput:
             strides=1,
             padding="same",
             activation="linear",
-            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg_encoder_1"]),
-
+            kernel_regularizer=tf.keras.regularizers.l2(0.1),
             name="Autoencoder_output",
         )(decoder)
 
@@ -89,41 +84,35 @@ class MultiOutput:
         decoder = self.build_decoder_module(inputs, input_shape, encoder)
         return encoder, decoder
 
-    def build_reconstruction_branch(self, inputs, input_shape, n_nodes):
+    def build_reconstruction_branch(self, inputs, input_shape, encoder, n_nodes):
         initializer = tf.keras.initializers.HeNormal()
 
-        #encoder = tf.cast(encoder, dtype=tf.float32)
-        print('reconstruction input shape')
-        print(inputs.shape)
-
         x = layers.Conv3D(
-            16,
+            64,
             (5, 2, 2),
             strides=(1, 1, 1),
             padding="same",
             activation="leaky_relu",
-            input_shape=(3, 4, 4, 1),
-            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg_encoder_1"]),
+            kernel_regularizer=tf.keras.regularizers.l2(0.1),
             kernel_initializer=initializer,
-        )(inputs)
+        )(encoder)
         x = layers.UpSampling3D((1, 2, 2))(x)
         x = layers.Conv3D(
-            1,
+            32,
             (5, 3, 3),
             strides=(1, 1, 1),
             padding="same",
             activation="leaky_relu",
-            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg_encoder_1"]),
+            kernel_regularizer=tf.keras.regularizers.l2(0.1),
         )(x)
-        #x = layers.UpSampling3D((1, 2, 2))(x)
+        x = layers.UpSampling3D((1, 2, 2))(x)
         # Ajusta el kernel temporal a 1 para evitar cambio en la dimensión temporal
-        x = layers.Conv3D(
-            3, (5, 3, 3), strides=(1, 1, 1), padding="same", activation="leaky_relu"
-        )(x)
+        x = layers.Conv3D(3, (5, 3, 3), strides=(1, 1, 1),
+                        padding="same", activation="leaky_relu")(x)
         x = layers.TimeDistributed(layers.Flatten())(x)
-        x = layers.BatchNormalization(axis=1)(x)
+        x = BatchNormalization(axis=1)(x)
         x = layers.LSTM(self.params["LSTM_units"], return_sequences=True)(x)
-        x = layers.Dropout(self.params["dropout"])(x)
+        x = layers.Dropout(0.3)(x)
         x = layers.Dense(n_nodes, activation="leaky_relu", name="Regressor_output")(x)
 
         return x
@@ -134,9 +123,8 @@ class MultiOutput:
         """
         inputs = layers.Input(shape=input_shape)
         encoder, autoencoder_branch = self.build_autoencoder_branch(inputs, input_shape)
-      
         reconstruction_branch = self.build_reconstruction_branch(
-            encoder, encoder.shape, n_nodes
+            inputs, input_shape, encoder, n_nodes
         )
 
         model = Model(

@@ -33,22 +33,15 @@ class MultiOutput_skip:
                 l=self.params["l2_reg_encoder_1"]
             ),
         )(inputs)
-        
-
         skip1 = encoder  # First skip connection
-
         encoder = layers.Conv3D(
             64, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
         )(encoder)
         skip2 = encoder  # Second skip connection
-
         encoder = layers.Conv3D(
             32, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
         )(encoder)
-        print('layers.Conv3D(64, (5, 2, 2),', encoder.shape)
         encoder = layers.MaxPooling3D((1, 2, 2))(encoder)
-        print('layers.MaxPooling3D(64, (1, 2, 2),', encoder.shape)
-
         encoder = layers.Conv3D(
             12,
             (5, 2, 2),
@@ -59,21 +52,12 @@ class MultiOutput_skip:
                 l=self.params["l2_reg_encoder_2"]
             ),
         )(encoder)
-        print('layers.Conv3D(12, (1, 2, 2),', encoder.shape)
         encoder = layers.MaxPooling3D((1, 2, 2))(encoder)
-        print('layers.MaxPooling3D(12, (1, 2, 2),', encoder.shape)
-
         encoder = layers.Conv3D(
             4, (5, 2, 2), strides=1, padding="same", activation="linear"
         )(encoder)
-        print('layers.Conv3D(4, (5, 2, 2),', encoder.shape)
-
         encoder = layers.MaxPooling3D((1, 1, 2))(encoder)
         skip3 = encoder  # Third skip connection
-
-        print('layers.MaxPooling3D(4, (5, 2, 2),', encoder.shape)
-
-
         return encoder, [skip1, skip2, skip3]
 
     def build_decoder_module(self, inputs, input_shape, encoder, skips):
@@ -87,12 +71,9 @@ class MultiOutput_skip:
         decoder = layers.Conv3D(
             12, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
         )(encoder)
-        print('layers.Conv3D(12, (5, 2, 2),', encoder.shape)
         decoder = layers.Concatenate()([decoder, skip3])
 
         decoder = layers.UpSampling3D((1, 1, 2))(decoder)
-        print('layers.UpSampling3D((1, 1, 2)),', decoder.shape)
-
 
         # Skip connection 1
         decoder = layers.Conv3D(
@@ -143,7 +124,6 @@ class MultiOutput_skip:
             strides=(1, 1, 1),
             padding="same",
             activation="leaky_relu",
-            input_shape=(3, 4, 4, 1),
             kernel_regularizer=tf.keras.regularizers.l2(l=self.params["l2_reg_rec_1"]),
             kernel_initializer=initializer,
         )(encoder)
@@ -180,7 +160,7 @@ class MultiOutput_skip:
         reconstruction_branch = self.build_reconstruction_branch(
             inputs, input_shape, encoder, n_nodes
         )
-
+        
         model = Model(
             inputs=inputs,
             outputs=[autoencoder_branch, reconstruction_branch],

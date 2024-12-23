@@ -209,11 +209,8 @@ class MultiOutput_VAE(Model):
         '''
         # self.input_shape_=input_shape_
 
-        print('latent_inputs shape', latent_inputs.shape)
 
         x = self.conv3d_1(latent_inputs)
-        print('x shape', x.shape)
-
         x = self.upsampling3d_1(x)
         x = self.conv3d_2(x)
         x = self.upsampling3d_2(x)
@@ -244,9 +241,6 @@ class MultiOutput_VAE(Model):
             name="MultiOutput",
         )
 
-        # Save to access during compile
-        # self.z_mean = z_mean
-        # self.z_log_var = z_log_var
 
         return model
 
@@ -302,7 +296,7 @@ class MultiOutput_VAE(Model):
 
             # Total loss (you can adjust weights if one branch's loss should have more influence)
             total_loss = (
-                loss_autoencoder + loss_regression
+                self.params["loss_weight_2"]*loss_autoencoder + self.params["loss_weight_2"]*loss_regression
             )  # Or weighted: alpha*loss_autoencoder + beta*loss_regression
 
         # Compute and apply gradients based on the total loss

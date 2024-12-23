@@ -24,9 +24,6 @@ from scipy.io import savemat
 
 
 from tools_.df_mapping import *
-from tools_.preprocessing_network import preprocessing_autoencoder_input
-
-
 from tools_.tools import *
 
 tf.random.set_seed(42)
@@ -49,8 +46,6 @@ print("end imports")
 K.clear_session()
 tf.keras.backend.clear_session()
 tf.compat.v1.reset_default_graph()
-#os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices=false'
-#tf.config.experimental_run_functions_eagerly(True)
 
 
 """
@@ -82,17 +77,18 @@ params = ParseHiperparams().parse_default_hyperparams()
 
 
 try:
-    # parse args
     print("parsing")
     parser = argparse.ArgumentParser(description="Noise params")
     parser.add_argument("--algorithm", type=str, help="experiment name", required=True)
     parser.add_argument("--optuna", type=str, help="True or False", required=False)
-    parser.add_argument("--LSTM", type=str, help="True or False", required=False)
+    parser.add_argument("--n_nodes", type=int, help="682, 1024", required=False)
 
     args = parser.parse_args()
     algorithm = args.algorithm
     optuna = args.optuna
-    LSTM = args.LSTM
+    n_nodes = args.n_nodes
+    params["algorithm"]=algorithm
+    params["n_nodes_regression"]=n_nodes
 
     if optuna == "True":
         params["optuna_optimization"] = True
@@ -100,6 +96,7 @@ try:
 except:
     algorithm = params["algorithm"]
 
+print('Params to train: ', params)
 
 SNR_em_noise = None
 SNR_white_noise = 100
@@ -107,20 +104,9 @@ patches_oclussion = "PT"
 experiment_number = 0
 unfold_code = 1
 
-experiment_name = (
-    datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "_EXP_" + str(experiment_number)
-)  # + '_' + str(SNR_white_noise)+ '_' + str(patches_oclussion)+ '_' + str(unfold_code)
 experiment_name = algorithm
-try:
-    if optuna:
-        experiment_name = f"{experiment_name}_optuna"
-        # if LSTM == 'True':
-        # experiment_name=f"{experiment_name}_lstm"
-except:
-    pass
 
-
-experiment_name = f"{experiment_name}_lstm_no_ls"
+experiment_name = f"{experiment_name}_bs_400_1024"
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
@@ -133,14 +119,8 @@ experiment_dir = "output/experiments/experiments_VAE/" + experiment_name + "/"
 
 
 if not os.path.exists(experiment_dir):
-    os.makedirs(experiment_dir)
-    print("Directory for experiment", experiment_dir, "created")
-    # else:
-    # experiment_dir = experiment_dir
-    print(
-        "Existing directory, CHANGE NAME TO AVOID rewriting information to:",
-        experiment_dir,
-    )
+    os.makedirs(experiment_dir)    
+print('Experiment dir', experiment_dir)
 
 dic_vars = {}
 dict_results = {}
@@ -150,7 +130,6 @@ physical_devices = tf.config.list_physical_devices("GPU")
 print("Num GPUs:", len(physical_devices))
 for gpu in tf.config.experimental.list_physical_devices("GPU"):
     tf.config.experimental.set_memory_growth(gpu, True)
-
 
 start = time.time()
 
@@ -280,7 +259,7 @@ model, history = TrainModel(
 # model = load_model('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/20240415-172029/model_mo.h5')
 pred_test = model.predict(
     x_test, batch_size=1
-)  # x_test=[#batches, batch_size, 12, 32, 1]
+) 
 
 if params["use_generator"]:
     pred_train = model.predict(
@@ -288,6 +267,7 @@ if params["use_generator"]:
     )
     # TODO: NOT WORKING
     print("Generator")
+    
 else:
     try:
         if params["parallelism"]:
