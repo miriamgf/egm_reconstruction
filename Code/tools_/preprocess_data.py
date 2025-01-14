@@ -17,13 +17,14 @@ from add_white_noise import *
 from generators import *
 from numpy import reshape
 from plots import *
+from scipy.io import savemat
+
 
 from tools_.noise_simulation import *
 from tools_.tools_1 import *
 
 # from noise_simulation import *
 
-# %% Path Models
 # %% Path Models
 current = os.path.dirname(os.path.realpath(__file__))
 torsos_dir = "../../../Labeled_torsos/"
@@ -40,7 +41,7 @@ class Preprocess_Dataset:
         - Split into train and test
         - Batch generation
         - Normalization
-        -Reshape to fit into input layers of the network
+        - Reshape to fit into input layers of the network
 
     """
 
@@ -54,7 +55,7 @@ class Preprocess_Dataset:
         dic_vars,
         Y,
         all_model_names,
-        transfer_matrices,
+        transfer_matrices,experiment_dir, norm_egm=True
     ):
         self.params = params
         self.X_1channel = X_1channel
@@ -65,6 +66,8 @@ class Preprocess_Dataset:
         self.Y = Y
         self.all_model_names = all_model_names
         self.transfer_matrices = transfer_matrices
+        self.experiment_dir=experiment_dir 
+        self.norm_egm=norm_egm
 
     def preprocess_main(self):
         """
@@ -87,12 +90,29 @@ class Preprocess_Dataset:
             )
         )
 
+        mdic = {"reconstruction": self.egm_tensor, "label": self.egm_tensor}
+        savemat(
+            self.experiment_dir + "/reconstructions_downsampling.mat",
+            mdic,
+        )
+
         # Normalize BSPS and EGM
         self.X_1channel = normalize_by_models(self.X_1channel, self.Y_model)
-        self.egm_tensor = normalize_by_models(self.egm_tensor, self.Y_model)
+
+        if self.norm_egm:
+            self.egm_tensor = normalize_by_models(self.egm_tensor, self.Y_model)
+        
+        #Remove Nans
         self.X_1channel = np.nan_to_num(
             self.X_1channel, nan=0.0
         )  # Nans generated during noise addition
+
+        #Save
+        mdic = {"reconstruction": self.egm_tensor, "label": self.egm_tensor}
+        savemat(
+            self.experiment_dir + "/reconstructions_norm.mat",
+            mdic,
+        )
 
         plt.figure()
         plt.plot(self.X_1channel[0:200, 0, 0], label="bsps")
@@ -167,7 +187,11 @@ class Preprocess_Dataset:
             test_models,
             val_models,
             self.params["batch_size"],
-            norm=False,
+        )
+        mdic = {"reconstruction": y_test, "label": y_test}
+        savemat(
+            self.experiment_dir + "/reconstructions_preprocessing_y.mat",
+            mdic,
         )
 
         plt.figure()
@@ -477,44 +501,28 @@ class Preprocess_Dataset:
         train_models,
         test_models,
         val_models,
-        n_batch,
-        norm=False,
-        random_split=True,
+        n_batch
     ):
-        # Normalize
-        if norm:
-            egm_tensor_n = []
-            for model in np.unique(self.Y_model):
+        
 
-                # 2. Normalize egm (output)
-                arr_to_norm_egm = self.egm_tensor[
-                    np.where((self.Y_model == model))
-                ]  # select window of signal belonging to model i
-                egm_tensor_norm = normalize_array(arr_to_norm_egm, 1, -1)
-                egm_tensor_n.extend(egm_tensor_norm)  # Add to new norm array
+        egm_tensor_n = self.egm_tensor
 
-            egm_tensor_n = np.array(egm_tensor_n)
-
-        else:
-
-            egm_tensor_n = self.egm_tensor
+        mdic = {"reconstruction": egm_tensor_n, "label": egm_tensor_n}
+        savemat(
+            self.experiment_dir + "/input_preprocessing_y.mat",
+            mdic,
+        )
 
         # Split EGM (Label)
-        if random_split:
-            y_train = egm_tensor_n[np.in1d(self.AF_models, train_models)]
-            y_test = egm_tensor_n[np.in1d(self.AF_models, test_models)]
-            y_val = egm_tensor_n[np.in1d(self.AF_models, val_models)]
+        y_train = egm_tensor_n[np.in1d(self.AF_models, train_models)]
+        y_test = egm_tensor_n[np.in1d(self.AF_models, test_models)]
+        y_val = egm_tensor_n[np.in1d(self.AF_models, val_models)]
 
-        else:
-
-            y_train = egm_tensor_n[
-                np.where((self.Y_model >= 1) & (self.Y_model <= 200))
-            ]
-            y_test = egm_tensor_n[
-                np.where((self.Y_model > 180) & (self.Y_model <= 244))
-            ]
-            y_val = egm_tensor_n[np.where((self.Y_model > 244) & (self.Y_model <= 286))]
-
+        mdic = {"reconstruction": y_test, "label": y_test}
+        savemat(
+            self.experiment_dir + "/split_preprocessing_y.mat",
+            mdic,
+        )
         # %% Subsample EGM nodes
 
         if self.params["n_nodes_regression"] == 2048:
@@ -525,12 +533,19 @@ class Preprocess_Dataset:
             N = 3
         elif self.params["n_nodes_regression"] == 512:
             N = 4
+        else: #default
+            N = 1
 
         y_train_subsample = y_train[:, 0:2048:N]  #:, 0:2048:2] --> 1024
         y_test_subsample = y_test[:, 0:2048:N]
         y_val_subsample = y_val[:, 0:2048:N]
 
-        y_train_subsample.shape[1]
+        mdic = {"reconstruction": y_test_subsample, "label": y_test_subsample}
+        savemat(
+            self.experiment_dir + "/subsample_preprocessing_y.mat",
+            mdic,
+        )
+
 
         y_train = reshape(
             y_train_subsample,
@@ -547,6 +562,12 @@ class Preprocess_Dataset:
         y_val = reshape(
             y_val_subsample,
             (int(len(y_val_subsample) / n_batch), n_batch, y_val_subsample.shape[1]),
+        )
+
+        mdic = {"reconstruction": y_test, "label": y_test}
+        savemat(
+            self.experiment_dir + "/resample_preprocessing_y.mat",
+            mdic,
         )
 
         return y_train, y_test, y_val
@@ -648,8 +669,9 @@ class Preprocess_Dataset:
                 ]
 
                 val_models_deterministic = [
-                    "LA_RIPV_150121",
-                    "RA_RAFW_140807",
+                    #"LA_RIPV_150121",
+                    #"RA_RAFW_140807",
+                    "Simulation_01_190502_001_004", #BORRAR
                     "Simulation_01_190502_001_005",
                     "Simulation_01_200212_001_  8",
                     "Sinusal_150629",

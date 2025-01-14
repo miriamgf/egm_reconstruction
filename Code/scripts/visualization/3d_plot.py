@@ -8,14 +8,18 @@ import os
 import cv2
 
 # Cargar datos
-model_path = "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_bs_200/reconstructions_by_model_OMAMI_bs_200.mat"
+#model_path = "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_weighted/reconstructions_by_model_OMAMI_weighted.mat"
+model_path="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/pruebas interpol/reconstructions_by_model_pruebas interpol.mat"
 geom_path_CF = "/home/pdi/miriamgf/tesis/Autoencoders/geometries/Atria_geom/Modelos_computacionales_Carlos_Fambuena/Atria.mat"
-model_path_database= "/home/pdi/miriamgf/tesis/Autoencoders/Data/Simulation_01_200428_001_010/EGMs.mat"
+model_path_database= "/home/pdi/miriamgf/tesis/Autoencoders/Data/modelLA_RSPV_CAF_150115/EGMs.mat"
 output_directory = "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/renderized_heart/OMAMI_bs_200"
 os.makedirs(output_directory, exist_ok=True)
 
 # Cargar datos del modelo y la geometría
-model = sio.loadmat(model_path)["modelSimulation_01_200428_001_010"]
+try:
+    model = sio.loadmat(model_path)["modelSimulation_01_190502_001_004"]
+except:
+    model = sio.loadmat(model_path)
 
 try:
     geom = sio.loadmat(geom_path_CF)["geometries"]
@@ -23,45 +27,126 @@ except:
     geom = sio.loadmat(geom_path_CF)
 
 # Extraer datos
-y_reconstructed = model["reconstruction"][0, 0]
-y_label = model["label"][0, 0]
+y_reconstructed = model["reconstruction"][0,0]
+y_label = model["label"][0,0]
 heart = geom["heart"]
 faces = heart["faces"][0, 0] - 1  # Convertir a índice base 0
 vertices = heart["vertices"][0, 0]
 
 # Crear renderizadores para var_represent y var_represent_original
-renderer_var = EGMRenderer(faces, vertices, min_val=-1, max_val=1)
-renderer_label = EGMRenderer(faces, vertices, min_val=0, max_val=np.max(y_label))
+renderer_var = EGMRenderer(faces, vertices, min_val=-10, max_val=10)
+try:
+    renderer_label = EGMRenderer(faces, vertices,  min_val=-10, max_val=10)
+except:
+    y_label=y_label[0][0]
+    renderer_label = EGMRenderer(faces, vertices,  min_val=-10, max_val=10)
 
 # Generar datos suavizados
-label_true = sio.loadmat(model_path_database)['x'].T
-var_represent = renderer_var.smoothing_plot(10, y_reconstructed)
-var_represent_original = renderer_label.smoothing_plot(10, label_true)
+#label_true = sio.loadmat(model_path_database)['x'].T
+
+if y_reconstructed.ndim>2:
+    y_reconstructed = y_reconstructed.reshape(-1, y_reconstructed.shape[2]) 
+
+#y_label=y_reconstructed 
+
+#var_represent = renderer_var.smoothing_plot(10, y_reconstructed)
+#var_represent_original = renderer_label.smoothing_plot(10, y_label)
+
+#probaf normalizacion
+# Inicializa una matriz para las señales estandarizadas
+
+estandarizar=False
+normalizar=False
+
+if estandarizar:
+    y_label_std = np.zeros_like(y_label)
+    for nodo in range(y_label.shape[1]): 
+        mean_val = np.mean(y_label[:, nodo])  
+        std_val = np.std(y_label[:, nodo])    
+        if std_val != 0:  
+            y_label_std[:, nodo] = (y_label[:, nodo] - mean_val) / std_val
+        else:
+            y_label_std[:, nodo] = 0  
+    var_represent=y_reconstructed
+    var_represent_original=y_label_std
+
+
+if normalizar:
+    y_label_n = np.zeros_like(y_label)
+    for nodo in range(y_label.shape[1]):  
+        min_val = np.min(y_label[:, nodo])
+        max_val = np.max(y_label[:, nodo])
+        
+        if max_val != min_val:  
+            y_label_n[:, nodo] = 2 * (y_label[:, nodo] - min_val) / (max_val - min_val) - 1
+        else:
+            y_label_n[:, nodo] = 0  
+
+    var_represent=y_reconstructed
+    var_represent_original=y_label_n
+
 var_represent=y_reconstructed
-var_represent_original=label_true
+var_represent_original=y_label
 
 
+
+'''
+if var_represent.shape[1]!=2048:
+    var_represent=var_represent[0][0]
+    var_represent_original=var_represent_original[0][0]
+'''
 # Configurar renderizadores como subplots
 renderer_var.renderer.SetViewport(0.0, 0.0, 0.5, 1.0)  # Subplot izquierdo
 renderer_label.renderer.SetViewport(0.5, 0.0, 1.0, 1.0)  # Subplot derecho
 
 # Configurar fondo blanco
-renderer_var.renderer.SetBackground(1.0, 1.0, 1.0)  # Blanco
-renderer_label.renderer.SetBackground(1.0, 1.0, 1.0)  # Blanco
+renderer_var.renderer.SetBackground(1, 1, 1)  # Gris claro
+renderer_label.renderer.SetBackground(1, 1, 1)  # Gris claro
 
-# Crear barras de color (leyendas)
+
+# Create a text actor for var_represent
+title_var = vtk.vtkTextActor()
+title_var.SetInput("Var Represent")
+title_varprop = title_var.GetTextProperty()
+title_varprop.SetFontFamilyToArial()
+title_varprop.SetFontSize(25)
+#title_varprop.BoldOn()
+title_varprop.SetColor(0, 0, 0)  # Black color
+title_var.SetPosition(300, 500)  # Adjust position manually as needed
+renderer_var.renderer.AddActor2D(title_var)
+
+# Create a text actor for label
+title_label = vtk.vtkTextActor()
+title_label.SetInput("Label")
+title_labelprop = title_label.GetTextProperty()
+title_labelprop.SetFontFamilyToArial()
+title_labelprop.SetFontSize(25)
+#title_labelprop.BoldOn()
+title_labelprop.SetColor(0, 0, 0)  # Black color
+title_label.SetPosition(300, 500)  # Adjust position manually as needed
+
+# Add the titles to the renderers
+
+renderer_label.renderer.AddActor2D(title_label)
+
+# Scalar bars remain unchanged but without titles
 scalar_bar_var = vtk.vtkScalarBarActor()
 scalar_bar_var.SetLookupTable(renderer_var.mapper.GetLookupTable())
-scalar_bar_var.SetTitle("Var Represent")
+scalar_bar_var.GetLabelTextProperty().SetColor(0, 0, 0)  # Set font color to black
+scalar_bar_var.GetLabelTextProperty().SetItalic(False)  # Ensure text is not italicized
+scalar_bar_var.GetLabelTextProperty().SetShadow(False) 
+scalar_bar_var.GetLabelTextProperty().SetFontFamilyToArial()  # Set font to Arial
+scalar_bar_var.GetLabelTextProperty().SetFontSize(15) 
 scalar_bar_var.SetNumberOfLabels(5)
 
 scalar_bar_label = vtk.vtkScalarBarActor()
 scalar_bar_label.SetLookupTable(renderer_label.mapper.GetLookupTable())
-scalar_bar_label.SetTitle("Label")
+scalar_bar_label.GetLabelTextProperty().SetColor(0, 0, 0)  # Set font color to black
 scalar_bar_label.SetNumberOfLabels(5)
 
 renderer_var.renderer.AddActor2D(scalar_bar_var)
 renderer_label.renderer.AddActor2D(scalar_bar_label)
+
 
 # Configurar la ventana de renderizado conjunta
 render_window = vtk.vtkRenderWindow()
@@ -83,8 +168,18 @@ for renderer in [renderer_var, renderer_label]:
 window_to_image_filter = vtk.vtkWindowToImageFilter()
 window_to_image_filter.SetInput(render_window)
 
+#configure video
+output_video = os.path.join(output_directory, f"video23.avi")
+sample_frame = os.path.join(output_directory, "sample_frame.png")
+renderer.render_frame(var_represent[0, :], sample_frame)
+framei = cv2.imread(sample_frame)
+height, width, layers = framei.shape
+fps = 10  # Frames por segundo
+fourcc = cv2.VideoWriter_fourcc(*'XVID')  # Codec para AVI
+video = cv2.VideoWriter(output_video, fourcc, fps, (1600, 600))
+
 # Iterar sobre instantes y generar frames
-for instant in range(0, var_represent.shape[0], 500):  # Cada 500 instantes
+for instant in range(0, 100, 5):  # Cada 500 instantes
     # Actualizar los datos escalares de los dos renderizadores
     vtk_scalars_var = numpy_to_vtk(var_represent[instant, :], deep=True)
     vtk_scalars_label = numpy_to_vtk(var_represent_original[instant, :], deep=True)
@@ -108,4 +203,19 @@ for instant in range(0, var_represent.shape[0], 500):  # Cada 500 instantes
     writer.SetInputData(window_to_image_filter.GetOutput())
     writer.Write()
 
+    # Obtener la imagen como un array numpy
+    image_data = window_to_image_filter.GetOutput()
+    dims = image_data.GetDimensions()
+    vtk_array = vtk.util.numpy_support.vtk_to_numpy(image_data.GetPointData().GetScalars())
+    frame = vtk_array.reshape((dims[1], dims[0], 3))[::-1]  # Invertir eje Y
+
+    # Escribir el frame en el video
+    video.write(frame)
+
     print(f"Frame guardado: {output_file}")
+    #os.remove(output_file)
+
+# Liberar el objeto VideoWriter
+video.release()
+
+print(f"Video guardado en {output_video}")

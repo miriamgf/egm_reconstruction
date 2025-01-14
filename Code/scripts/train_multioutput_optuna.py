@@ -17,11 +17,12 @@ import tools_
 import tools_.oclusion
 from evaluate_function import evaluate_function_multioutput, evaluate_function_multioutput
 from numpy import *
+from scipy.io import savemat
+import h5py
 
 import tools_
 import tools_.tools
-from scipy.io import savemat
-
+ 
 
 from tools_.df_mapping import *
 from tools_.tools import *
@@ -107,9 +108,10 @@ unfold_code = 1
 experiment_name = algorithm
 
 experiment_name = f"{experiment_name}_bs_400_1024"
+experiment_name='pruebas interpol'
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
+data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data_short/"
 torsos_dir = "../../../../Labeled_torsos/"
 figs_dir = "output/figures/"
 models_dir = "output/model/"
@@ -191,6 +193,10 @@ sinusoids = False
     inference=False,
 )()
 
+#mdic = {"egm": egm_tensor, "AF_models": AF_models, "all_model_names": all_model_names}
+#with h5py.File(experiment_dir + "/egm_names_all.mat", 'w') as f:
+    #for key, value in mdic.items():
+        #f.create_dataset(key, data=value)
 
 if params["optuna_optimization"]:
     print("Starting Optuna optimization...")
@@ -245,9 +251,27 @@ plt.savefig('output/figures/input_output/before_norm.png')
     Y,
     all_model_names,
     transfer_matrices,
+    experiment_dir,
+    norm_egm=False,
 )()
 
+#borrar
+y_test=y_val
+x_test=x_val
+AF_models_test=AF_models_val
+test_models=val_models
 
+mdic = {"reconstruction": y_test, "label": y_test}
+savemat(
+    experiment_dir + "/reconstructions_preprocess.mat",
+    mdic,
+)
+
+mdic = {"reconstruction": egm_tensor[0:2000, :], "label": egm_tensor[0:2000, :]}
+savemat(
+    experiment_dir + "/reconstructions_load.mat",
+    mdic,
+)
 
 print("Algorithm selected:", params["algorithm"])
 model, history = TrainModel(
@@ -256,7 +280,6 @@ model, history = TrainModel(
 
 
 # Evaluate
-# model = load_model('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/20240415-172029/model_mo.h5')
 pred_test = model.predict(
     x_test, batch_size=1
 ) 
@@ -324,7 +347,7 @@ autoencoder_flat_test = reshape_tensor(
 )
 estimate_egms_test = reconstruction_flat_test
 
-# normalize
+# normalize reconstrutions
 estimate_egm_test_r = estimate_egms_test
 estimate_egms_n = reconstruction_flat_test
 estimate_egms_n = normalize_by_models(reconstruction_flat_test, AF_models_test)
@@ -345,8 +368,8 @@ x_fl = reshape(
 
 # Reconstruction predictions
 for i in range(0, 60):
-    interv = random.randrange(0, len(pred_test_egm_fl) - 1, 50)
-    node = random.randrange(0, estimate_egms_n.shape[-1], 1)
+    interv = random.randrange(1, len(pred_test_egm_fl) - 1, 50)
+    node = random.randrange(1, estimate_egms_n.shape[-1], 1)
     normalize_ = True
     rango = 500
     # normalize between -1 and 1
@@ -380,10 +403,10 @@ for i in range(0, 60):
     plt.close()
 
 time_instant = random.randint(0, params["batch_size"])
-batch = random.randrange(0, x_test.shape[0] - 20, 1)
+batch = random.randrange(2, x_test.shape[0]-2, 1)
 
 # Reconstrauction Autoencoders
-for i in range(0, 10):
+for i in range(0, 2):
     batch = batch + 1
     plt.figure(tight_layout=True)
     plt.subplot(3, 1, 1)
@@ -554,14 +577,35 @@ estimate_egms_reshaped = reshape(
     estimate_egms_n, (estimate_egms_n.shape[0], estimate_egms_n.shape[1], 1, 1)
 )
 interpol = interpolate_reconstruction(estimate_egms_reshaped)
-Test_estimation = reshape(interpol, (interpol.shape[0], interpol.shape[1]))
+test_estimation = reshape(interpol, (interpol.shape[0], interpol.shape[1]))
 
+mdic = {"reconstruction": y_test_flat, "label": y_test_flat}
+savemat(
+    experiment_dir + "/reconstructions_yflat.mat",
+    mdic,
+)
 label_represent = y_test_flat[:, :]
+mdic = {"reconstruction": label_represent, "label": label_represent}
+savemat(
+    experiment_dir + "/reconstruction_label_represent.mat",
+    mdic,
+)
 estimate_labels_reshaped = reshape(
     label_represent, (label_represent.shape[0], label_represent.shape[1], 1, 1)
 )
-interpol_label = interpolate_reconstruction(estimate_labels_reshaped)
-Label = reshape(interpol_label, (interpol_label.shape[0], interpol_label.shape[1]))
+mdic = {"reconstruction": estimate_labels_reshaped, "label": estimate_labels_reshaped}
+savemat(
+    experiment_dir + "/reconstruction_estimate_labels_reshaped.mat",
+    mdic,
+)
+interpol_label = interpolate_reconstruction(estimate_labels_reshaped, method="bilinear")
+label = reshape(interpol_label, (interpol_label.shape[0], interpol_label.shape[1]))
+
+mdic = {"reconstruction": label, "label": label}
+savemat(
+    experiment_dir + "/reconstruction_interpol.mat",
+    mdic,
+)
 
 print("Saving variables...")
 
@@ -576,10 +620,19 @@ test_model_name = [all_model_names[index] for index in AF_models_test]
 val_model_name = [all_model_names[index] for index in AF_models_val]
 train_model_name = [all_model_names[index] for index in AF_models_train]
 
-mdic = {"reconstruction": Test_estimation, "label": Label}
+mdic = {"reconstruction": test_estimation, "label": label}
+savemat(
+    experiment_dir + "/reconstruction_before_dic_by_models.mat",
+    mdic,
+)
 
 dic_by_models = array_to_dic_by_models(
     mdic, test_models, AF_models_test, all_model_names
+)
+mdic = {"reconstruction": test_estimation, "label": label}
+savemat(
+    experiment_dir + "/reconstruction_after_dic_by_models.mat",
+    mdic,
 )
 
 variables = {

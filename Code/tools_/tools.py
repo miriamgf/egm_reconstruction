@@ -1752,19 +1752,27 @@ def reshape_tensor(tensor, n_dim_input, n_dim_output):
         )
 
 
-def interpolate_reconstruction(estimate_egms_reshaped):
+def interpolate_reconstruction(estimate_egms_reshaped, method="bilinear"):
     """
     This function applies interpolation to reconstructed signals which have been undersampled in the node
     dimension, considering the original number of nodes 2048.
 
+    Methods can be bilinear, bicubic or nearest neighbor.
+
     """
+
+    
     no_nodes = estimate_egms_reshaped.shape[1]
     original_no = 2048
+    
     ratio = original_no / no_nodes
-    interpol = tf.keras.layers.UpSampling2D(size=(ratio, 1), interpolation="bilinear")(
-        estimate_egms_reshaped
-    )
-
+    if method == "nearest_neighbor":
+        method = tf.image.ResizeMethod.NEAREST_NEIGHBOR
+    if ratio!=1:
+        interpol = tf.image.resize(estimate_egms_reshaped, size=(2048, 1), method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+    else:    
+        interpol = estimate_egms_reshaped
+    
     return interpol
 
 
