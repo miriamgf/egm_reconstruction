@@ -218,6 +218,7 @@ for model in range(len(all_model_names)):
     new_dic[key] = {
         "reconstruction": x_hat.tolist(),
         "label": x_array.tolist(),
+
     }
 
     rmse_list_node = []
@@ -236,7 +237,6 @@ for model in range(len(all_model_names)):
 
 rmse_mean = np.mean(rmse_array, axis=1)
 rmse_std = np.std(rmse_array, axis=1)
-
 
 # print(new_dic)
 savemat(experiment_dir + "tikhonov_matlab.mat", new_dic)

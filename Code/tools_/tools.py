@@ -1420,12 +1420,14 @@ def corr_spearman_cols(array1, array2):
     return corr
 
 
-def correlation_by_AFModels(AF_models_test, estimate_egms_n, y_test_subsample):
+def correlation_by_AFModels(AF_models_test, estimate_egms_n, y_test_subsample, names):
     """This function computes the Spearman correlation between the reconstruction and the
     real signal, but separately for each AF Model"""
 
     correlation_list = []
     test_models_corr = []
+    names_list= []
+    mean_corr_list = []
 
     for model in np.unique(AF_models_test):
         # 1. Normalize Reconstruction
@@ -1438,10 +1440,16 @@ def correlation_by_AFModels(AF_models_test, estimate_egms_n, y_test_subsample):
         correlation_pearson_nodes = corr_spearman_cols(estimation_array, y_array)
         correlation_list.extend([correlation_pearson_nodes])
         test_models_corr.extend([AF_models_test[model]])
+        mean_corr_list.extend([np.mean(correlation_pearson_nodes)])
+        names_list.extend([names[model]])
 
     correlation_array = np.array(correlation_list)
+    df = pd.DataFrame({
+    "name": names_list,
+    "mean correlation": mean_corr_list
+    })
 
-    return correlation_array, test_models_corr
+    return correlation_array, test_models_corr, df
 
 
 def DTW_by_AFModels(AF_models_test, estimate_egms_n, y_test_subsample):
@@ -1489,15 +1497,18 @@ def DTW_by_AFModels(AF_models_test, estimate_egms_n, y_test_subsample):
     return dtw_array, dtw_array_random
 
 
-def RMSE_by_AFModels(AF_models_test, estimate_egms_n, y_test_subsample):
+def RMSE_by_AFModels(AF_models_test, estimate_egms_n, y_test_subsample, names):
     """This function computes RMSE between the reconstruction and the real signal, but separately for each AF Model.
     It computes RMSE for each node in each AF Model
     """
     # DTW by nodes and models
     rmse_list = []
+    rmse_mean_list=[]
+    names_list = []
 
     for model in np.unique(AF_models_test):
 
+        names_list.extend([names[model]])
         estimation_array = estimate_egms_n[
             np.where((AF_models_test == model))
         ]  # select window of signal belonging to model i
@@ -1514,10 +1525,15 @@ def RMSE_by_AFModels(AF_models_test, estimate_egms_n, y_test_subsample):
             rmse_list_node.append(RMSE)
 
         rmse_list.extend([rmse_list_node])
+        rmse_mean_list.extend([np.mean(rmse_list_node)])
 
     rmse_array = np.array(rmse_list)
+    df=pd.DataFrame({
+        "names": names_list,
+        "mean RMSE": rmse_mean_list
+    })
 
-    return rmse_array
+    return rmse_array, df
 
 
 def normalize_by_models(data, Y_model):

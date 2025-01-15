@@ -222,6 +222,8 @@ class TrainModel:
             print(model.model.summary())
         except:
             print(model.summary())
+        
+        
 
         # Train the model
         history = model.fit(

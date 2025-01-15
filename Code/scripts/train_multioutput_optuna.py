@@ -107,11 +107,11 @@ unfold_code = 1
 
 experiment_name = algorithm
 
-experiment_name = f"{experiment_name}_bs_400_1024"
-experiment_name='pruebas interpol'
+experiment_name = f"{experiment_name}_bs_400_2048_norm"
+#experiment_name='pruebas interpol'
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data_short/"
+data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
 torsos_dir = "../../../../Labeled_torsos/"
 figs_dir = "output/figures/"
 models_dir = "output/model/"
@@ -252,26 +252,17 @@ plt.savefig('output/figures/input_output/before_norm.png')
     all_model_names,
     transfer_matrices,
     experiment_dir,
-    norm_egm=False,
+    norm_egm=True,
 )()
 
 #borrar
+'''
 y_test=y_val
 x_test=x_val
 AF_models_test=AF_models_val
 test_models=val_models
+'''
 
-mdic = {"reconstruction": y_test, "label": y_test}
-savemat(
-    experiment_dir + "/reconstructions_preprocess.mat",
-    mdic,
-)
-
-mdic = {"reconstruction": egm_tensor[0:2000, :], "label": egm_tensor[0:2000, :]}
-savemat(
-    experiment_dir + "/reconstructions_load.mat",
-    mdic,
-)
 
 print("Algorithm selected:", params["algorithm"])
 model, history = TrainModel(
@@ -539,10 +530,14 @@ dtw_array, dtw_array_random = [
     0,
     0,
 ]  # DTW_by_AFModels(AF_models_test, estimate_egms_n, y_test_subsample)
-rmse_array = RMSE_by_AFModels(AF_models_test, estimate_egms_n, y_test_flat)
-correlation_array, test_models_corr = correlation_by_AFModels(
-    AF_models_test, estimate_egms_n, y_test_flat
+rmse_array, rmse_df_test = RMSE_by_AFModels(AF_models_test, estimate_egms_n, y_test_flat, all_model_names)
+rmse_df_test.to_csv(experiment_dir+"/rmse_df_test.csv", index=False) # Save RMSE by nodes to csv
+
+correlation_array, test_models_corr, corr_df_test = correlation_by_AFModels(
+    AF_models_test, estimate_egms_n, y_test_flat, all_model_names
 )
+corr_df_test.to_csv(experiment_dir+"/corr_df_test.csv", index=False) # Save correlation by nodes to csv
+
 
 # Mean and STD of Spearman Correlation, DTW and RMSE
 corr_mean = np.mean(correlation_array, axis=1)
@@ -576,36 +571,16 @@ dic_vars.update(new_items)
 estimate_egms_reshaped = reshape(
     estimate_egms_n, (estimate_egms_n.shape[0], estimate_egms_n.shape[1], 1, 1)
 )
-interpol = interpolate_reconstruction(estimate_egms_reshaped)
+interpol = interpolate_reconstruction(estimate_egms_reshaped, method="bicubic")
 test_estimation = reshape(interpol, (interpol.shape[0], interpol.shape[1]))
-
-mdic = {"reconstruction": y_test_flat, "label": y_test_flat}
-savemat(
-    experiment_dir + "/reconstructions_yflat.mat",
-    mdic,
-)
 label_represent = y_test_flat[:, :]
-mdic = {"reconstruction": label_represent, "label": label_represent}
-savemat(
-    experiment_dir + "/reconstruction_label_represent.mat",
-    mdic,
-)
 estimate_labels_reshaped = reshape(
     label_represent, (label_represent.shape[0], label_represent.shape[1], 1, 1)
 )
-mdic = {"reconstruction": estimate_labels_reshaped, "label": estimate_labels_reshaped}
-savemat(
-    experiment_dir + "/reconstruction_estimate_labels_reshaped.mat",
-    mdic,
-)
-interpol_label = interpolate_reconstruction(estimate_labels_reshaped, method="bilinear")
+
+interpol_label = interpolate_reconstruction(estimate_labels_reshaped, method="bicubic")
 label = reshape(interpol_label, (interpol_label.shape[0], interpol_label.shape[1]))
 
-mdic = {"reconstruction": label, "label": label}
-savemat(
-    experiment_dir + "/reconstruction_interpol.mat",
-    mdic,
-)
 
 print("Saving variables...")
 
@@ -621,19 +596,11 @@ val_model_name = [all_model_names[index] for index in AF_models_val]
 train_model_name = [all_model_names[index] for index in AF_models_train]
 
 mdic = {"reconstruction": test_estimation, "label": label}
-savemat(
-    experiment_dir + "/reconstruction_before_dic_by_models.mat",
-    mdic,
-)
 
 dic_by_models = array_to_dic_by_models(
     mdic, test_models, AF_models_test, all_model_names
 )
-mdic = {"reconstruction": test_estimation, "label": label}
-savemat(
-    experiment_dir + "/reconstruction_after_dic_by_models.mat",
-    mdic,
-)
+
 
 variables = {
     "RMSEmean": rmse_mean,
@@ -650,8 +617,7 @@ variables = {
     "val_model_name": np.unique(val_model_name),
 }
 
-savemat(dict_results_dir + "/reconstruction" + experiment_name + ".mat", mdic)
-savemat(experiment_dir + "/matlab_3d_map_" + experiment_name + ".mat", mdic)
+
 savemat(
     experiment_dir + "/reconstructions_by_model_" + experiment_name + ".mat",
     dic_by_models,

@@ -6,20 +6,22 @@ from vtk.util.numpy_support import numpy_to_vtk
 from renderizer import EGMRenderer
 import os
 import cv2
+
 # Cargar datos
 #model_path = "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_weighted/reconstructions_by_model_OMAMI_weighted.mat"
 model_path="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/pruebas interpol/reconstructions_by_model_pruebas interpol.mat"
-model_path="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_bs_400_2048_norm/reconstructions_by_model_OMAMI_bs_400_2048_norm.mat"
+model_path="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_bs_200_2048_norm/reconstructions_by_model_OMAMI_bs_200_2048_norm.mat"
 geom_path_CF = "/home/pdi/miriamgf/tesis/Autoencoders/geometries/Atria_geom/Modelos_computacionales_Carlos_Fambuena/Atria.mat"
 geom_path_edgar= "/home/pdi/miriamgf/tesis/Autoencoders/geometries/Atria_geom/Modelos_Edgar/Atria.mat"
 model_path_database= "/home/pdi/miriamgf/tesis/Autoencoders/Data/modelLA_RSPV_CAF_150115/EGMs.mat"
 output_directory = "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/renderized_heart/OMAMI_bs_200"
+path_tikhonov="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/scripts/Tikhonov/figures/tikhonov_matlab.mat"
 os.makedirs(output_directory, exist_ok=True)
 
+tikhonov = False
+
 # Cargar datos del modelo y la geometría
-
-model_name="modelSimulation_01_200316_001_  3"
-
+model_name="modelSimulation_01_190502_001_003"
 try:
     model = sio.loadmat(model_path)[model_name]
     print('Loaded model ', model_name)
@@ -31,7 +33,7 @@ try:
 except:
     geom = sio.loadmat(geom_path_CF)
 
-# Extraer datosy
+# Extraer datos
 y_reconstructed = model["reconstruction"][0,0]
 y_label = model["label"][0,0]
 heart = geom["heart"]
@@ -162,7 +164,7 @@ render_window.AddRenderer(renderer_label.renderer)
 # Configurar la cámara para ambos subplots
 center = renderer_var.mesh.GetCenter()
 for renderer in [renderer_var, renderer_label]:
-    renderer.camera.SetPosition(center[0], center[1], center[2] + 35)  # Alejar la cámara
+    renderer.camera.SetPosition(center[0], center[1], center[2] + 50)  # Alejar la cámara
     renderer.camera.SetFocalPoint(center[0], center[1], center[2])  # Enfocar al centro
     renderer.camera.SetViewUp(1, 0, 0)  # Eje vertical hacia arriba
     renderer.camera.Elevation(270)  # Flip de 180 grados sobre el eje horizontal
