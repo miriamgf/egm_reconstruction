@@ -1769,7 +1769,7 @@ def interpolate_reconstruction(estimate_egms_reshaped, method="bilinear"):
     if method == "nearest_neighbor":
         method = tf.image.ResizeMethod.NEAREST_NEIGHBOR
     if ratio!=1:
-        interpol = tf.image.resize(estimate_egms_reshaped, size=(2048, 1), method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+        interpol = tf.image.resize(estimate_egms_reshaped, size=(2048, 1), method=method)
     else:    
         interpol = estimate_egms_reshaped
     

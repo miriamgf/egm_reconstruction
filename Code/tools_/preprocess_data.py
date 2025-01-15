@@ -90,11 +90,7 @@ class Preprocess_Dataset:
             )
         )
 
-        mdic = {"reconstruction": self.egm_tensor, "label": self.egm_tensor}
-        savemat(
-            self.experiment_dir + "/reconstructions_downsampling.mat",
-            mdic,
-        )
+        
 
         # Normalize BSPS and EGM
         self.X_1channel = normalize_by_models(self.X_1channel, self.Y_model)
@@ -108,12 +104,7 @@ class Preprocess_Dataset:
         )  # Nans generated during noise addition
 
         #Save
-        mdic = {"reconstruction": self.egm_tensor, "label": self.egm_tensor}
-        savemat(
-            self.experiment_dir + "/reconstructions_norm.mat",
-            mdic,
-        )
-
+        
         plt.figure()
         plt.plot(self.X_1channel[0:200, 0, 0], label="bsps")
         plt.plot(self.egm_tensor[0:200, 0], label="egm")
@@ -188,11 +179,7 @@ class Preprocess_Dataset:
             val_models,
             self.params["batch_size"],
         )
-        mdic = {"reconstruction": y_test, "label": y_test}
-        savemat(
-            self.experiment_dir + "/reconstructions_preprocessing_y.mat",
-            mdic,
-        )
+       
 
         plt.figure()
         plt.plot(x_train[0, :, 0, 0, 0], label="bsps")
@@ -351,150 +338,6 @@ class Preprocess_Dataset:
 
         return x_train_reshaped, x_test_reshaped, x_val_reshaped
 
-    def preprocessing_regression_input(
-        self,
-        latent_vector_train,
-        latent_vector_test,
-        latent_vector_val,
-        train_models,
-        test_models,
-        val_models,
-        Y_model,
-        egm_tensor,
-        AF_models,
-        n_batch,
-        random_split=True,
-        norm=False,
-    ):
-        """
-        Regression Input shape: [# batches, batch_size, 3, 4, 12]
-        Regression Output shape: [# batches, batch_size, #nodes]
-
-        Parameters
-        ----------
-        latent_vector_train: [# batches, batch_size, 3, 4, 12]
-        latent_vector_test: [# batches, batch_size, 3, 4, 12]
-        latent_vector_val: [# batches, batch_size, 3, 4, 12]
-        Y_model
-        egm_tensor
-
-        Returns
-        y_train, y_test, y_val, x_train_ls, x_test_ls, x_val_ls: x and x
-        n_nodes: number of nodes are predicted (original geometry: 2048 nodes in heart geom)
-
-        """
-
-        try:
-
-            latent_space_n, egm_tensor_n = self.preprocess_latent_space(
-                latent_vector_train,
-                latent_vector_test,
-                latent_vector_val,
-                train_models,
-                test_models,
-                val_models,
-                self.Y_model,
-                self.egm_tensor,
-                dimension=5,
-                norm=True,
-            )
-        except:
-
-            raise Exception(
-                "Input shape for Regression network is [# batches, batch_size, 3, 4, 12]. Current input shape is: ",
-                latent_vector_train.shape,
-            )
-
-        # Split egm_tensor
-        if random_split:
-            x_train = latent_space_n[np.in1d(self.AF_models, train_models)]
-            x_test = latent_space_n[np.in1d(self.AF_models, test_models)]
-            x_val = latent_space_n[np.in1d(self.AF_models, val_models)]
-        else:
-            x_train = latent_space_n[
-                np.where((self.Y_model >= 1) & (self.Y_model <= 200))
-            ]
-            x_test = latent_space_n[
-                np.where((self.Y_model > 180) & (self.Y_model <= 244))
-            ]
-            x_val = latent_space_n[
-                np.where((self.Y_model > 244) & (self.Y_model <= 286))
-            ]
-
-        # Split EGM (Label)
-        if random_split:
-            y_train = egm_tensor_n[np.in1d(self.AF_models, train_models)]
-            y_test = egm_tensor_n[np.in1d(self.AF_models, test_models)]
-            y_val = egm_tensor_n[np.in1d(self.AF_models, val_models)]
-
-        else:
-
-            y_train = egm_tensor_n[
-                np.where((self.Y_model >= 1) & (self.Y_model <= 200))
-            ]
-            y_test = egm_tensor_n[
-                np.where((self.Y_model > 180) & (self.Y_model <= 244))
-            ]
-            y_val = egm_tensor_n[np.where((self.Y_model > 244) & (self.Y_model <= 286))]
-
-        # %% Subsample EGM nodes
-
-        y_train_subsample = y_train[:, 0:2048:3]
-        y_test_subsample = y_test[:, 0:2048:3]
-        y_val_subsample = y_val[:, 0:2048:3]
-
-        n_nodes = y_train_subsample.shape[1]
-
-        # Batch generation
-        x_train_ls = reshape(
-            x_train,
-            (
-                int(len(x_train) / n_batch),
-                n_batch,
-                x_train.shape[1],
-                x_train.shape[2],
-                x_train.shape[3],
-            ),
-        )
-        x_test_ls = reshape(
-            x_test,
-            (
-                int(len(x_test) / n_batch),
-                n_batch,
-                x_test.shape[1],
-                x_test.shape[2],
-                x_test.shape[3],
-            ),
-        )
-        x_val_ls = reshape(
-            x_val,
-            (
-                int(len(x_val) / n_batch),
-                n_batch,
-                x_val.shape[1],
-                x_val.shape[2],
-                x_val.shape[3],
-            ),
-        )
-
-        y_train = reshape(
-            y_train_subsample,
-            (
-                int(len(y_train_subsample) / n_batch),
-                n_batch,
-                y_train_subsample.shape[1],
-            ),
-        )
-        y_test = reshape(
-            y_test_subsample,
-            (int(len(y_test_subsample) / n_batch), n_batch, y_test_subsample.shape[1]),
-        )
-        y_val = reshape(
-            y_val_subsample,
-            (int(len(y_val_subsample) / n_batch), n_batch, y_val_subsample.shape[1]),
-        )
-
-        return y_train, y_test, y_val, x_train_ls, x_test_ls, x_val_ls, n_nodes
 
     def preprocessing_y(
         self,
@@ -507,22 +350,12 @@ class Preprocess_Dataset:
 
         egm_tensor_n = self.egm_tensor
 
-        mdic = {"reconstruction": egm_tensor_n, "label": egm_tensor_n}
-        savemat(
-            self.experiment_dir + "/input_preprocessing_y.mat",
-            mdic,
-        )
-
         # Split EGM (Label)
         y_train = egm_tensor_n[np.in1d(self.AF_models, train_models)]
         y_test = egm_tensor_n[np.in1d(self.AF_models, test_models)]
         y_val = egm_tensor_n[np.in1d(self.AF_models, val_models)]
 
-        mdic = {"reconstruction": y_test, "label": y_test}
-        savemat(
-            self.experiment_dir + "/split_preprocessing_y.mat",
-            mdic,
-        )
+        
         # %% Subsample EGM nodes
 
         if self.params["n_nodes_regression"] == 2048:
@@ -540,12 +373,6 @@ class Preprocess_Dataset:
         y_test_subsample = y_test[:, 0:2048:N]
         y_val_subsample = y_val[:, 0:2048:N]
 
-        mdic = {"reconstruction": y_test_subsample, "label": y_test_subsample}
-        savemat(
-            self.experiment_dir + "/subsample_preprocessing_y.mat",
-            mdic,
-        )
-
 
         y_train = reshape(
             y_train_subsample,
@@ -564,11 +391,7 @@ class Preprocess_Dataset:
             (int(len(y_val_subsample) / n_batch), n_batch, y_val_subsample.shape[1]),
         )
 
-        mdic = {"reconstruction": y_test, "label": y_test}
-        savemat(
-            self.experiment_dir + "/resample_preprocessing_y.mat",
-            mdic,
-        )
+        
 
         return y_train, y_test, y_val
 
@@ -669,9 +492,8 @@ class Preprocess_Dataset:
                 ]
 
                 val_models_deterministic = [
-                    #"LA_RIPV_150121",
-                    #"RA_RAFW_140807",
-                    "Simulation_01_190502_001_004", #BORRAR
+                    "LA_RIPV_150121",
+                    "RA_RAFW_140807",
                     "Simulation_01_190502_001_005",
                     "Simulation_01_200212_001_  8",
                     "Sinusal_150629",
