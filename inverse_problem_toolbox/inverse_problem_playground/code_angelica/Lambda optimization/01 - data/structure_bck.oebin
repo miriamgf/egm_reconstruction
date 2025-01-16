@@ -1,0 +1,1577 @@
+{
+    "GUI version": "0.6.3",
+    "continuous": [
+      {
+        "folder_name": "Acquisition_Board-100.Rhythm Data/",
+        "sample_rate": 4000.0,
+        "source_processor_name": "Acquisition Board",
+        "source_processor_id": 100,
+        "stream_name": "Rhythm Data",
+        "recorded_processor": "Record Node",
+        "recorded_processor_id": 101,
+        "num_channels": 192,
+        "channels": [
+          {
+            "channel_name": "CH1",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH2",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH3",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH4",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH5",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH6",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH7",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH8",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH9",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH10",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH11",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH12",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH13",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH14",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH15",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH16",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH17",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH18",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH19",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH20",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH21",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH22",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH23",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH24",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH25",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH26",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH27",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH28",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH29",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH30",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH31",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH32",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH33",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH34",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH35",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH36",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH37",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH38",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH39",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH40",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH41",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH42",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH43",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH44",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH45",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH46",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH47",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH48",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH49",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH50",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH51",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH52",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH53",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH54",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH55",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH56",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH57",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH58",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH59",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH60",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH61",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH62",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH63",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH64",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH65",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH66",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH67",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH68",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH69",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH70",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH71",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH72",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH73",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH74",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH75",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH76",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH77",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH78",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH79",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH80",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH81",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH82",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH83",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH84",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH85",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH86",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH87",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH88",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH89",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH90",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH91",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH92",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH93",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH94",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH95",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH96",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH97",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH98",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH99",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH100",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH101",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH102",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH103",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH104",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH105",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH106",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH107",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH108",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH109",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH110",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH111",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH112",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH113",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH114",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH115",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH116",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH117",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH118",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH119",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH120",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH121",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH122",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH123",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH124",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH125",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH126",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH127",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH128",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH129",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH130",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH131",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH132",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH133",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH134",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH135",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH136",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH137",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH138",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH139",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH140",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH141",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH142",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH143",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH144",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH145",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH146",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH147",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH148",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH149",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH150",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH151",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH152",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH153",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH154",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH155",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH156",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH157",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH158",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH159",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH160",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH161",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH162",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH163",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH164",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH165",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH166",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH167",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH168",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH169",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH170",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH171",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH172",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH173",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH174",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH175",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH176",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH177",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH178",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH179",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH180",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH181",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH182",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH183",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH184",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH185",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH186",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH187",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH188",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH189",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH190",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH191",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          },
+          {
+            "channel_name": "CH192",
+            "description": "Headstage channel from a Rhythm FPGA device",
+            "identifier": "",
+            "history": "Acquisition Board -> Record Node",
+            "bit_volts": 0.1949999928474426,
+            "units": "uV"
+          }
+        ]
+      }
+    ],
+    "events": [
+      {
+        "folder_name": "Acquisition_Board-100.Rhythm Data/TTL/",
+        "channel_name": "Rhythm FPGA TTL Input",
+        "description": "Events on digital input lines of a Rhythm FPGA device",
+        "identifier": "rhythm-fpga-device.events",
+        "sample_rate": 4000.0,
+        "type": "int16",
+        "source_processor": "Acquisition Board",
+        "stream_name": "Rhythm Data",
+        "initial_state": 0
+      },
+      {
+        "folder_name": "MessageCenter/",
+        "channel_name": "Messages",
+        "description": "Broadcasts messages from the MessageCenter",
+        "identifier": "messagecenter.events",
+        "sample_rate": 4000.0,
+        "type": "string",
+        "source_processor": "Message Center",
+        "stream_name": "Rhythm Data"
+      }
+    ],
+    "spikes": []
+  }
