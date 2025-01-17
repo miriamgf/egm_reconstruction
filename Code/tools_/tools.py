@@ -39,13 +39,13 @@ from generators import *
 from numpy import reshape
 import matplotlib.image
 from scipy.io import savemat
-from plots import *
+#from plots import *
 from scipy.stats import pearsonr
 from scipy.stats import spearmanr
 from datetime import time
-from tools_.noise_simulation import *
-from scripts.config import DataConfig
-from tools_.oclusion import Oclussion
+#from tools_.noise_simulation import *
+#from scripts.config import DataConfig
+#from tools_.oclusion import Oclussion
 import time
 #from noise_simulation import *
 
@@ -53,7 +53,7 @@ import time
 # %% Path Models
 current = os.path.dirname(os.path.realpath(__file__))
 torsos_dir = "../../../Labeled_torsos/"
-#directory = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
+directory = "../../Data_short/"
 #torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
 torsos_dir = "../../Labeled_torsos/"
 
@@ -536,7 +536,7 @@ def sinusoids_generator(n, m, fs=100):
     return sinusoids
 
 
-def load_egms(model_name, sinusoid=False):
+def load_egms(model_name, directory=directory, sinusoid=False):
     """
     Load electrograms and select 2500 time instants and 2048 nodes
 

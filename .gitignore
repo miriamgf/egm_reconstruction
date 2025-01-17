@@ -27,3 +27,17 @@ Data_short/TwoRotors_181219/driver_position_2.mat
 Data_short/TwoRotors_181219/driver_position.mat
 Data_short/TwoRotors_181219/EGMs.mat
 Data_short/TwoRotors_181219/labels_video.mp4
+Code/tools_/__pycache__/add_white_noise.cpython-310.pyc
+Code/tools_/__pycache__/generators.cpython-310.pyc
+Code/tools_/__pycache__/plots.cpython-310.pyc
+Code/tools_/__pycache__/tools.cpython-310.pyc
+Labeled_torsos/Torso1_mod.mat
+Labeled_torsos/Torso2_mod.mat
+Labeled_torsos/Torso3_mod.mat
+Labeled_torsos/Torso4_mod.mat
+Labeled_torsos/Torso5_mod.mat
+Labeled_torsos/Torso6_mod.mat
+Labeled_torsos/Torso7_mod.mat
+Labeled_torsos/Torso8_mod.mat
+Labeled_torsos/Torso9_mod.mat
+Labeled_torsos/Torso10_mod.mat
