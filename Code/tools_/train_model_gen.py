@@ -15,8 +15,6 @@ from models.multioutput_VAE import MultiOutput_VAE
 from models.multioutput_VAE_skip import MultiOutput_VAE_skip
 from models.gen_vae import Gen_VAE
 from keras.callbacks import TensorBoard
-from optuna.integration import TFKerasPruningCallback
-
 
 tf.random.set_seed(42)
 import datetime
@@ -24,7 +22,7 @@ import datetime
 import tensorflow as tf
 from keras.models import load_model
 
-class TrainModel:
+class TrainModelGen:
     """
     A class to manage the training of a multi-output model, including the loading of preprocessed datasets,
     model initialization, training, and validation. The class handles model saving, callbacks, and can also
@@ -72,7 +70,6 @@ class TrainModel:
         y_val,
         models_dir,
         experiment_dir,
-        trial = None
     ):
         """
         Initializes the TrainModel class with the necessary data and configuration.
@@ -98,8 +95,6 @@ class TrainModel:
             Path to the directory where models will be saved during training.
         experiment_dir : str
             Path to the directory where outputs like training curves and logs will be saved.
-        trial : optuna.Trial, optional
-            An optuna trial object for hyperparameter optimization. Default is None.
         """
         self.params = params
         self.x_train = x_train
@@ -110,7 +105,6 @@ class TrainModel:
         self.y_val = y_val
         self.models_dir = models_dir
         self.experiment_dir = experiment_dir
-        self.trial= trial
 
     @tf.function(jit_compile=False)
     def train_main(self, x_train, x_test, x_val, y_train, y_test, y_val):
@@ -142,19 +136,12 @@ class TrainModel:
         history : keras.callbacks.History
             The history object generated during model training, containing metrics like loss and accuracy.
         """
-
         print("Training model...")
 
-        if self.params["set_gpu"] is not None:
-            print("Using GPU:", self.params["set_gpu"])
-            with tf.device(f"/GPU:{self.params['set_gpu']}"):
-                # Train on specified GPU
-                pass
-        else:
-            pass
+        # Optimizer configuration
+        optimizer = Adam(learning_rate=self.params["learning_rate"])
 
         # Callbacks
-        
         cp_callback = tf.keras.callbacks.ModelCheckpoint(
             filepath=self.experiment_dir
             + "regressor.weights.h5",
@@ -163,88 +150,26 @@ class TrainModel:
             save_best_only=True,
         )
 
-        initial_learning_rate = self.params["learning_rate"]
-        lr_schedule = keras.optimizers.schedules.ExponentialDecay(
-            initial_learning_rate,
-            decay_steps=1000,
-            decay_rate=0.96,
-            staircase=True)
-        
-        # Optimizer configuration
-        optimizer = Adam(learning_rate=lr_schedule)
-        early_stopping_callback = tf.keras.callbacks.EarlyStopping(
-            monitor="val_loss", patience=20
+        lr_decay = tf.keras.callbacks.LearningRateScheduler(
+            lambda epoch: self.params["learning_rate"] * 0.95 ** epoch
         )
-        
+
+        if self.params["algorithm"] == "OMAMI" or self.params["algorithm"] == "OMAMI_ski":
+            early_stopping_callback = tf.keras.callbacks.EarlyStopping(
+                monitor="val_loss", patience=20
+            )
+        else:
+            early_stopping_callback = tf.keras.callbacks.EarlyStopping(
+                monitor="val_total_loss", patience=20
+            )
         tensorboard_callback = TensorBoard(log_dir='output/tensorboard/logs/'+self.params['algorithm'], histogram_freq=1)
-
-        callbacks_list = [early_stopping_callback, cp_callback, tensorboard_callback]
         #ssh -L 6006:localhost:6006 miriamgf@10.110.100.78 en terminal LOCAL
-        #tensorboard --logdir=output/tensorboard/logs/ en terminal REMOTO
+        #tensorboard --logdir=output/tensorboard/logs/
 
-        if self.trial is not None:
-            pruning_callback = TFKerasPruningCallback(self.trial, monitor="val_loss")
-            callbacks_list.append(pruning_callback)
 
-        
-        
-        # Choose algorithm {OMAMI, OMAMI_VAE, OMAMI_ski, OMAMI_VAE_ski} 
+        # Choose algorithm {OMAMI, OMAMI_VAE, OMAMI_ski, OMAMI_VAE_ski}
 
-        if self.params["algorithm"] == "OMAMI":
-
-            model = MultiOutput(params=self.params).assemble_full_model(
-                input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1]
-            )
-            model.compile(
-                optimizer=optimizer,
-                loss=["mean_squared_error", "mean_squared_error"],
-                loss_weights=[self.params["loss_weight_1"], self.params["loss_weight_2"]],
-                metrics=["mean_absolute_error"]
-                
-            )
-
-        if self.params["algorithm"] == "OMAMI_ski":
-
-            model = MultiOutput_skip(params=self.params).assemble_full_model(
-                input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1]
-            )
-            model.compile(
-                optimizer=optimizer,
-                loss=["mean_squared_error", "mean_squared_error"],
-                loss_weights=[self.params["loss_weight_1"], self.params["loss_weight_2"]],
-                metrics=["mean_absolute_error"]
-
-            )
-        elif self.params["algorithm"] == "OMAMI_VAE":
-
-            # Create an instance of your model
-            model = MultiOutput_VAE(
-                self.params,
-                input_shape_=x_train.shape[1:],
-                n_nodes=y_train.shape[-1],
-                tensorboard_logs=self.experiment_dir + "tb_logs/",
-            )
-
-            print(model.model.summary())
-
-            # Compile the model
-            model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
-
-        elif self.params["algorithm"] == "OMAMI_VAE_ski":
-            # Create an instance of your model
-            model = MultiOutput_VAE_skip(
-                self.params,
-                input_shape_=x_train.shape[1:],
-                n_nodes=y_train.shape[-1],
-                tensorboard_logs=self.experiment_dir + "tb_logs/",
-            )
-
-            print(model.model.summary())
-
-            # Compile the model
-            model.compile(optimizer=tf.keras.optimizers.Adam())
-        
-        elif self.params["algorithm"] == "gen_VAE":
+        if self.params["algorithm"] == "gen_VAE":
 
             # Create an instance of your model
             model = Gen_VAE(
@@ -257,70 +182,42 @@ class TrainModel:
             print(model.model.summary())
 
             # Compile the model
-            model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0)) 
+            model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
 
         try:
             print(model.model.summary())
         except:
             print(model.summary())
-        
-        
-        
+            
+        # Train the model
         history = model.fit(
-            x=x_train,
-            y=[x_train, y_train],
+            x=y_train,
+            y=y_train,
             batch_size=1,
             epochs=self.params["n_epochs"],
-            validation_data=(x_val, [x_val, y_val]),
-            callbacks=callbacks_list,
-)
+            validation_data=(y_val, y_val),
+            callbacks=[early_stopping_callback, cp_callback, tensorboard_callback, lr_decay],
+        )
         
         # Plot and save training and validation curves
-        
-        plt.figure()
-        plt.plot(history.history["val_loss"], label="Global loss (Validation)")
-        plt.plot(
-            history.history["val_autoencoder_loss"],
-            label="Autoencoder loss (Validation)",
-        )
-        plt.plot(
-            history.history["val_reconstruction_loss"],
-            label="Regressor loss (Validation)",
-        )
-        plt.plot(history.history["loss"], label="Global loss (Train)")
-        plt.plot(
-            history.history["autoencoder_loss"],
-            label="Autoencoder loss (Train)",
-        )
-        plt.plot(
-            history.history["reconstruction_loss"],
-            label="Regressor loss (Train)",
-        )
-        plt.legend(loc="upper left")
-        plt.title("Model Loss During Training and Validation")
-        plt.ylabel("Mean Squared Error (MSE)")
-        plt.xlabel("Epoch")
-        plt.savefig(self.experiment_dir + "Learning_curves.png")
-        plt.show()
-        '''
-        except: #VAE
+        try:
             plt.figure()
             plt.plot(history.history["val_loss"], label="Global loss (Validation)")
             plt.plot(
-                history.history["val_autoencoder_loss"],
+                history.history["val_Autoencoder_output_loss"],
                 label="Autoencoder loss (Validation)",
             )
             plt.plot(
-                history.history["val_reconstruction_loss"],
+                history.history["val_Regressor_output_loss"],
                 label="Regressor loss (Validation)",
             )
             plt.plot(history.history["loss"], label="Global loss (Train)")
             plt.plot(
-                history.history["autoencoder_loss"],
+                history.history["Autoencoder_output_loss"],
                 label="Autoencoder loss (Train)",
             )
             plt.plot(
-                history.history["reconstruction_mse"],
+                history.history["Regressor_output_loss"],
                 label="Regressor loss (Train)",
             )
             plt.legend(loc="upper left")
@@ -329,8 +226,28 @@ class TrainModel:
             plt.xlabel("Epoch")
             plt.savefig(self.experiment_dir + "Learning_curves.png")
             plt.show()
+        
+        except:
+            plt.figure()
+            plt.plot(history.history["val_total_loss"], label="Global loss (Validation)")
+            plt.plot(
+                history.history["val_loss_autoencoder"],
+                label="Autoencoder loss (Validation)",
+            )
+            plt.plot(history.history["total_loss"], label="Global loss (Train)")
+            plt.plot(
+                history.history["loss_autoencoder"],
+                label="Autoencoder loss (Train)",
+            )
+            
+            plt.legend(loc="upper left")
+            plt.title("Model Loss During Training and Validation")
+            plt.ylabel("Mean Squared Error (MSE)")
+            plt.xlabel("Epoch")
+            plt.savefig(self.experiment_dir + "Learning_curves.png")
+            plt.show()
 
-        '''
+    
         return model, history
 
     

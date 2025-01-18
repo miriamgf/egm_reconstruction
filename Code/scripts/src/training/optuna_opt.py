@@ -4,6 +4,15 @@ from pathlib import Path
 import optuna
 from config import ParseHiperparams
 from optuna.samplers import NSGAIISampler, RandomSampler, TPESampler
+from optuna.visualization import (
+    plot_optimization_history,
+    plot_parallel_coordinate,
+    plot_contour,
+    plot_slice,
+    plot_param_importances,
+    plot_intermediate_values,
+)
+
 
 from tools_.preprocess_data import Preprocess_Dataset
 from tools_.train_model import TrainModel
@@ -228,7 +237,7 @@ class OptunaOpt:
                 The validation loss after training the model with the trial's suggested hyperparameters.
             """
             self.params = self.parse_search_space(trial)
-            print("Trial number", trial)
+            print("Trial number", trial.number)
 
             # Preprocess data
             (
@@ -258,33 +267,52 @@ class OptunaOpt:
                 self.Y,
                 self.all_model_names,
                 self.transfer_matrices,
+                self.experiment_dir,
+                norm_egm = True
             )()
 
-            # Train the model
+            print("Algorithm selected:", self.params["algorithm"])
             model, history = TrainModel(
                 self.params,
-                x_train,
-                x_test,
-                x_val,
-                y_train,
-                y_test,
-                y_val,
-                self.models_dir,
-                self.experiment_dir,
+                x_train, 
+                x_test, 
+                x_val, 
+                y_train, 
+                y_test, 
+                y_val, 
+                self.models_dir, 
+                self.experiment_dir, 
+                trial #to set pruning_callback
             )()
 
-            val_loss = history.history["val_Regressor_output_loss"]
+        
+            val_loss = history.history["val_reconstruction_loss"]
 
             return val_loss[-1]
 
         # Perform optimization
-        study = optuna.create_study(direction="minimize")
-        study.optimize(objective, n_trials=3)
+        study = optuna.create_study(direction="minimize",pruner=optuna.pruners.MedianPruner(n_startup_trials=2))
+        study.optimize(objective,
+                    n_trials=self.params["n_trials"],
+                    )
 
         # Get best hyperparameters
         best_params = study.best_params
         print("Best hyperparameters:", best_params)
-        return best_params
+        params=self.parse_best_params(best_params)
+
+        #figures
+        # Save visualizations
+        plot_optimization_history(study).write_image(f"{self.experiment_dir}/optimization_history.png")
+        plot_parallel_coordinate(study).write_image(f"{self.experiment_dir}/parallel_coordinate.png")
+        plot_contour(study).write_image(f"{self.experiment_dir}/contour_plot.png")
+        plot_slice(study).write_image(f"{self.experiment_dir}/slice_plot.png")
+        plot_param_importances(study).write_image(f"{self.experiment_dir}/param_importances.png")
+        plot_intermediate_values(study).write_image(f"{self.experiment_dir}/intermediate_values.png")
+
+
+        
+        return params
 
     def parse_best_params(self, best_params):
         """

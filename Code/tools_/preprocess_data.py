@@ -22,6 +22,7 @@ from scipy.io import savemat
 
 from tools_.noise_simulation import *
 from tools_.tools_1 import *
+from tools_.k_fold import KFold_Stratified
 
 # from noise_simulation import *
 
@@ -451,68 +452,76 @@ class Preprocess_Dataset:
         if random_split:
 
             if deterministic:
-                # Deterministic assignation
-                train_models_deterministic = [
-                    "RA_RAA_141230",
-                    "Simulation_01_190502_001_003",
-                    "Simulation_01_190502_001_004",
-                    "Simulation_01_190502_001_006",
-                    "Simulation_01_190619_001_001",
-                    "Simulation_01_190619_001_002",
-                    "Simulation_01_190619_001_003",
-                    "Simulation_01_190619_001_004",
-                    "Simulation_01_190717_001_001",
-                    "Simulation_01_190717_001_002",
-                    "Simulation_01_190717_001_003",
-                    "Simulation_01_190717_001_004",
-                    "Simulation_01_191001_001_001",
-                    "Simulation_01_191001_001_002",
-                    "Simulation_01_191001_001_005",
-                    "Simulation_01_191001_001_007",
-                    "Simulation_01_200212_001_  1",
-                    "Simulation_01_200212_001_  2",
-                    "Simulation_01_200212_001_  4",
-                    "Simulation_01_200212_001_  6",
-                    "Simulation_01_200212_001_  7",
-                    "Simulation_01_200212_001_  9",
-                    "Simulation_01_200316_001_  1",
-                    "Simulation_01_200316_001_  5",
-                    "Simulation_01_200316_001_  7",
-                    "Simulation_01_200428_001_001",
-                    "Simulation_01_200428_001_002",
-                    "Simulation_01_200428_001_003",
-                    "Simulation_01_200428_001_005",
-                    "Simulation_01_200428_001_006",
-                    "Simulation_01_200428_001_007",
-                    "Simulation_01_200428_001_009",
-                    "Simulation_01_201223_001_002",
-                    "Simulation_01_210209_001_003",
-                    "Simulation_01_210210_001_001",
-                    "TwoRotors_181219",
-                ]
+                if not self.params["cross_validation"]:
+                    # Deterministic assignation
+                    train_models_deterministic = [
+                        "RA_RAA_141230",
+                        "Simulation_01_190502_001_003",
+                        "Simulation_01_190502_001_004",
+                        #"Simulation_01_190502_001_006",
+                        "Simulation_01_190619_001_001",
+                        "Simulation_01_190619_001_002",
+                        #"Simulation_01_190619_001_003",
+                        #"Simulation_01_190619_001_004",
+                        #"Simulation_01_190717_001_001",
+                        "Simulation_01_190717_001_002",
+                        #"Simulation_01_190717_001_003",
+                        #"Simulation_01_190717_001_004",
+                        "Simulation_01_191001_001_001",
+                        #"Simulation_01_191001_001_002",
+                        "Simulation_01_191001_001_005",
+                        #"Simulation_01_191001_001_007",
+                        "Simulation_01_200212_001_  1",
+                        "Simulation_01_200212_001_  2",
+                        "Simulation_01_200212_001_  4",
+                        "Simulation_01_200212_001_  6",
+                        "Simulation_01_200212_001_  7",
+                        "Simulation_01_200212_001_  9",
+                        "Simulation_01_200316_001_  1",
+                        "Simulation_01_200316_001_  5",
+                        "Simulation_01_200316_001_  7",
+                        "Simulation_01_200428_001_001",
+                        "Simulation_01_200428_001_002",
+                        "Simulation_01_200428_001_003",
+                        "Simulation_01_200428_001_005",
+                        "Simulation_01_200428_001_006",
+                        "Simulation_01_200428_001_007",
+                        "Simulation_01_200428_001_009",
+                        "Simulation_01_201223_001_002",
+                        "Simulation_01_210209_001_003",
+                        "Simulation_01_210210_001_001",
+                        "TwoRotors_181219",
+                    ]
 
-                val_models_deterministic = [
-                    "LA_RIPV_150121",
-                    "RA_RAFW_140807",
-                    "Simulation_01_190502_001_005",
-                    "Simulation_01_200212_001_  8",
-                    "Sinusal_150629",
-                ]
+                    val_models_deterministic = [
+                        "LA_RIPV_150121",
+                        "RA_RAFW_140807",
+                        "Simulation_01_190502_001_005",
+                        "Simulation_01_200212_001_  8",
+                        "Sinusal_150629",
+                    ]
 
-                test_models_deterministic = [
-                    "LA_PLAW_140711_arm",
-                    "LA_RSPV_CAF_150115",
-                    "Simulation_01_200212_001_  5",
-                    "Simulation_01_200212_001_ 10",
-                    "Simulation_01_200316_001_  3",
-                    "Simulation_01_200316_001_  4",
-                    "Simulation_01_200316_001_  8",
-                    "Simulation_01_200428_001_004",
-                    "Simulation_01_200428_001_008",
-                    "Simulation_01_200428_001_010",
-                    "Simulation_01_210119_001_001",
-                    "Simulation_01_210208_001_002",
-                ]
+                    test_models_deterministic = [
+                        "LA_PLAW_140711_arm",
+                        "LA_RSPV_CAF_150115",
+                        "Simulation_01_200212_001_  5",
+                        "Simulation_01_200212_001_ 10",
+                        "Simulation_01_200316_001_  3",
+                        "Simulation_01_200316_001_  4",
+                        "Simulation_01_200316_001_  8",
+                        "Simulation_01_200428_001_004",
+                        "Simulation_01_200428_001_008",
+                        "Simulation_01_200428_001_010",
+                        "Simulation_01_210119_001_001",
+                        "Simulation_01_210208_001_002",
+                    ]
+                    
+                elif self.params["cross_validation"]:
+                    KFold_obj = KFold_Stratified(k=4)
+                    fold_list=KFold_obj.select_fold(fold=self.params["fold"])
+                    train_models_deterministic = fold_list["train"]
+                    test_models_deterministic = fold_list["test"]
+                    val_models_deterministic = fold_list["val"]
 
                 train_models, test_models, val_models = [], [], []
                 for elemento in train_models_deterministic:

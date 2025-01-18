@@ -43,7 +43,7 @@ class MultiOutput_VAE_skip(Model):
             activation="leaky_relu",
             input_shape=input_shape_[2:],
             kernel_initializer=initializer,
-            kernel_regularizer=tf.keras.regularizers.l2(params["l2_reg_encoder_1"]),
+            kernel_regularizer=tf.keras.regularizers.l2(params["l2_reg"]),
         )
         self.conv2 = layers.Conv3D(
             64, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
@@ -58,7 +58,7 @@ class MultiOutput_VAE_skip(Model):
             strides=1,
             padding="same",
             activation="leaky_relu",
-            kernel_regularizer=tf.keras.regularizers.l2(params["l2_reg_encoder_2"]),
+            kernel_regularizer=tf.keras.regularizers.l2(params["l2_reg"]),
         )
         self.maxpool2 = layers.MaxPooling3D((1, 2, 2))
         self.conv5 = layers.Conv3D(
@@ -115,7 +115,7 @@ class MultiOutput_VAE_skip(Model):
             strides=1,
             padding="same",
             activation="linear",
-            kernel_regularizer=tf.keras.regularizers.l2(params["l2_reg_decoder_1"]),
+            kernel_regularizer=tf.keras.regularizers.l2(params["l2_reg"]),
             name="Autoencoder_output",
         )
 
@@ -127,7 +127,7 @@ class MultiOutput_VAE_skip(Model):
             padding="same",
             activation="leaky_relu",
             input_shape=(3, 4, 4, 1),
-            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg_rec_1"]),
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]),
             kernel_initializer=initializer,
 
         )
@@ -139,7 +139,7 @@ class MultiOutput_VAE_skip(Model):
             strides=(1, 1, 1),
             padding="same",
             activation="leaky_relu",
-            kernel_regularizer=tf.keras.regularizers.l2(l=self.params["l2_reg_rec_2"]),
+            kernel_regularizer=tf.keras.regularizers.l2(l=self.params["l2_reg"]),
         )
         self.upsampling3d_2 = layers.UpSampling3D((1, 2, 2))
 
@@ -316,11 +316,13 @@ class MultiOutput_VAE_skip(Model):
             self.log_latent_space_image(latent_space, step)
 
         return {
-            "total_loss": total_loss,
-            "loss_autoencoder": loss_autoencoder,
-            "mse_autoencoder": mse_autoencoder,
-            "mse_regression": loss_regression,
+            "loss": total_loss,
+            "autoencoder_loss": loss_autoencoder,
+            "autoencoder_mse": mse_autoencoder,
+            "reconstruction_mse": loss_regression,
+            "reconstruction_loss": loss_regression
         }
+
 
     def test_step(self, data):
         """
@@ -349,11 +351,13 @@ class MultiOutput_VAE_skip(Model):
                     ) 
         # Return losses for tracking
         return {
-            "total_loss": total_loss,
-            "loss_autoencoder": loss_autoencoder,
-            "mse_autoencoder": mse_autoencoder,
-            "mse_regression": loss_regression,
+            "loss": total_loss,
+            "autoencoder_loss": loss_autoencoder,
+            "autoencoder_mse": mse_autoencoder,
+            "reconstruction_mse": loss_regression,
+            "reconstruction_loss": loss_regression
         }
+
 
     def log_latent_space_image(self, latent_space, step):
         # Reshape and reduce dimensionality to 2D for visualization

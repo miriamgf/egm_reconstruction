@@ -76,7 +76,6 @@ print(type(patches_oclussion))
 
 params = ParseHiperparams().parse_default_hyperparams()
 
-
 try:
     print("parsing")
     parser = argparse.ArgumentParser(description="Noise params")
@@ -107,7 +106,10 @@ unfold_code = 1
 
 experiment_name = algorithm
 
-experiment_name = f"{experiment_name}_bs_400_2048_norm"
+if params["cross_validation"]:
+    experiment_name = f"{experiment_name}_fold_{params['fold']}"
+
+experiment_name = f"{experiment_name}"
 #experiment_name='pruebas interpol'
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -255,13 +257,6 @@ plt.savefig('output/figures/input_output/before_norm.png')
     norm_egm=True,
 )()
 
-#borrar
-'''
-y_test=y_val
-x_test=x_val
-AF_models_test=AF_models_val
-test_models=val_models
-'''
 
 
 print("Algorithm selected:", params["algorithm"])
@@ -622,7 +617,6 @@ savemat(
     experiment_dir + "/reconstructions_by_model_" + experiment_name + ".mat",
     dic_by_models,
 )
-savemat(dict_var_dir + "/variables.mat", variables)
 dic_latent_space_test = {"Latent_space_test": pred_test_autoencoder}
 savemat(experiment_dir + "/autoencoder.mat", dic_latent_space_test)
 
@@ -651,7 +645,6 @@ results_Reconstruction = pd.DataFrame.from_dict(
     results_regressor, orient="index", columns=["Reconstruction"]
 )
 global_results = pd.concat([results_Autoencoder, results_Reconstruction], axis=1)
-global_results.to_csv(dict_var_dir + "/Results_MO")
 global_results.to_csv(experiment_dir + "/Results_MO.csv")
 
 
@@ -659,12 +652,12 @@ global_results.round(3)
 
 # Save dictionaries into pickle and .mat
 
-with open(dict_var_dir + "variables_MO.pkl", "wb") as fp:
-    pickle.dump(dic_vars, fp)
-with open(dict_results_dir + "dict_results_reconstruction_MO.pkl", "wb") as fp:
-    pickle.dump(results_regressor, fp)
-with open(dict_results_dir + "dict_results_autoencoder_MO.pkl", "wb") as fp:
-    pickle.dump(results_autoencoder, fp)
+#with open(dict_var_dir + "variables_MO.pkl", "wb") as fp:
+    #pickle.dump(dic_vars, fp)
+#with open(dict_results_dir + "dict_results_reconstruction_MO.pkl", "wb") as fp:
+    #pickle.dump(results_regressor, fp)
+#with open(dict_results_dir + "dict_results_autoencoder_MO.pkl", "wb") as fp:
+    #pickle.dump(results_autoencoder, fp)
 
 # savemat(dict_var_dir + "dic_vars.mat", dic_vars) #TODO: cannot be saved to .mat because now is saving a keras model
 savemat(dict_results_dir + "dict_results_autoencoder.mat", results_autoencoder)

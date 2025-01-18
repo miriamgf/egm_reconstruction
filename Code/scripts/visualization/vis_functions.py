@@ -18,7 +18,7 @@ def load_signals(type, experiment="20240530-141019", p=None):
     elif type == "DL":
         if p == None:
             p = (
-                "/home/profes/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_CINC/"
+                "/home/profes/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/"
                 + str(experiment)
                 + "/reconstructions_by_model_"
                 + str(experiment)
@@ -32,7 +32,7 @@ def load_signals(type, experiment="20240530-141019", p=None):
 def get_fs_from_experiment(experiment="20240530-141019"):
 
     p = (
-        "/home/profes/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_CINC/"
+        "/home/profes/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/"
         + str(experiment)
         + "/"
     )
@@ -80,6 +80,8 @@ def plot_1D_signals(
     n_samples=500,
     normalize_tik=False,
     filter_tik_label=False,
+    fs_tik=500,
+    fs_dil=200,
 ):
     """
     This function plots the specified model comparing DL and Tikhonov reconstructions.
@@ -92,12 +94,11 @@ def plot_1D_signals(
     """
 
     if filter_tik_label:
-        tikhonov_label = ECG_filtering(tikhonov_label, fs=500)
+        tikhonov_label = ECG_filtering(tikhonov_label, fs=fs_tik)
 
     if torso != None:
         dl_signal = select_torso(dl_signal, torso, n_torsos=10)
         dl_label = select_torso(dl_label, torso, n_torsos=10)
-        n_samples = len(dl_signal)
 
     if normalize_tik:
         tikhonov_signal = normalize_array(tikhonov_signal, 1, -1, axis_n=0)
@@ -168,18 +169,22 @@ def plot_correlation_by_nodes(
 
             corr_i_tk = corr_pearson_cols(tikhonov_signal, tikhonov_label)
             corr_i_dl = corr_pearson_cols(dl_signal, dl_label)
+            indice_max=np.argmax(corr_i_dl)
 
         elif type_corr == "Spearman":
 
             corr_i_tk = corr_spearman_cols(tikhonov_signal, tikhonov_label)
             corr_i_dl = corr_spearman_cols(dl_signal, dl_label)
+            indice_max=np.argmax(corr_i_dl)
 
         if smoothing != None:
             corr_i_tk = moving_average(corr_i_tk, window_size=smoothing)
             corr_i_dl = moving_average(corr_i_dl, window_size=smoothing)
 
+
         correlations_tk.append(corr_i_tk)
         correlations_dl.append(corr_i_dl)
+
 
     plt.figure(figsize=(18, 7), tight_layout=True)
     plt.subplot(2, 1, 1)
@@ -192,7 +197,7 @@ def plot_correlation_by_nodes(
     plt.subplot(2, 1, 2)
     for model_i in range(0, len(range_of_models)):
         plt.plot(correlations_dl[model_i], label=range_of_models[model_i])
-    plt.title("DL")
+    plt.title(f"DL. Max correlation in node {indice_max}")
     plt.xlabel("Nodes")
     plt.ylabel(type_corr + "Correlation")
     plt.legend()

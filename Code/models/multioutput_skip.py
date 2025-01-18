@@ -30,7 +30,7 @@ class MultiOutput_skip:
             input_shape=input_shape[2:],
             kernel_initializer=initializer,
             kernel_regularizer=tf.keras.regularizers.l2(
-                l=self.params["l2_reg_encoder_1"]
+                l=self.params["l2_reg"]
             ),
         )(inputs)
         skip1 = encoder  # First skip connection
@@ -49,7 +49,7 @@ class MultiOutput_skip:
             padding="same",
             activation="leaky_relu",
             kernel_regularizer=tf.keras.regularizers.l2(
-                l=self.params["l2_reg_encoder_2"]
+                l=self.params["l2_reg"]
             ),
         )(encoder)
         encoder = layers.MaxPooling3D((1, 2, 2))(encoder)
@@ -97,7 +97,7 @@ class MultiOutput_skip:
             padding="same",
             activation="linear",
             kernel_regularizer=tf.keras.regularizers.l2(
-                l=self.params["l2_reg_decoder_1"]
+                l=self.params["l2_reg"]
             ),
             name="Autoencoder_output",
         )(decoder)
@@ -124,7 +124,7 @@ class MultiOutput_skip:
             strides=(1, 1, 1),
             padding="same",
             activation="leaky_relu",
-            kernel_regularizer=tf.keras.regularizers.l2(l=self.params["l2_reg_rec_1"]),
+            kernel_regularizer=tf.keras.regularizers.l2(l=self.params["l2_reg"]),
             kernel_initializer=initializer,
         )(encoder)
         x = layers.UpSampling3D((1, 2, 2))(x)
@@ -134,7 +134,7 @@ class MultiOutput_skip:
             strides=(1, 1, 1),
             padding="same",
             activation="leaky_relu",
-            kernel_regularizer=tf.keras.regularizers.l2(l=self.params["l2_reg_rec_2"]),
+            kernel_regularizer=tf.keras.regularizers.l2(l=self.params["l2_reg"]),
         )(x)
         x = layers.UpSampling3D((1, 2, 2))(x)
 
