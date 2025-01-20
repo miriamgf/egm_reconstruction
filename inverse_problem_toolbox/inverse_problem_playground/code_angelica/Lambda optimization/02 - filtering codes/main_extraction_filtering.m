@@ -9,7 +9,7 @@ clear; clc;
 % fullfilename = "/media/obarquero/Datos/GitHub/egm_reconstruction/inverse_problem_toolbox/inverse_problem_playground/code_angelica/Lambda optimization/01 - data/structure.oebin"; % Put the .oebin path
 % 
 % % Channels to save
-% channels = [1:192];
+ channels = [1:192];
 % 
 % DATA = load_open_ephys_binary(fullfilename, 'continuous', 1); % Load the data file
 % DATA.Data = DATA.Data(channels, :); % Select desired channels

@@ -1,30 +1,31 @@
 %% Loading Files
 
 % Define file paths
-signal_file = "C:\Users\HeartLAB\Documents\Dados\data_filtered_sync_E20_F01_R01.mat";
-electrodes_idx_file = 'C:\Users\HeartLAB\Documents\ECGi\Dados\eletrodos_LR.mat';
-heart_geo_file = "C:\Users\HeartLAB\Documents\Documents\heart_geometry_20000_exp14.mat";
-tank_geo_file = "C:\Users\HeartLAB\Documents\ECGi\Dados\LR_tank.mat";
-mtransfer_file = "C:\Users\HeartLAB\Documents\transfer_matrix_LR_20000_exp20.mat";
+signal_file = "../../01 - data/electric_data_Exx_Fxx_Rxx_filtered.mat";
+electrodes_idx_file = '../../01 - data/eletrodos_LR.mat';
+heart_geo_file = "../../01 - data/../../01 - data/heart_geometry_20000_exp14.mat";
+tank_geo_file = "../../01 - data/LR_tank.mat";
+mtransfer_file = "../../01 - data/MTransfer_exp14_LR_20000.mat";
 
 %% Reading Files
 
 % Extracting tank signals
 signal_data = load(signal_file);
+%signal_data = signal_data.(subsref(fieldnames(signal_data), substruct('{}', {1})));
 signal_data = signal_data.(subsref(fieldnames(signal_data), substruct('{}', {1})));
-signal = signal_data.EL([129:174, 177:190], :); % Keeping only 60 electrodes
+signal = signal_data.Data([129:174, 177:190], :); % Keeping only 60 electrodes
 
 % Electrodes
 electrodes_data = load(electrodes_idx_file);
 electrodes = electrodes_data.(subsref(fieldnames(electrodes_data), substruct('{}', {1})));
 
 % Tank geometry
-tank_data = load(tank_geo_file);
-tank_geo = tank_data.(subsref(fieldnames(tank_data), substruct('{}', {1})));
+%tank_data = load(tank_geo_file);
+%tank_geo = tank_data.(subsref(fieldnames(tank_data), substruct('{}', {1})));
 
 % Heart geometry
-heart_data = load(heart_geo_file);
-heart_geo = heart_data.(subsref(fieldnames(heart_data), substruct('{}', {1})));
+%heart_data = load(heart_geo_file);
+%heart_geo = heart_data.(subsref(fieldnames(heart_data), substruct('{}', {1})));
 
 % Transfer Matrix
 mtransfer_data = load(mtransfer_file);
