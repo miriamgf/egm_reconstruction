@@ -3,7 +3,7 @@
 % Define file paths
 signal_file = "../../01 - data/electric_data_Exx_Fxx_Rxx_filtered.mat";
 electrodes_idx_file = '../../01 - data/eletrodos_LR.mat';
-heart_geo_file = "../../01 - data/../../01 - data/heart_geometry_20000_exp14.mat";
+heart_geo_file = "../../01 - data/heart_geometry_20000_exp14.mat";
 tank_geo_file = "../../01 - data/tank_geometry.mat";
 mtransfer_file = "../../01 - data/MTransfer_exp14_LR_20000.mat";
 
@@ -24,8 +24,8 @@ tank_data = load(tank_geo_file);
 tank_geo = tank_data.(subsref(fieldnames(tank_data), substruct('{}', {1})));
 
 % Heart geometry
-%heart_data = load(heart_geo_file);
-%heart_geo = heart_data.(subsref(fieldnames(heart_data), substruct('{}', {1})));
+heart_data = load(heart_geo_file);
+heart_geo = heart_data.(subsref(fieldnames(heart_data), substruct('{}', {1})));
 
 % Transfer Matrix
 mtransfer_data = load(mtransfer_file);
@@ -67,6 +67,8 @@ end
 
 %save interp_signal for python here
 
+save('interp_signal.mat',"interp_signal")
+
 %% Define Transfer Matrix
 
 A = MTransfer;
@@ -83,17 +85,16 @@ est_end_sample = est_end * fs;
 
 % Precompute matrices for the regularization method
 [AA, L, LL] = precompute_matrices(A, order, heart_geo);
-
-% Regularization method (comment/uncomment as needed)
+%% Regularization method (comment/uncomment as needed)
 
 % Tikhonov method
-%[x_hat, lambda_opt] = tikhonov(A, L, AA, LL, interp_signal(:, est_start_sample:est_end_sample), lambda, SNR, order, reg_param_method, compute_params);
+[x_hat, lambda_opt] = tikhonov(A, L, AA, LL, interp_signal(:, est_start_sample:est_end_sample), lambda, SNR, order, reg_param_method, compute_params);
 
 % TSVD method
 %[x_hat, k] = tsvd(A, L, interp_signal(:, est_start_sample:est_end_sample), lambda, SNR, order, compute_params);
 
 % DSVD
-[x_hat, lambda_opt] = dsvd (A, interp_signal(:, est_start_sample:est_end_sample), lambda, SNR, compute_params);
+%[x_hat, lambda_opt] = dsvd (A, interp_signal(:, est_start_sample:est_end_sample), lambda, SNR, compute_params);
 
 %% Plot All Signals
 

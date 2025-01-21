@@ -253,8 +253,9 @@ with h5py.File(signal_file, 'r') as f:
     # Accessing the 'Data' field and selecting rows
     raw_signal= signal_data['Data']
     # Keeping only 60 electrodes (adjust for zero-based indexing)
-    
+    r_signal = raw_signal[:,:].T
     signal = raw_signal[:,np.r_[128:174, 176:190]].T  # Append additional rows
+   
 
 
 tank_geo = scipy.io.loadmat(tank_geo_file)['tank_geo']
@@ -277,8 +278,143 @@ del heart_geo_file, tank_geo_file, mtransfer_file, signal_file, electrodes_idx_f
 #%% Interpolate BSPs
 
 #why do you need to do that
-
+"""
 y = signal.copy()
 idx = electrodes.T
 
 lap, edge = mesh_laplacian(vertices_tank, faces_tank-1)
+"""
+
+#load interp signal
+interp_signal = scipy.io.loadmat('interp_signal.mat')['interp_signal']
+
+A = mtransfer.copy()
+
+
+
+#%% tikhonov
+
+from precompute_matrix import precompute_matrix
+
+AA, L , LL = precompute_matrix(A, None, order = 0)
+
+
+
+
+#%%
+#some plottings
+import matplotlib.pyplot as plt
+from scipy.signal import welch
+plt.close('all')
+fs = 4e3
+
+plt.figure()
+plt.subplot(321)
+plt.plot(signal[0,:])
+plt.title('bsp')
+plt.subplot(322)
+plt.plot(r_signal[0,:])
+plt.title('r_atria')
+plt.subplot(323)
+plt.plot(interp_signal[0,:])
+plt.title('bsp_interp')
+plt.subplot(324)
+plt.plot(r_signal[18,:])
+plt.title('l_atria')
+plt.subplot(325)
+plt.plot(signal[40,:])
+plt.title('bsp')
+plt.subplot(326)
+plt.plot(r_signal[66,:])
+plt.title('ventricle')
+
+#psd
+f, psd = welch(interp_signal[0,:], fs=fs, nperseg=len(interp_signal[0,:]/8))
+
+idx = f<60
+
+plt.figure()
+plt.subplot(121)
+plt.plot(r_signal[0,:])
+plt.subplot(122)
+plt.plot(f[idx],psd[idx])
+
+
+
+#%%
+
+#perform some filtering
+import filtering
+
+y_,_ = filtering.detrendSpline(interp_signal,fs,l_w = 0.2)
+#y,_ = filtering.detrendSpline(y,fs,l_w = 0.25)
+y_filtered = filtering.ECG_filtering_real(y_, fs,filt_order = 8)
+#y_filtered = filtering.ECG_filtering_real(y, fs)
+
+plt.close('all')
+# Loop through each row and plot
+for i in range(signal.shape[0]):    
+    plt.figure(figsize=(20, 10))
+    
+    f, psd = welch(interp_signal[i,:], fs=fs, nperseg=len(interp_signal[i,:]/8))
+    f, psd_f = welch(y_filtered[i,:], fs=fs, nperseg=len(interp_signal[i,:]/8))
+
+    idx = f<60
+    
+    plt.subplot(121)
+    plt.plot(interp_signal[i, :], label=f'Signal {i}',linewidth = 0.3, alpha = 0.8)
+    #plt.plot(x_[i,:],label='detrended')
+    plt.plot(y_filtered[i,:],label='filtered')
+    plt.title(f'Row {i + 1}')
+    plt.xlabel('Index')
+    plt.ylabel('Amplitude')
+    plt.legend()
+    plt.grid(True)
+    
+    plt.subplot(122)
+    plt.plot(f[idx],psd[idx], label = f'PSD {i}')
+    plt.plot(f[idx],psd_f[idx], label = f'PSD_filtered {i}')
+    plt.xlabel('f[Hz]')
+    plt.ylabel('PSD')
+    plt.legend()
+    plt.grid(True)
+    
+    plt.show(block=False)
+    
+    
+    
+    print(f"Displaying row {i + 1}. Close the plot and press any key to continue.")
+    plt.waitforbuttonpress()  # Wait for a key press
+    plt.close() 
+
+
+#%% Several options to perform the tikhonov
+
+#%%1. Downsampling
+
+from scipy.signal import resample_poly
+
+# Downsampling factor
+factor = 16
+
+# Downsample using resample_poly
+y_filt_down = resample_poly(y_filtered.T, up=1, down=factor).T
+
+fs_d = fs/factor
+
+print(f"Original signal length: {y_filtered.shape}")
+print(f"Downsampled signal length: {y_filt_down.shape}")
+print(f"fs {fs_d}")
+
+
+#Tikhonov regularization
+import forward_inverse_problem as fip
+
+#time estimations
+est_on = 2 
+est_off = 2.2
+
+samples_on = int(est_on*fs)
+samples_off = int(est_off*fs)
+
+x_hat_tikh0, lambda_opt_tikh0, plot = fip.classical_tikhonov(A, AA, L, LL, y_filtered[:,samples_on:samples_off])
