@@ -4,7 +4,7 @@
 signal_file = "../../01 - data/electric_data_Exx_Fxx_Rxx_filtered.mat";
 electrodes_idx_file = '../../01 - data/eletrodos_LR.mat';
 heart_geo_file = "../../01 - data/../../01 - data/heart_geometry_20000_exp14.mat";
-tank_geo_file = "../../01 - data/LR_tank.mat";
+tank_geo_file = "../../01 - data/tank_geometry.mat";
 mtransfer_file = "../../01 - data/MTransfer_exp14_LR_20000.mat";
 
 %% Reading Files
@@ -20,8 +20,8 @@ electrodes_data = load(electrodes_idx_file);
 electrodes = electrodes_data.(subsref(fieldnames(electrodes_data), substruct('{}', {1})));
 
 % Tank geometry
-%tank_data = load(tank_geo_file);
-%tank_geo = tank_data.(subsref(fieldnames(tank_data), substruct('{}', {1})));
+tank_data = load(tank_geo_file);
+tank_geo = tank_data.(subsref(fieldnames(tank_data), substruct('{}', {1})));
 
 % Heart geometry
 %heart_data = load(heart_geo_file);
@@ -64,6 +64,8 @@ interp_signal = int * y;
 for i = 1:60
     interp_signal(idx(1, i), :) = y(i, :);
 end
+
+%save interp_signal for python here
 
 %% Define Transfer Matrix
 
