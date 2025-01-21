@@ -351,6 +351,7 @@ y_,_ = filtering.detrendSpline(interp_signal,fs,l_w = 0.2)
 y_filtered = filtering.ECG_filtering_real(y_, fs,filt_order = 8)
 #y_filtered = filtering.ECG_filtering_real(y, fs)
 
+#%%
 plt.close('all')
 # Loop through each row and plot
 for i in range(signal.shape[0]):    
@@ -417,4 +418,18 @@ est_off = 2.2
 samples_on = int(est_on*fs)
 samples_off = int(est_off*fs)
 
-x_hat_tikh0, lambda_opt_tikh0, plot = fip.classical_tikhonov(A, AA, L, LL, y_filtered[:,samples_on:samples_off])
+#x_hat,lambda_opt, lambdas_,errors_,magnitude_term_,lambda_opt_= fip.classical_tikhonov(A, AA, L, LL, y_filtered[:,samples_on:samples_off],n_iterations = 3)
+
+#x_hat,lambda_opt,magnitude_term,error_term,maxcurve_index = fip.classical_tikhonov_noiter(A,AA,L,LL,y_filtered[:,samples_on:samples_off],size_chunk=400)
+
+#add noise to measurementes:
+scale = 0.005 * np.max(np.abs(y_filtered))
+# Generate Gaussian noise
+noise = np.random.normal(0, scale, y_filtered.shape)
+# Add noise to the signal
+y_filtered_n = y_filtered + noise
+
+
+x_hat,lambda_opt,magnitude_term,error_term,maxcurve_index = fip.classical_tikhonov_noiter_global(A,AA,L,LL,y_filtered[:,samples_on:samples_off],positive_curvature_only = True)
+
+# %%

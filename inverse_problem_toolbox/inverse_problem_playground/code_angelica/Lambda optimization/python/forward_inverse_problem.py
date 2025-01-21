@@ -279,7 +279,7 @@ def classical_tikhonov_noiter(A,AA,L,LL,y,size_chunk=400):
     
     return x_hat,lambda_opt_list,magnitude_terms_list,error_terms_list,max_lcurve_list
 
-def classical_tikhonov_noiter_global(A,AA,L,LL,y):
+def classical_tikhonov_noiter_global(A,AA,L,LL,y,positive_curvature_only = False):
     """
     Tikhonov global method reconstruction.
     The analytical solution of the inverse problem in terms of Tikhonov regularization is:
@@ -301,10 +301,12 @@ def classical_tikhonov_noiter_global(A,AA,L,LL,y):
     # Initialize magnitude and error terms
     magnitude_term=np.zeros(lambda_test.shape[0])
     error_term=np.zeros(lambda_test.shape[0]) 
+
+    A_T = A.T
         
     for j in range(0, lambda_test.shape[0]):
         print('Classical Tikhonov method (full lambda sampling method). Number of tested lambda values: %d/%d' % (j+1,lambda_test.shape[0]))
-        x_hat = np.matmul(np.matmul(np.linalg.inv(AA+lambda_test[j]*LL),np.transpose(A)),y);
+        x_hat = np.matmul(np.matmul(np.linalg.inv(AA+lambda_test[j]*LL),A_T),y);
         error_term[j]    = (np.linalg.norm(np.matmul(A,x_hat)-y,'fro'))**2;
         magnitude_term[j]= (np.linalg.norm(np.matmul(L,x_hat),'fro'))**2;
         
@@ -319,8 +321,20 @@ def classical_tikhonov_noiter_global(A,AA,L,LL,y):
     curve_term2=(dx**2+dz**2)**3/2
     curve=curve_term1/curve_term2
         
-    abscurve=np.abs(curve)
-    maxcurve_index=np.argmax(abscurve)
+    #only interested in positive curvature
+
+    if positive_curvature_only:
+        positive_curvature_indices = np.where(curve > 0)[0]
+
+        # From the positive curvature values, find the index with the maximum curvature
+        maxcurve_index= positive_curvature_indices[np.argmax(curve[positive_curvature_indices])]
+        
+
+    else:
+        abscurve=np.abs(curve)
+        maxcurve_index=np.argmax(abscurve)
+        
+    #get lambda opt
     lambda_opt=lambda_test[maxcurve_index]
         
     x_hat = np.matmul(np.matmul(np.linalg.inv(AA+lambda_opt*LL),np.transpose(A)),y);        
