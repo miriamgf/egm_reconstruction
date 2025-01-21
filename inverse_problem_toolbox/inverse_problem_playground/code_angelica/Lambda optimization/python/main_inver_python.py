@@ -413,7 +413,7 @@ import forward_inverse_problem as fip
 
 #time estimations
 est_on = 2 
-est_off = 2.2
+est_off = 3.5
 
 samples_on = int(est_on*fs)
 samples_off = int(est_off*fs)
@@ -430,9 +430,39 @@ noise = np.random.normal(0, scale, y_filtered.shape)
 y_filtered_n = y_filtered + noise
 
 
+import os
+print("primer método")
 x_hat_1,lambda_opt_1,magnitude_term_1,error_term_1,maxcurve_index_1 = fip.classical_tikhonov_noiter_global(A,AA,L,LL,y_filtered[:,samples_on:samples_off],positive_curvature_only = True)
-x_hat_2,lambda_opt_2,magnitude_term_2,error_term_2,maxcurve_index_2 = fip.classical_tikhonov_noiter_global(A,AA,L,LL,y_filtered_n[:,samples_on:samples_off],positive_curvature_only = True)
+saved_data = {
+    "x_hat": x_hat_1,
+    "lambda_opt": lambda_opt_1,
+    "magnitude_term": magnitude_term_1,
+    "error_term": error_term_1,
+    "maxcurve_index": maxcurve_index_1,
+}
+
+np.save("tikh_1",saved_data)
+
+os.system('clear')
+print("segundo método")
+#x_hat_2,lambda_opt_2,magnitude_term_2,error_term_2,maxcurve_index_2 = fip.classical_tikhonov_noiter_global(A,AA,L,LL,y_filtered_n[:,samples_on:samples_off],positive_curvature_only = True)
+
+os.system('clear')
+print("segundo método")
 x_hat_3,lambda_opt_3,magnitude_term_3,error_term_3,maxcurve_index_3 = fip.classical_tikhonov_noiter_global(A,AA,L,LL,y_filtered[:,samples_on:samples_off])
+saved_data_2 = {
+    "x_hat": x_hat_3,
+    "lambda_opt": lambda_opt_3,
+    "magnitude_term": magnitude_term_3,
+    "error_term": error_term_3,
+    "maxcurve_index": maxcurve_index_3,
+}
+
+np.save("tikh_2",saved_data_2)
+
+
+
+# %%
 
 
 

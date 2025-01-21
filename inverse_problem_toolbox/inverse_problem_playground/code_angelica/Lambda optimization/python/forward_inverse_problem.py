@@ -296,7 +296,8 @@ def classical_tikhonov_noiter_global(A,AA,L,LL,y,positive_curvature_only = False
         x_hat (matrix): epicardial potentials reconstruction.
         lambda_opt: regularization parameter.
     """
-    lambda_test=np.logspace(-1,-7,128)
+    #lambda_test=np.logspace(-1,-7,128)
+    lambda_test=np.logspace(-0.5,-7,512)
         
     # Initialize magnitude and error terms
     magnitude_term=np.zeros(lambda_test.shape[0])
