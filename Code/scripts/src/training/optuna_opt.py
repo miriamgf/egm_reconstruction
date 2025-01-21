@@ -303,13 +303,15 @@ class OptunaOpt:
 
         #figures
         # Save visualizations
-        plot_optimization_history(study).write_image(f"{self.experiment_dir}/optimization_history.png")
-        plot_parallel_coordinate(study).write_image(f"{self.experiment_dir}/parallel_coordinate.png")
-        plot_contour(study).write_image(f"{self.experiment_dir}/contour_plot.png")
-        plot_slice(study).write_image(f"{self.experiment_dir}/slice_plot.png")
-        plot_param_importances(study).write_image(f"{self.experiment_dir}/param_importances.png")
-        plot_intermediate_values(study).write_image(f"{self.experiment_dir}/intermediate_values.png")
-
+        try:
+            plot_optimization_history(study).write_image(f"{self.experiment_dir}/optimization_history.png")
+            plot_parallel_coordinate(study).write_image(f"{self.experiment_dir}/parallel_coordinate.png")
+            plot_contour(study).write_image(f"{self.experiment_dir}/contour_plot.png")
+            plot_slice(study).write_image(f"{self.experiment_dir}/slice_plot.png")
+            plot_param_importances(study).write_image(f"{self.experiment_dir}/param_importances.png")
+            plot_intermediate_values(study).write_image(f"{self.experiment_dir}/intermediate_values.png")
+        except:
+            print('Could not save Optuna figures')
 
         
         return params

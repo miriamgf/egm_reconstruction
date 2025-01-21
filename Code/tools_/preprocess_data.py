@@ -56,7 +56,7 @@ class Preprocess_Dataset:
         dic_vars,
         Y,
         all_model_names,
-        transfer_matrices,experiment_dir, norm_egm=True
+        transfer_matrices,experiment_dir, norm_egm=True, inference = False
     ):
         self.params = params
         self.X_1channel = X_1channel
@@ -69,6 +69,7 @@ class Preprocess_Dataset:
         self.transfer_matrices = transfer_matrices
         self.experiment_dir=experiment_dir 
         self.norm_egm=norm_egm
+        self.inference =inference
 
     def preprocess_main(self):
         """
@@ -91,8 +92,6 @@ class Preprocess_Dataset:
             )
         )
 
-        
-
         # Normalize BSPS and EGM
         self.X_1channel = normalize_by_models(self.X_1channel, self.Y_model)
 
@@ -105,6 +104,10 @@ class Preprocess_Dataset:
         )  # Nans generated during noise addition
 
         #Save
+
+        if self.inference:
+
+            return self.X_1channel, self.egm_tensor, self.AF_models, self.Y_model
         
         plt.figure()
         plt.plot(self.X_1channel[0:200, 0, 0], label="bsps")
@@ -181,11 +184,12 @@ class Preprocess_Dataset:
             self.params["batch_size"],
         )
        
-
+        '''
         plt.figure()
         plt.plot(x_train[0, :, 0, 0, 0], label="bsps")
         plt.plot(y_train[0, :, 0], label="egm")
         plt.legend()
+        '''
         os.makedirs("output/figures/input_output/", exist_ok=True)
         plt.savefig("output/figures/input_output/preprocessing.png")
 

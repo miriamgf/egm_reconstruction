@@ -169,6 +169,7 @@ def addwhitenoise(signal, fs=50, SNR=20, model="AF", seed="N"):
     plt.savefig(
         "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/white_noise.png"
     )
+    plt.close()
 
     Cn = np.power(sigma, 2) * np.eye(noisy_EGM.shape[0])
 

@@ -1,5 +1,6 @@
 import json
 import os
+import argparse
 
 
 
@@ -26,6 +27,17 @@ class ParseHiperparams(object):
             data = json.load(file)  # Load the JSON data into a dictionary
         optuna_params = data["optuna_parameters"]
         return optuna_params
+    
+def str_to_bool(value):
+    """Convierte una cadena en booleano"""
+    if isinstance(value, bool):
+        return value
+    if value.lower() in ('true', 't', '1'):
+        return True
+    elif value.lower() in ('false', 'f', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError(f"Boolean value expected, got '{value}' instead.")
 
 
 class TrainConfig_1(object):  # Multioutput

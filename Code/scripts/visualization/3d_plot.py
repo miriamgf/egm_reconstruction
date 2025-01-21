@@ -3,7 +3,7 @@ import scipy.io as sio
 import vtk
 from scipy.interpolate import interp1d
 from vtk.util.numpy_support import numpy_to_vtk
-from renderizer import EGMRenderer
+from scripts.visualization.utils.renderizer import EGMRenderer_EGM
 import os
 import cv2
 import imageio
@@ -12,7 +12,7 @@ import imageio
 # Cargar datos
 #model_path = "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_weighted/reconstructions_by_model_OMAMI_weighted.mat"
 model_path="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/pruebas interpol/reconstructions_by_model_pruebas interpol.mat"
-model_path="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_Optuna/reconstructions_by_model_OMAMI_Optuna.mat"
+model_path="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_VAE/reconstructions_by_model_OMAMI_VAE.mat"
 geom_path_CF = "/home/pdi/miriamgf/tesis/Autoencoders/geometries/Atria_geom/Modelos_computacionales_Carlos_Fambuena/Atria.mat"
 geom_path_edgar= "/home/pdi/miriamgf/tesis/Autoencoders/geometries/Atria_geom/Modelos_Edgar/Atria.mat"
 model_path_database= "/home/pdi/miriamgf/tesis/Autoencoders/Data/modelLA_RSPV_CAF_150115/EGMs.mat"
@@ -21,7 +21,7 @@ os.makedirs(output_directory, exist_ok=True)
 
 # Cargar datos del modelo y la geometría
 
-model_name="modelSimulation_01_200316_001_  4"
+model_name="modelSimulation_01_200316_001_  3" 
 
 try:
     model = sio.loadmat(model_path)[model_name]
@@ -42,12 +42,12 @@ faces = heart["faces"][0, 0] - 1  # Convertir a índice base 0
 vertices = heart["vertices"][0, 0]
 
 # Crear renderizadores para var_represent y var_represent_original
-renderer_var = EGMRenderer(faces, vertices, min_val=-0.6, max_val=0.6)
+renderer_var = EGMRenderer_EGM(faces, vertices, min_val=-0.6, max_val=0.6)
 try:
-    renderer_label = EGMRenderer(faces, vertices,  min_val=-0.6, max_val=0.6)
+    renderer_label = EGMRenderer_EGM(faces, vertices,  min_val=-0.6, max_val=0.6)
 except:
     y_label=y_label[0][0]
-    renderer_label = EGMRenderer(faces, vertices,  min_val=-10, max_val=10)
+    renderer_label = EGMRenderer_EGM(faces, vertices,  min_val=-10, max_val=10)
 
 # Generar datos suavizados
 #label_true = sio.loadmat(model_path_database)['x'].T

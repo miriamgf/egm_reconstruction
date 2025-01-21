@@ -1,5 +1,6 @@
 import os
 import sys
+#sys.path.append("../Code")
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import random
@@ -15,10 +16,6 @@ from scipy.signal import welch
 
 from tools_.tools import *
 
-# %% Path Models
-# %% Path Models
-current = os.path.dirname(os.path.realpath(__file__))
-torsos_dir = "../../../Labeled_torsos/"
 directory = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
 torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
 
@@ -183,14 +180,7 @@ class NoiseSimulation:
                 noisy_signal_before, SNR=self.SNR_white_noise, fs=self.fs
             )
 
-            plt.figure(figsize=(20, 5))
-            plt.plot(noisy_signal[:, 0, 4], label="EM + WN")
-            plt.plot(noisy_signal_before[:, 0, 4], label="only EM")
-            plt.plot(clean_signal[:, 0, 4], label="clean")
-            plt.legend()
-            os.makedirs("output/figures/Noise_module/", exist_ok=True)
-            plt.savefig("output/figures/Noise_module/phases_filtering1.png")
-            plt.close()
+            
 
         return noisy_signal, binary_map
 
@@ -420,13 +410,22 @@ class NoiseSimulation:
 
         """
         record_name = type_noise  # Nombre del registro
-        path_noise_models = "tools_/noise_models"
-        record = wfdb.rdrecord(
-            f"{path_noise_models}/{record_name}", sampfrom=0, channels=[0]
-        )
+        try:
+            path_noise_models = "tools_/noise_models"
+            record = wfdb.rdrecord(
+                f"{path_noise_models}/{record_name}", sampfrom=0, channels=[0]
+            )
 
-        noise = record.p_signal
-        noise_original = noise.copy()
+            noise = record.p_signal
+            noise_original = noise.copy()
+        except:
+            path_noise_models = "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/tools_/noise_models"
+            record = wfdb.rdrecord(
+                f"{path_noise_models}/{record_name}", sampfrom=0, channels=[0]
+            )
+
+            noise = record.p_signal
+            noise_original = noise.copy()
 
         self.compute_periodogram_of_noise(noise_original)
 
@@ -454,6 +453,7 @@ class NoiseSimulation:
         signal = signal.flatten()
         f, Pxx = welch(signal, fs, nperseg=nperseg, noverlap=nperseg // 2)
         # Graficar el periodograma de Welch
+        ''''''
         plt.figure(figsize=(10, 6))
         plt.semilogy(f, Pxx)
         plt.title("Periodograma de Welch")

@@ -6,8 +6,6 @@ Created on Tue Jun 19 14:17:08 2018
 """
 
 import os
-
-import data_load as dl
 import h5py
 import numpy as np
 import scipy.io
@@ -16,7 +14,7 @@ data_path = os.getcwd() + "/data/"
 data_path_real = os.getcwd() + "/data/Real/"
 
 
-def precompute_matrix(A, atrial_model, order=0):
+def precompute_matrix(A, order=0):
     """
     Function which applies narrow-band filter to x and calculates variables for
     minimizing computing time in calculation of inverse matrix A.

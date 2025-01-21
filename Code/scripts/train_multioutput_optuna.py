@@ -8,6 +8,7 @@ import os
 import pickle
 import random
 import time
+import json
 
 import matplotlib.pyplot as plt
 #import mlflow
@@ -36,6 +37,8 @@ import tensorflow as tf
 from config import ParseHiperparams
 from src.training.optuna_opt import OptunaOpt
 from keras import backend as K
+from tensorflow.keras.models import load_model
+from config import str_to_bool
 
 from tools_.load_dataset import LoadDataset
 from tools_.preprocess_data import Preprocess_Dataset
@@ -80,18 +83,26 @@ try:
     print("parsing")
     parser = argparse.ArgumentParser(description="Noise params")
     parser.add_argument("--algorithm", type=str, help="experiment name", required=True)
-    parser.add_argument("--optuna", type=str, help="True or False", required=False)
+    parser.add_argument("--optuna", type=str_to_bool, help="True or False", required=False)
     parser.add_argument("--n_nodes", type=int, help="682, 1024", required=False)
+    parser.add_argument("--fold", type=int, help="0, 1, 2, 3, 4", required=False)
+    parser.add_argument("--filter_EGM", type=str_to_bool, help="True or False", required=False)
 
     args = parser.parse_args()
     algorithm = args.algorithm
     optuna = args.optuna
     n_nodes = args.n_nodes
+    filter_EGM= args.filter_EGM
+
     params["algorithm"]=algorithm
     params["n_nodes_regression"]=n_nodes
 
-    if optuna == "True":
-        params["optuna_optimization"] = True
+    if params["cross_validation"]:
+        fold=args.fold
+        params["fold"] = fold
+    
+    if filter_EGM is not None:  
+        params["filter_EGM"] = filter_EGM
 
 except:
     algorithm = params["algorithm"]
@@ -109,8 +120,22 @@ experiment_name = algorithm
 if params["cross_validation"]:
     experiment_name = f"{experiment_name}_fold_{params['fold']}"
 
-experiment_name = f"{experiment_name}"
+if not params["filter_EGM"]:  
+    experiment_name = f"{experiment_name}_no_filt"
+
+if params["algorithm"] == "OMAMI":
+    params["fs_sub"]=200
+    params["batch_size"]=400
+
+if params["optuna_optimization"]:
+    experiment_name = f"{experiment_name}_Optuna"
+
+
+#experiment_name = f"{experiment_name}"
+
 #experiment_name='pruebas interpol'
+print('Experiment name: ', experiment_name)
+
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
@@ -163,6 +188,7 @@ print(all_model_names)
 # Load data
 if params["fs"] == params["fs_sub"]:
     params["fs"] = params["fs_sub"]
+ 
 
 Transfer_model = False  # Transfer learning from sinusoids
 sinusoids = False
@@ -177,17 +203,17 @@ sinusoids = False
     AF_models,
     all_model_names,
     transfer_matrices,
+    y_list
 ) = LoadDataset(
     params,
     directory=directory,
     data_type="1channelTensor",
     n_classes=params["n_classes"],
-    downsampling=False,
+    downsampling=False, #deprecated
     fs=params["fs"],
     norm=False,
     SR=True,
     n_batch=params["batch_size"],
-    sinusoid=sinusoids,
     SNR_em_noise=SNR_em_noise,
     SNR_white_noise=SNR_white_noise,
     patches_oclussion=patches_oclussion,
@@ -215,6 +241,8 @@ if params["optuna_optimization"]:
         models_dir=models_dir,
         experiment_dir=experiment_dir,
     )()
+
+print('params after optimization', params)
 
 """
 plt.figure()
@@ -263,7 +291,6 @@ print("Algorithm selected:", params["algorithm"])
 model, history = TrainModel(
     params, x_train, x_test, x_val, y_train, y_test, y_val, models_dir, experiment_dir
 )()
-
 
 # Evaluate
 pred_test = model.predict(
@@ -508,14 +535,7 @@ plt.savefig(experiment_dir + "PSD.png")
 plt.close()
 
 
-# DF mapping: Calculate DF Maps and Phase maps from reconstruction and labels --> Plot 3D in Matlab
-"""
-if params['DF_mapping']:
-    print("Computing DF Mapping...")
-    DF_mapping(
-        y_test, pred_test_egm, BSPM_test, AF_models_test, experiment_dir, norm=True
-    )
-"""
+
 # Calculate metrics DTW, RMSE and Correlation BY AF MODELS: Meand and std
 # *This metrics are calculated appart because thay are not computed in evaluate_function, (...)
 # (...) as they cannot be included in the tensorflow metric callback
@@ -669,12 +689,11 @@ end = time.time()
 
 params["execution_time"] = (end - start) / 60
 # Specify the file path
-file_path = experiment_dir + "hyperparams.txt"
+file_path = experiment_dir + "hyperparams.json"
 
-# Write dictionary string representation to text file
+# Escribe el diccionario como JSON en el archivo
 with open(file_path, "w") as f:
-    for key, value in params.items():
-        f.write(f"{key}: {value}\n")
+    json.dump(params, f, indent=2)
 
 print((end - start) / 60, "Mins of execution")
 print("-------------EXPERIMENT RED MULTIOUPUT'--------------", experiment_name)

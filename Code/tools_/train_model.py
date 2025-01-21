@@ -1,21 +1,20 @@
 import sys
 
 sys.path.append("../Code")
-import datetime
-
+import json
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from tensorflow import keras
-
+from keras.callbacks import TensorBoard
+from optuna.integration import TFKerasPruningCallback
 from keras.optimizers import Adam
 
 from models.multioutput import MultiOutput
 from models.multioutput_skip import MultiOutput_skip
-from models.multioutput_VAE import MultiOutput_VAE
+from models.multioutput_VAE import MultiOutput_VAE, SamplingLayer
 from models.multioutput_VAE_skip import MultiOutput_VAE_skip
 from models.gen_vae import Gen_VAE
-from keras.callbacks import TensorBoard
-from optuna.integration import TFKerasPruningCallback
+
 
 
 tf.random.set_seed(42)
@@ -145,7 +144,7 @@ class TrainModel:
 
         print("Training model...")
 
-        if self.params["set_gpu"] is not None:
+        if self.params["set_gpu"] is not False:
             print("Using GPU:", self.params["set_gpu"])
             with tf.device(f"/GPU:{self.params['set_gpu']}"):
                 # Train on specified GPU
@@ -156,9 +155,8 @@ class TrainModel:
         # Callbacks
         
         cp_callback = tf.keras.callbacks.ModelCheckpoint(
-            filepath=self.experiment_dir
-            + "regressor.weights.h5",
-            save_weights_only=True,
+            filepath=self.experiment_dir+ "model_weights.h5",
+            save_weights_only=False,
             verbose=1,
             save_best_only=True,
         )
@@ -178,7 +176,8 @@ class TrainModel:
         
         tensorboard_callback = TensorBoard(log_dir='output/tensorboard/logs/'+self.params['algorithm'], histogram_freq=1)
 
-        callbacks_list = [early_stopping_callback, cp_callback, tensorboard_callback]
+        callbacks_list = [early_stopping_callback, tensorboard_callback]
+        print(callbacks_list)
         #ssh -L 6006:localhost:6006 miriamgf@10.110.100.78 en terminal LOCAL
         #tensorboard --logdir=output/tensorboard/logs/ en terminal REMOTO
 
@@ -273,8 +272,25 @@ class TrainModel:
             epochs=self.params["n_epochs"],
             validation_data=(x_val, [x_val, y_val]),
             callbacks=callbacks_list,
-)
-        
+            )    
+        # Construir el modelo antes de guardarlo si es un modelo subclasificado
+        try:
+            model.build(input_shape=(None, *x_train.shape[1:]))  # Define el input shape correcto
+            print('Modelo construido con éxito.')
+        except Exception as e:
+            print(f'Error al construir el modelo: {e}')
+
+
+        try:
+            print('saving model')
+            #Save model and history    
+            model.save(self.experiment_dir+"/model_weights.h5")
+        except:
+
+            model.model.save(self.experiment_dir+"/model_weights.h5")
+            model_loaded = load_model(self.experiment_dir + "/model_weights.h5", custom_objects={'SamplingLayer': SamplingLayer})
+        with open(self.experiment_dir+'historial.json', 'w') as json_file:
+                        json.dump(history.history, json_file)
         # Plot and save training and validation curves
         
         plt.figure()
