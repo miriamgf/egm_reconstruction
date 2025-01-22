@@ -669,7 +669,7 @@ else:
 #%%
 lambda_test = np.logspace(-0.5,-12,10)
 
-run_tikh_pca_selected_v= True
+run_tikh_pca_selected_v= False
 #Selected atria
 
 if run_tikh_pca_selected_v:
