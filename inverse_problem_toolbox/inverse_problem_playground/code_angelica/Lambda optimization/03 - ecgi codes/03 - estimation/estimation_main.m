@@ -88,13 +88,13 @@ est_end_sample = est_end * fs;
 %% Regularization method (comment/uncomment as needed)
 
 % Tikhonov method
-[x_hat, lambda_opt] = tikhonov(A, L, AA, LL, interp_signal(:, est_start_sample:est_end_sample), lambda, SNR, order, reg_param_method, compute_params);
+%[x_hat, lambda_opt] = tikhonov(A, L, AA, LL, interp_signal(:, est_start_sample:est_end_sample), lambda, SNR, order, reg_param_method, compute_params);
 
 % TSVD method
 %[x_hat, k] = tsvd(A, L, interp_signal(:, est_start_sample:est_end_sample), lambda, SNR, order, compute_params);
 
 % DSVD
-%[x_hat, lambda_opt] = dsvd (A, interp_signal(:, est_start_sample:est_end_sample), lambda, SNR, compute_params);
+[x_hat, lambda_opt] = dsvd (A, interp_signal(:, est_start_sample:est_end_sample), lambda, SNR, compute_params);
 
 %% Plot All Signals
 
@@ -115,8 +115,8 @@ v3 = 2900;
 v4 = 7000;
 
 % Define time window for plot (in seconds)
-t_start = 1;
-t_end = 2;
+t_start = 0;
+t_end = 0.1;
 
 % Convert time to samples
 t_start_sample = t_start * fs + 1;
@@ -157,8 +157,8 @@ v3 = 2900;
 v4 = 7000;
 
 % Define time window for plot (in seconds)
-t_start = 1;
-t_end = 2;
+t_start = 0;
+t_end = 0.1;
 
 % Convert time to samples
 t_start_sample = t_start * fs + 1;
@@ -173,12 +173,12 @@ figure();
 subplot(4, 1, 1);
 %for tank signals, it is necessary to take into account the estimation
 %start sample
-plot(time, signal_data.EL(tank_el1, (est_start_sample + t_start_sample) : (est_start_sample + t_end_sample)), 'LineWidth', 1, 'Color', 'black');
+plot(time, signal_data.Data(tank_el1, (est_start_sample + t_start_sample) : (est_start_sample + t_end_sample)), 'LineWidth', 1, 'Color', 'black');
 title(['Tank electrode ', num2str(tank_el1)], 'FontSize', 15);
 ylabel('Amplitude ($\mu$V)', 'Interpreter', 'latex', 'FontSize', 14);
 
 subplot(4, 1, 2);
-plot(time, signal_data.EL(tank_el2,  (est_start_sample + t_start_sample) : (est_start_sample + t_end_sample)), 'LineWidth', 1, 'Color', 'black');
+plot(time, signal_data.Data(tank_el2,  (est_start_sample + t_start_sample) : (est_start_sample + t_end_sample)), 'LineWidth', 1, 'Color', 'black');
 title(['Tank electrode ', num2str(tank_el2)], 'FontSize', 15);
 ylabel('Amplitude ($\mu$V)', 'Interpreter', 'latex', 'FontSize', 14);
 

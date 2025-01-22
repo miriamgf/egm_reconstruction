@@ -9,6 +9,7 @@ import numpy as np
 from scipy import signal as sigproc
 import time
 from numba import jit, prange
+from scipy.linalg import cholesky, solve
 
 def forward_problem(EGMs,MTransfer):
     """
@@ -278,9 +279,10 @@ def classical_tikhonov_noiter(A,AA,L,LL,y,size_chunk=400):
     x_hat = np.hstack(x_hat_list)  
     
     return x_hat,lambda_opt_list,magnitude_terms_list,error_terms_list,max_lcurve_list
-
+"""
+OLD => USING OPTIMIZED VERSION
 def classical_tikhonov_noiter_global(A,AA,L,LL,y,positive_curvature_only = False):
-    """
+ 
     Tikhonov global method reconstruction.
     The analytical solution of the inverse problem in terms of Tikhonov regularization is:
     phi_x_hat = inv(A'*A + lambda*L'*L)*A'*phi_T    
@@ -295,9 +297,10 @@ def classical_tikhonov_noiter_global(A,AA,L,LL,y,positive_curvature_only = False
     Returns:
         x_hat (matrix): epicardial potentials reconstruction.
         lambda_opt: regularization parameter.
-    """
+
     #lambda_test=np.logspace(-1,-7,128)
-    lambda_test=np.logspace(-0.5,-7,512)
+    lambda_test=np.logspace(-1,-7,32)
+    #lambda_test=np.logspace(-0.5,-7,512)
         
     # Initialize magnitude and error terms
     magnitude_term=np.zeros(lambda_test.shape[0])
@@ -341,6 +344,82 @@ def classical_tikhonov_noiter_global(A,AA,L,LL,y,positive_curvature_only = False
     x_hat = np.matmul(np.matmul(np.linalg.inv(AA+lambda_opt*LL),np.transpose(A)),y);        
     
     return x_hat,lambda_opt,magnitude_term,error_term,maxcurve_index
+"""
+
+def classical_tikhonov_noiter_global(A, AA, L, LL, y, positive_curvature_only=False,lambda_test=np.logspace(-1, -7, 32)):
+    """
+    Optimized Tikhonov global method reconstruction.
+    Tikhonov global method reconstruction.
+    The analytical solution of the inverse problem in terms of Tikhonov regularization is:
+    phi_x_hat = inv(A'*A + lambda*L'*L)*A'*phi_T    
+ 
+    Parameters:
+        A (matrix): transfer matrix.
+        AA (matrix): transfer matrix.
+        L (matrix): regularization matrix
+        LL (matrix): L'*L
+        y (matrix): Body surface potentials (BSP)
+        n_iterations (int): number of iterations for computing optimization parameter
+    Returns:
+        x_hat (matrix): epicardial potentials reconstruction.
+        lambda_opt: regularization parameter.
+
+    """
+    import numpy as np
+
+    # Define lambda test range
+    #lambda_test = np.logspace(-1, -7, 32)
+
+    # Precompute reusable values
+    A_T = A.T
+    At_y = A_T @ y
+    norm_y = np.linalg.norm(y, 'fro')**2
+
+    # Containers for error and magnitude terms
+    error_term = np.zeros(lambda_test.shape[0])
+    magnitude_term = np.zeros(lambda_test.shape[0])
+
+    # Compute error and magnitude terms efficiently
+    for j, lam in enumerate(lambda_test):
+        print('Classical Tikhonov method (full lambda sampling method). Number of tested lambda values: %d/%d' % (j+1,lambda_test.shape[0]))
+        inv_term = np.linalg.inv(AA + lam * LL)
+        #regularized_matrix = AA + lam * LL
+
+         # Fallback to general solver in case Cholesky fails
+        #x_hat = np.linalg.solve(regularized_matrix, At_y)
+            
+        
+        x_hat = inv_term @ At_y # Optimized matrix multiplication
+        error_term[j] = np.linalg.norm(A @ x_hat - y, 'fro')**2 / norm_y
+        magnitude_term[j] = np.linalg.norm(L @ x_hat, 'fro')**2
+
+    # Compute log terms
+    x_term = np.log10(error_term)
+    z_term = np.log10(magnitude_term)
+
+    # Compute gradients and curvature
+    dx = np.gradient(x_term)
+    dz = np.gradient(z_term)
+    ddx = np.gradient(dx)
+    ddz = np.gradient(dz)
+    curve = (dx * ddz - ddx * dz) / (dx**2 + dz**2)**1.5
+
+    # Handle positive curvature condition
+    if positive_curvature_only:
+        positive_indices = np.where(curve > 0)[0]
+        if len(positive_indices) > 0:
+            maxcurve_index = positive_indices[np.argmax(curve[positive_indices])]
+        else:
+            raise ValueError("No positive curvature found.")
+    else:
+        maxcurve_index = np.argmax(np.abs(curve))
+
+    # Optimal lambda and x_hat
+    lambda_opt = lambda_test[maxcurve_index]
+    x_hat = np.linalg.inv(AA + lambda_opt * LL) @ A_T @ y
+
+    return x_hat, lambda_opt, magnitude_term, error_term, maxcurve_index
+
 
 def classical_tikhonov_noiter_i(A,AA,L,LL,y):
     """

@@ -396,7 +396,7 @@ for i in range(signal.shape[0]):
 from scipy.signal import resample_poly
 
 # Downsampling factor
-factor = 16
+factor = 18
 
 # Downsample using resample_poly
 y_filt_down = resample_poly(y_filtered.T, up=1, down=factor).T
@@ -408,15 +408,16 @@ print(f"Downsampled signal length: {y_filt_down.shape}")
 print(f"fs {fs_d}")
 
 
+#%%
 #Tikhonov regularization
 import forward_inverse_problem as fip
 
 #time estimations
 est_on = 2 
-est_off = 3.5
+est_off = 3
 
-samples_on = int(est_on*fs)
-samples_off = int(est_off*fs)
+samples_on = int(est_on*fs_d)
+samples_off = int(est_off*fs_d)
 
 #x_hat,lambda_opt, lambdas_,errors_,magnitude_term_,lambda_opt_= fip.classical_tikhonov(A, AA, L, LL, y_filtered[:,samples_on:samples_off],n_iterations = 3)
 
@@ -430,10 +431,49 @@ noise = np.random.normal(0, scale, y_filtered.shape)
 y_filtered_n = y_filtered + noise
 
 
+#%%
 import os
-print("primer método")
-x_hat_1,lambda_opt_1,magnitude_term_1,error_term_1,maxcurve_index_1 = fip.classical_tikhonov_noiter_global(A,AA,L,LL,y_filtered[:,samples_on:samples_off],positive_curvature_only = True)
-saved_data = {
+
+run_tikh = False
+
+if run_tikh:
+    print("primer método")
+    lambda_test = np.logspace(-0.5,-12,10)
+    x_hat,lambda_opt,magnitude_term,error_term,maxcurve_index = fip.classical_tikhonov_noiter_global(A,AA,L,LL,y_filt_down[:,samples_on:samples_off],positive_curvature_only = True,lambda_test = lambda_test)
+    
+    lambda_test = np.logspace(-0.5,-12,10)
+    y_filtered_norm = y_filt_down/ np.max(np.abs(y_filt_down),axis = 1, keepdims=True)
+    x_hat_norm,lambda_opt_norm,magnitude_term_norm,error_term_norm,maxcurve_index_norm = fip.classical_tikhonov_noiter_global(A,AA,L,LL,y_filtered_norm[:,samples_on:samples_off],positive_curvature_only = False,lambda_test = lambda_test)
+    
+    import pickle
+    
+    # Save atria-related outputs (positive curvature)
+    with open('output.pkl', 'wb') as atria_file:
+        pickle.dump((x_hat, lambda_opt, magnitude_term, error_term, maxcurve_index), atria_file)
+    
+    # Save ventricles-related outputs (normalized data, positive curvature off)
+    with open('output_norm.pkl', 'wb') as ventricles_file:
+        pickle.dump((x_hat_norm, lambda_opt_norm, magnitude_term_norm, error_term_norm, maxcurve_index_norm), ventricles_file)
+    
+    print("Files saved as 'output.pkl' and 'output_norm.pkl'")
+    
+else:
+    # Load atria-related outputs (positive curvature)
+    with open('output.pkl', 'rb') as atria_file:
+        atria_outputs = pickle.load(atria_file)
+    
+    # Load ventricles-related outputs (normalized data, positive curvature off)
+    with open('output_norm.pkl', 'rb') as ventricles_file:
+        ventricles_outputs = pickle.load(ventricles_file)
+    
+    # Access individual outputs for atria
+    x_hat, lambda_opt, magnitude_term, error_term, maxcurve_index = atria_outputs
+    
+    # Access individual outputs for ventricles
+    x_hat_norm, lambda_opt_norm, magnitude_term_norm, error_term_norm, maxcurve_index_norm = ventricles_outputs
+
+
+"""saved_data = {
     "x_hat": x_hat_1,
     "lambda_opt": lambda_opt_1,
     "magnitude_term": magnitude_term_1,
@@ -441,30 +481,185 @@ saved_data = {
     "maxcurve_index": maxcurve_index_1,
 }
 
-np.save("tikh_1",saved_data)
-
-os.system('clear')
-print("segundo método")
-#x_hat_2,lambda_opt_2,magnitude_term_2,error_term_2,maxcurve_index_2 = fip.classical_tikhonov_noiter_global(A,AA,L,LL,y_filtered_n[:,samples_on:samples_off],positive_curvature_only = True)
-
-os.system('clear')
-print("segundo método")
-x_hat_3,lambda_opt_3,magnitude_term_3,error_term_3,maxcurve_index_3 = fip.classical_tikhonov_noiter_global(A,AA,L,LL,y_filtered[:,samples_on:samples_off])
-saved_data_2 = {
-    "x_hat": x_hat_3,
-    "lambda_opt": lambda_opt_3,
-    "magnitude_term": magnitude_term_3,
-    "error_term": error_term_3,
-    "maxcurve_index": maxcurve_index_3,
-}
 
 np.save("tikh_2",saved_data_2)
-
-
-
-# %%
+"""
 
 
 
 
-# %%
+
+#%%
+
+from sklearn.decomposition import PCA
+#PCA in y
+
+row_max = np.max(np.abs(y_filt_down), axis=1, keepdims=True)
+#row_max[row_max == 0] = 1  # Avoid division by zero
+y_normalized = y_filt_down / row_max
+
+# Perform PCA
+pca = PCA(n_components=y_filt_down.shape[0])
+transformed = pca.fit_transform(y_normalized)  # Scores (projection onto principal components)
+components = pca.components_  # Principal components (time patterns)
+
+# Visualize explained variance
+plt.figure(figsize=(8, 4))
+plt.plot(np.cumsum(pca.explained_variance_ratio_) * 100, marker='o')
+plt.title('Cumulative Explained Variance')
+plt.xlabel('Number of Components')
+plt.ylabel('Explained Variance (%)')
+plt.grid()
+plt.show()
+
+# Visualize principal components
+fig, axes = plt.subplots(25, 1, figsize=(12, 8), sharex=True)
+
+t = np.arange(len(r_signal[0,:]))/4e3
+tt = np.arange(len(components[0]))/fs_d
+for i, ax in enumerate(axes):
+    if i==0:
+        ax.plot(t,r_signal[0,:],color='blue')
+        ax.set_title('Atrial signal')
+        ax.axis('off')
+    elif i==1:
+        ax.plot(t,r_signal[26,:],color='blue')
+        ax.set_title('Ventricle signal')
+        ax.axis('off')
+        
+    else: 
+        ax.plot(tt,components[i], color='blue')
+        ax.set_title(f'Component {i -2}', fontsize=10)
+        ax.axis('off')  # Remove axes for better visualization
+
+plt.tight_layout()
+plt.show()
+
+
+#%% reconstruction
+# Allow user to select components interactively or specify indices
+print(f"Total Components: {components.shape[0]}")
+selected_components = input("Enter the indices of components to retain (e.g., 0,1,2): ")
+selected_indices = list(map(int, selected_components.split(',')))
+
+all_indices = np.arange(components.shape[0])  # All component indices
+not_selected_indices = np.setdiff1d(all_indices, selected_indices)
+
+# Reconstruction with selected components
+selected_scores = transformed[:, selected_indices]
+selected_basis = components[selected_indices, :]
+reconstructed_selected = np.dot(selected_scores, selected_basis)
+
+# Reconstruction with non-selected components
+not_selected_scores = transformed[:, not_selected_indices]
+not_selected_basis = components[not_selected_indices, :]
+reconstructed_not_selected = np.dot(not_selected_scores, not_selected_basis)
+
+# Scale back both reconstructions to the original scale
+reconstructed_selected *= row_max
+reconstructed_not_selected *= row_max
+
+#%%
+#correlate components with atria and ventricle signals
+
+components_norm = components / np.max(np.abs(components), axis=1, keepdims=True)
+atria_norm = r_signal[0,:]/ np.max(np.abs(r_signal[0,:]))
+ventricle_norm = r_signal[26,:]/ np.max(np.abs(r_signal[28,:]))
+
+atria_norm = resample_poly(atria_norm, up=1, down=factor).T
+ventricle_norm = resample_poly(ventricle_norm, up=1, down=factor).T
+
+n_components = components_norm.shape[0]
+corr_atria = np.zeros(n_components)
+corr_ventricle = np.zeros(n_components)
+for i in range(n_components):
+    corr_atria[i] = np.corrcoef(components_norm[i], atria_norm)[0, 1]
+    corr_ventricle[i] = np.corrcoef(components_norm[i], ventricle_norm)[0, 1]
+    
+
+top_atria_comp = np.argsort(corr_atria)
+top_ventri_comp = np.argsort(corr_ventricle)
+
+
+#atria top componente
+atri_com = components_norm[top_atria_comp[-3:]]
+ventricle_com = components_norm[top_ventri_comp[-3:]]
+
+plt.figure()
+plt.plot(atria_norm,label='atria signal')
+plt.plot(atri_com[0,:],label='componentes correlated with atria')
+
+plt.figure()
+
+plt.plot(ventricle_norm,label='atria signal')
+plt.plot(ventricle_com[0,:],label='componentes correlated with atria')
+
+
+#%%
+#inverse problem with pca
+
+lambda_test = np.logspace(-0.5,-12,10)
+
+run_tikh = False
+#Selected atria
+
+if run_tikh:
+    #y_filtered_norm = y_filt_down/ np.max(np.abs(y_filt_down),axis = 1, keepdims=True)
+    x_hat_pca_atria,lambda_opt_pca_atria,magnitude_term_pca_atria,error_term_pca_atria,maxcurve_index_pca_atria = fip.classical_tikhonov_noiter_global(A,AA,L,LL,reconstructed_selected[:,samples_on:samples_off],positive_curvature_only = False,lambda_test = lambda_test)
+
+    #non selected ventricles
+    x_hat_pca_v,lambda_opt_pca_v,magnitude_term_pca_v,error_term_pca_v,maxcurve_index_pca_v = fip.classical_tikhonov_noiter_global(A,AA,L,LL,reconstructed_not_selected[:,samples_on:samples_off],positive_curvature_only = False,lambda_test = lambda_test)
+    import pickle
+
+    # Save atria-related outputs
+    with open('output_atria.pkl', 'wb') as atria_file:
+        pickle.dump((x_hat_pca_atria, lambda_opt_pca_atria, magnitude_term_pca_atria, error_term_pca_atria, maxcurve_index_pca_atria), atria_file)
+    
+    # Save ventricles-related outputs
+    with open('output_ventricles.pkl', 'wb') as ventricles_file:
+        pickle.dump((x_hat_pca_v, lambda_opt_pca_v, magnitude_term_pca_v, error_term_pca_v, maxcurve_index_pca_v), ventricles_file)
+
+    print("Files saved as 'output_atria.pkl' and 'output_ventricles.pkl'")
+
+else:
+    with open('output_atria.pkl', 'rb') as atria_file:
+        atria_outputs = pickle.load(atria_file)
+
+    with open('output_ventricles.pkl', 'rb') as ventricles_file:
+        ventricles_outputs = pickle.load(ventricles_file)
+
+    # Access individual outputs
+    x_hat_pca_atria, lambda_opt_pca_atria, magnitude_term_pca_atria, error_term_pca_atria, maxcurve_index_pca_atria = atria_outputs
+    x_hat_pca_v, lambda_opt_pca_v, magnitude_term_pca_v, error_term_pca_v, maxcurve_index_pca_v = ventricles_outputs
+
+
+#%%
+plt.figure()
+plt.plot(np.log(error_term_pca_atria),np.log(magnitude_term_pca_atria),'.-',label = "L_curve pca atria")
+plt.plot(np.log(error_term_pca_atria)[maxcurve_index_pca_atria],np.log(magnitude_term_pca_atria)[maxcurve_index_pca_atria],'rX')
+
+plt.figure()
+plt.plot(np.log(error_term_pca_v),np.log(magnitude_term_pca_v),'.-',label = "L_curve pca atria")
+plt.plot(np.log(error_term_pca_v)[maxcurve_index_pca_v],np.log(magnitude_term_pca_v)[maxcurve_index_pca_v],'rX')
+
+
+#%%
+plt.close('all')
+for i in range(signal.shape[0]):    
+    #plt.figure(figsize=(20, 10))
+    plt.figure()
+    print(i)
+    plt.plot(x_hat_pca_atria[i,:]/np.max(np.abs(x_hat_pca_atria[i,:])),label = 'reconstructed atria')
+    plt.plot(x_hat_pca_v[i,:]/np.max(np.abs(x_hat_pca_v[i,:])),label = 'reconstructed v')
+    plt.legend()
+
+    plt.grid(True)
+    
+    plt.show(block=False)
+    
+    
+    
+    print(f"Displaying row {i + 1}. Close the plot and press any key to continue.")
+    plt.waitforbuttonpress()  # Wait for a key press
+    plt.close() 
+
