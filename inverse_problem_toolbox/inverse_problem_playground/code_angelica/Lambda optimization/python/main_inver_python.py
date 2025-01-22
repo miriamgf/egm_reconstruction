@@ -485,7 +485,13 @@ else:
 np.save("tikh_2",saved_data_2)
 """
 
+plt.figure()
+plt.plot(np.log(error_term),np.log(magnitude_term),'.-',label = "L_curve pca atria")
+plt.plot(np.log(error_term)[maxcurve_index],np.log(magnitude_term)[maxcurve_index],'rX')
 
+plt.figure()
+plt.plot(np.log(error_term_norm),np.log(magnitude_term_norm),'.-',label = "L_curve pca atria")
+plt.plot(np.log(error_term_norm)[maxcurve_index_norm],np.log(magnitude_term_norm)[maxcurve_index_norm],'rX')
 
 
 
@@ -645,7 +651,7 @@ plt.plot(np.log(error_term_pca_v)[maxcurve_index_pca_v],np.log(magnitude_term_pc
 
 #%%
 plt.close('all')
-for i in range(signal.shape[0]):    
+for i in range(0,x_hat_pca_atria.shape[0],50):    
     #plt.figure(figsize=(20, 10))
     plt.figure()
     print(i)
