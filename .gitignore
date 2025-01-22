@@ -156,3 +156,4 @@ Real_data/EDGAR_2014/ECGs.mat
 Real_data/EDGAR_2014/EGMs.mat
 inverse_problem_toolbox/inverse_problem_playground/code_angelica/Lambda optimization/python/tikh_1.npy
 inverse_problem_toolbox/inverse_problem_playground/code_angelica/Lambda optimization/python/tikh_2.npy
+*.pkl
