@@ -669,3 +669,27 @@ for i in range(0,x_hat_pca_atria.shape[0],50):
     plt.waitforbuttonpress()  # Wait for a key press
     plt.close() 
 
+
+#%% 
+
+#compare with the vnetricle
+t = np.linspace(0,1,4000)
+tt = np.arange(x_hat_pca_atria.shape[1])/fs_d
+for i in range(0,x_hat_pca_atria.shape[0],50):    
+    #plt.figure(figsize=(20, 10))
+    plt.figure()
+    print(i)
+    plt.plot(t,r_signal[20,4000*2:4000*3]/np.max(np.abs(r_signal[20,4000*2:4000*3])),label = 'original')
+    plt.plot(tt,x_hat[i,:]/np.max(np.abs(x_hat[i,:])),label = 'reconstructed all')
+    plt.plot(tt,x_hat_pca_v[i,:]/np.max(np.abs(x_hat_pca_v[i,:])),label = 'reconstructed v')
+    plt.legend()
+
+    plt.grid(True)
+    
+    plt.show(block=False)
+    
+    
+    
+    print(f"Displaying row {i + 1}. Close the plot and press any key to continue.")
+    plt.waitforbuttonpress()  # Wait for a key press
+    plt.close() 
