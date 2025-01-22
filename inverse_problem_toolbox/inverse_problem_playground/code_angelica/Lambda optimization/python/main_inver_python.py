@@ -433,7 +433,7 @@ y_filtered_n = y_filtered + noise
 
 #%%
 import os
-
+import pickle 
 run_tikh = False
 
 if run_tikh:
@@ -606,10 +606,10 @@ plt.plot(ventricle_com[0,:],label='componentes correlated with atria')
 
 lambda_test = np.logspace(-0.5,-12,10)
 
-run_tikh = False
+run_tikh_pca_selected_atria = False
 #Selected atria
 
-if run_tikh:
+if run_tikh_pca_selected_atria:
     #y_filtered_norm = y_filt_down/ np.max(np.abs(y_filt_down),axis = 1, keepdims=True)
     x_hat_pca_atria,lambda_opt_pca_atria,magnitude_term_pca_atria,error_term_pca_atria,maxcurve_index_pca_atria = fip.classical_tikhonov_noiter_global(A,AA,L,LL,reconstructed_selected[:,samples_on:samples_off],positive_curvature_only = False,lambda_test = lambda_test)
 
@@ -638,15 +638,54 @@ else:
     x_hat_pca_atria, lambda_opt_pca_atria, magnitude_term_pca_atria, error_term_pca_atria, maxcurve_index_pca_atria = atria_outputs
     x_hat_pca_v, lambda_opt_pca_v, magnitude_term_pca_v, error_term_pca_v, maxcurve_index_pca_v = ventricles_outputs
 
+#%%
+lambda_test = np.logspace(-0.5,-12,10)
+
+run_tikh_pca_selected_v= False
+#Selected atria
+
+if run_tikh_pca_selected_v:
+    #y_filtered_norm = y_filt_down/ np.max(np.abs(y_filt_down),axis = 1, keepdims=True)
+    x_hat_pca_2_atria,lambda_opt_pca_2_atria,magnitude_term_pca_2_atria,error_term_pca_2_atria,maxcurve_index_pca_2_atria = fip.classical_tikhonov_noiter_global(A,AA,L,LL,reconstructed_not_selected[:,samples_on:samples_off],positive_curvature_only = False,lambda_test = lambda_test)
+
+    #selected ventricles
+    x_hat_pca_2_v,lambda_opt_pca_2_v,magnitude_term_pca_2_v,error_term_pca_2_v,maxcurve_index_pca_2_v = fip.classical_tikhonov_noiter_global(A,AA,L,LL,reconstructed_selected[:,samples_on:samples_off],positive_curvature_only = False,lambda_test = lambda_test)
+    import pickle
+
+    # Save atria-related outputs
+    with open('output_atria_2.pkl', 'wb') as atria_file:
+        pickle.dump((x_hat_pca_2_atria, lambda_opt_pca_2_atria, magnitude_term_pca_2_atria, error_term_pca_2_atria, maxcurve_index_pca_2_atria), atria_file)
+    
+    # Save ventricles-related outputs
+    with open('output_ventricles_2.pkl', 'wb') as ventricles_file:
+        pickle.dump((x_hat_pca_2_v, lambda_opt_pca_2_v, magnitude_term_pca_2_v, error_term_pca_2_v, maxcurve_index_pca_2_v), ventricles_file)
+
+    print("Files saved as 'output_atria.pkl' and 'output_ventricles.pkl'")
+
+else:
+    with open('output_atria_2.pkl', 'rb') as atria_file:
+        atria_2_outputs = pickle.load(atria_file)
+
+    with open('output_ventricles_2.pkl', 'rb') as ventricles_file:
+        ventricles_2_outputs = pickle.load(ventricles_file)
+
+    # Access individual outputs
+    x_hat_pca_2_atria, lambda_opt_pca_2_atria, magnitude_term_pca_2_atria, error_term_pca_2_atria, maxcurve_index_pca_2_atria = atria_outputs
+    x_hat_pca_2_v, lambda_opt_pca_2_v, magnitude_term_pca_2_v, error_term_pca_2_v, maxcurve_index_pca_2_v = ventricles_outputs
+
 
 #%%
 plt.figure()
 plt.plot(np.log(error_term_pca_atria),np.log(magnitude_term_pca_atria),'.-',label = "L_curve pca atria")
 plt.plot(np.log(error_term_pca_atria)[maxcurve_index_pca_atria],np.log(magnitude_term_pca_atria)[maxcurve_index_pca_atria],'rX')
 
-plt.figure()
-plt.plot(np.log(error_term_pca_v),np.log(magnitude_term_pca_v),'.-',label = "L_curve pca atria")
+
+plt.plot(np.log(error_term_pca_v),np.log(magnitude_term_pca_v),'.-',label = "L_curve pca vnetricl")
 plt.plot(np.log(error_term_pca_v)[maxcurve_index_pca_v],np.log(magnitude_term_pca_v)[maxcurve_index_pca_v],'rX')
+
+
+plt.plot(np.log(error_term_pca_2_v),np.log(magnitude_term_pca_2_v),'.-',label = "L_curve pca ventricle_recons2")
+plt.plot(np.log(error_term_pca_2_v)[maxcurve_index_pca_2_v],np.log(magnitude_term_pca_2_v)[maxcurve_index_pca_2_v],'rX')
 
 
 #%%
@@ -657,6 +696,7 @@ for i in range(0,x_hat_pca_atria.shape[0],50):
     print(i)
     plt.plot(x_hat_pca_atria[i,:]/np.max(np.abs(x_hat_pca_atria[i,:])),label = 'reconstructed atria')
     plt.plot(x_hat_pca_v[i,:]/np.max(np.abs(x_hat_pca_v[i,:])),label = 'reconstructed v')
+    plt.plot(x_hat_pca_2_v[i,:]/np.max(np.abs(x_hat_pca_2_v[i,:])),label = 'reconstructed v 2')
     plt.legend()
 
     plt.grid(True)
@@ -672,16 +712,44 @@ for i in range(0,x_hat_pca_atria.shape[0],50):
 
 #%% 
 
+plt.close('all')
 #compare with the vnetricle
 t = np.linspace(0,1,4000)
 tt = np.arange(x_hat_pca_atria.shape[1])/fs_d
 for i in range(0,x_hat_pca_atria.shape[0],50):    
-    #plt.figure(figsize=(20, 10))
-    plt.figure()
+    plt.figure(figsize=(20, 10))
+    #plt.figure()
     print(i)
     plt.plot(t,r_signal[20,4000*2:4000*3]/np.max(np.abs(r_signal[20,4000*2:4000*3])),label = 'original')
     plt.plot(tt,x_hat[i,:]/np.max(np.abs(x_hat[i,:])),label = 'reconstructed all')
     plt.plot(tt,x_hat_pca_v[i,:]/np.max(np.abs(x_hat_pca_v[i,:])),label = 'reconstructed v')
+    plt.plot(tt,x_hat_pca_2_v[i,:]/np.max(np.abs(x_hat_pca_2_v[i,:])),label = 'reconstructed v 2')
+    plt.legend()
+
+    plt.grid(True)
+    
+    plt.show(block=False)
+    
+    
+    
+    print(f"Displaying row {i + 1}. Close the plot and press any key to continue.")
+    plt.waitforbuttonpress()  # Wait for a key press
+    plt.close() 
+
+#%%
+
+plt.close('all')
+#compare with the vnetricle
+t = np.linspace(0,1,4000)
+tt = np.arange(x_hat_pca_atria.shape[1])/fs_d
+for i in range(0,x_hat_pca_atria.shape[0],50):    
+    plt.figure(figsize=(20, 10))
+    #plt.figure()
+    print(i)
+    plt.plot(t,r_signal[0,4000*2:4000*3]/np.max(np.abs(r_signal[0,4000*2:4000*3])),label = 'original')
+    plt.plot(tt,x_hat[i,:]/np.max(np.abs(x_hat[i,:])),label = 'reconstructed all')
+    plt.plot(tt,x_hat_pca_atria[i,:]/np.max(np.abs(x_hat_pca_atria[i,:])),label = 'reconstructed a')
+    plt.plot(tt,x_hat_pca_2_atria[i,:]/np.max(np.abs(x_hat_pca_2_atria[i,:])),label = 'reconstructed a 2')
     plt.legend()
 
     plt.grid(True)
