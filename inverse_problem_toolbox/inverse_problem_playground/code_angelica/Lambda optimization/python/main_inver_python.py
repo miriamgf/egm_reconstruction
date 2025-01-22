@@ -3,7 +3,7 @@
 """
 Created on Mon Jan 20 14:04:38 2025
 
-Inverse problem on data from Angelica/Joao
+Inverse problem oÇÇn data from Angelica/Joao
 
 @author: obarquero
 """
@@ -445,32 +445,41 @@ if run_tikh:
     y_filtered_norm = y_filt_down/ np.max(np.abs(y_filt_down),axis = 1, keepdims=True)
     x_hat_norm,lambda_opt_norm,magnitude_term_norm,error_term_norm,maxcurve_index_norm = fip.classical_tikhonov_noiter_global(A,AA,L,LL,y_filtered_norm[:,samples_on:samples_off],positive_curvature_only = False,lambda_test = lambda_test)
     
-    import pickle
-    
-    # Save atria-related outputs (positive curvature)
-    with open('output.pkl', 'wb') as atria_file:
-        pickle.dump((x_hat, lambda_opt, magnitude_term, error_term, maxcurve_index), atria_file)
+    np.savez('output.npz', 
+         x_hat=x_hat, 
+         lambda_opt=lambda_opt, 
+         magnitude_term=magnitude_term, 
+         error_term=error_term, 
+         maxcurve_index=maxcurve_index)
     
     # Save ventricles-related outputs (normalized data, positive curvature off)
-    with open('output_norm.pkl', 'wb') as ventricles_file:
-        pickle.dump((x_hat_norm, lambda_opt_norm, magnitude_term_norm, error_term_norm, maxcurve_index_norm), ventricles_file)
+    np.savez('output_norm.npz', 
+         x_hat=x_hat_norm, 
+         lambda_opt=lambda_opt_norm, 
+         magnitude_term=magnitude_term_norm, 
+         error_term=error_term_norm, 
+         maxcurve_index=maxcurve_index_norm)
     
-    print("Files saved as 'output.pkl' and 'output_norm.pkl'")
+    print("Files saved as 'output.npz' and 'output_norm.npz'")
     
 else:
-    # Load atria-related outputs (positive curvature)
-    with open('output.pkl', 'rb') as atria_file:
-        atria_outputs = pickle.load(atria_file)
-    
-    # Load ventricles-related outputs (normalized data, positive curvature off)
-    with open('output_norm.pkl', 'rb') as ventricles_file:
-        ventricles_outputs = pickle.load(ventricles_file)
+    # Load data using NumPy
+    output_data = np.load('output.npz')
+    output_norm_data = np.load('output_norm.npz')
     
     # Access individual outputs for atria
-    x_hat, lambda_opt, magnitude_term, error_term, maxcurve_index = atria_outputs
+    x_hat = output_data['x_hat']
+    lambda_opt = output_data['lambda_opt']
+    magnitude_term = output_data['magnitude_term']
+    error_term = output_data['error_term']
+    maxcurve_index = output_data['maxcurve_index']
     
     # Access individual outputs for ventricles
-    x_hat_norm, lambda_opt_norm, magnitude_term_norm, error_term_norm, maxcurve_index_norm = ventricles_outputs
+    x_hat_norm = output_norm_data['x_hat']
+    lambda_opt_norm = output_norm_data['lambda_opt']
+    magnitude_term_norm = output_norm_data['magnitude_term']
+    error_term_norm = output_norm_data['error_term']
+    maxcurve_index_norm = output_norm_data['maxcurve_index']
 
 
 """saved_data = {
@@ -617,31 +626,50 @@ if run_tikh_pca_selected_atria:
     x_hat_pca_v,lambda_opt_pca_v,magnitude_term_pca_v,error_term_pca_v,maxcurve_index_pca_v = fip.classical_tikhonov_noiter_global(A,AA,L,LL,reconstructed_not_selected[:,samples_on:samples_off],positive_curvature_only = False,lambda_test = lambda_test)
     import pickle
 
-    # Save atria-related outputs
-    with open('output_atria.pkl', 'wb') as atria_file:
-        pickle.dump((x_hat_pca_atria, lambda_opt_pca_atria, magnitude_term_pca_atria, error_term_pca_atria, maxcurve_index_pca_atria), atria_file)
+    np.savez('output_atria.npz', 
+         x_hat=x_hat_pca_atria, 
+         lambda_opt=lambda_opt_pca_atria, 
+         magnitude_term=magnitude_term_pca_atria, 
+         error_term=error_term_pca_atria, 
+         maxcurve_index=maxcurve_index_pca_atria)
     
-    # Save ventricles-related outputs
-    with open('output_ventricles.pkl', 'wb') as ventricles_file:
-        pickle.dump((x_hat_pca_v, lambda_opt_pca_v, magnitude_term_pca_v, error_term_pca_v, maxcurve_index_pca_v), ventricles_file)
-
-    print("Files saved as 'output_atria.pkl' and 'output_ventricles.pkl'")
+    # Save ventricles-related outputs (normalized data, positive curvature off)
+    np.savez('output_ventricles.npz', 
+         x_hat=x_hat_pca_v, 
+         lambda_opt=lambda_opt_pca_v, 
+         magnitude_term=magnitude_term_pca_v, 
+         error_term=error_term_pca_v, 
+         maxcurve_index=maxcurve_index_pca_v)
+    
+    print("Files saved as 'output:atria.npz' and 'output_ventricles.npz'")
 
 else:
-    with open('output_atria.pkl', 'rb') as atria_file:
-        atria_outputs = pickle.load(atria_file)
-
-    with open('output_ventricles.pkl', 'rb') as ventricles_file:
-        ventricles_outputs = pickle.load(ventricles_file)
+    # Load data using NumPy
+    output_data = np.load('output_atria.npz')
+    output_norm_data = np.load('output_ventricles.npz')
+    
+    # Access individual outputs for atria
+    x_hat_pca_atria = output_data['x_hat']
+    lambda_opt_pca_atria = output_data['lambda_opt']
+    magnitude_term_pca_atria = output_data['magnitude_term']
+    error_term_pca_atria = output_data['error_term']
+    maxcurve_index_pca_atria = output_data['maxcurve_index']
+    
+    # Access individual outputs for ventricles
+    x_hat_pca_v = output_norm_data['x_hat']
+    lambda_opt_pca_v = output_norm_data['lambda_opt']
+    magnitude_term_pca_v = output_norm_data['magnitude_term']
+    error_term_pca_v = output_norm_data['error_term']
+    maxcurve_index_pca_v = output_norm_data['maxcurve_index']
 
     # Access individual outputs
-    x_hat_pca_atria, lambda_opt_pca_atria, magnitude_term_pca_atria, error_term_pca_atria, maxcurve_index_pca_atria = atria_outputs
-    x_hat_pca_v, lambda_opt_pca_v, magnitude_term_pca_v, error_term_pca_v, maxcurve_index_pca_v = ventricles_outputs
+  #  x_hat_pca_atria, lambda_opt_pca_atria, magnitude_term_pca_atria, error_term_pca_atria, maxcurve_index_pca_atria = atria_outputs
+  #  x_hat_pca_v, lambda_opt_pca_v, magnitude_term_pca_v, error_term_pca_v, maxcurve_index_pca_v = ventricles_outputs
 
 #%%
 lambda_test = np.logspace(-0.5,-12,10)
 
-run_tikh_pca_selected_v= False
+run_tikh_pca_selected_v= True
 #Selected atria
 
 if run_tikh_pca_selected_v:
@@ -653,25 +681,45 @@ if run_tikh_pca_selected_v:
     import pickle
 
     # Save atria-related outputs
-    with open('output_atria_2.pkl', 'wb') as atria_file:
-        pickle.dump((x_hat_pca_2_atria, lambda_opt_pca_2_atria, magnitude_term_pca_2_atria, error_term_pca_2_atria, maxcurve_index_pca_2_atria), atria_file)
+    np.savez('output_atria_v_ventri.npz', 
+         x_hat=x_hat_pca_2_atria, 
+         lambda_opt=lambda_opt_pca_2_atria, 
+         magnitude_term=magnitude_term_pca_2_atria, 
+         error_term=error_term_pca_2_atria, 
+         maxcurve_index=maxcurve_index_pca_2_atria)
     
-    # Save ventricles-related outputs
-    with open('output_ventricles_2.pkl', 'wb') as ventricles_file:
-        pickle.dump((x_hat_pca_2_v, lambda_opt_pca_2_v, magnitude_term_pca_2_v, error_term_pca_2_v, maxcurve_index_pca_2_v), ventricles_file)
-
-    print("Files saved as 'output_atria.pkl' and 'output_ventricles.pkl'")
+    # Save ventricles-related outputs (normalized data, positive curvature off)
+    np.savez('output_ventricles_v_ventri.npz', 
+         x_hat=x_hat_pca_2_v, 
+         lambda_opt=lambda_opt_pca_2_v, 
+         magnitude_term=magnitude_term_pca_2_v, 
+         error_term=error_term_pca_2_v, 
+         maxcurve_index=maxcurve_index_pca_2_v)
+    
+    print("Files saved as 'output.npz' and 'output_norm.npz'")
 
 else:
-    with open('output_atria_2.pkl', 'rb') as atria_file:
-        atria_2_outputs = pickle.load(atria_file)
-
-    with open('output_ventricles_2.pkl', 'rb') as ventricles_file:
-        ventricles_2_outputs = pickle.load(ventricles_file)
+    # Load data using NumPy
+    output_data = np.load('output_atria_v_ventri.npz')
+    output_norm_data = np.load('output_ventricles_v_ventri.npz')
+    
+    # Access individual outputs for atria
+    x_hat_pca_2_atria = output_data['x_hat']
+    lambda_opt_pca_2_atria = output_data['lambda_opt']
+    magnitude_term_pca_2_atria = output_data['magnitude_term']
+    error_term_pca_2_atria = output_data['error_term']
+    maxcurve_index_pca_2_atria = output_data['maxcurve_index']
+    
+    # Access individual outputs for ventricles
+    x_hat_pca_2_v = output_norm_data['x_hat']
+    lambda_opt_pca_2_v = output_norm_data['lambda_opt']
+    magnitude_term_pca_2_v = output_norm_data['magnitude_term']
+    error_term_pca_2_v = output_norm_data['error_term']
+    maxcurve_index_pca_2_v = output_norm_data['maxcurve_index']
 
     # Access individual outputs
-    x_hat_pca_2_atria, lambda_opt_pca_2_atria, magnitude_term_pca_2_atria, error_term_pca_2_atria, maxcurve_index_pca_2_atria = atria_outputs
-    x_hat_pca_2_v, lambda_opt_pca_2_v, magnitude_term_pca_2_v, error_term_pca_2_v, maxcurve_index_pca_2_v = ventricles_outputs
+    #x_hat_pca_2_atria, lambda_opt_pca_2_atria, magnitude_term_pca_2_atria, error_term_pca_2_atria, maxcurve_index_pca_2_atria = atria_outputs
+    #x_hat_pca_2_v, lambda_opt_pca_2_v, magnitude_term_pca_2_v, error_term_pca_2_v, maxcurve_index_pca_2_v = ventricles_outputs
 
 
 #%%
