@@ -539,6 +539,18 @@ class Preprocess_Dataset:
                 for elemento in val_models_deterministic:
                     if elemento in self.all_model_names:
                         val_models.append(self.all_model_names.index(elemento))
+                
+                #Save to dic
+                with open(self.experiment_dir+"train_models.txt", "w") as file:
+                    for model in train_models_deterministic:
+                        file.write(model + "\n")
+                with open(self.experiment_dir+"test_models.txt", "w") as file:
+                    for model in test_models_deterministic:
+                        file.write(model + "\n")
+                with open(self.experiment_dir+"val_models.txt", "w") as file:
+                    for model in val_models_deterministic:
+                        file.write(model + "\n")
+
             else:
 
                 if caution_split:

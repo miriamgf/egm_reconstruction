@@ -1,7 +1,7 @@
 {       
-    "n_epochs": 30,
-    "batch_size": 200,
-    "fs_sub": 100, 
+    "n_epochs": 1,
+    "batch_size": 400,
+    "fs_sub": 200, 
     "algorithm": "OMAMI_VAE",
     "filter_EGM": true,
     "set_gpu": false,
@@ -27,7 +27,7 @@
     "LSTM_units":40, 
     "3D_depth":10,
     "latent_dim":2,
-    "optuna_optimization": true,
+    "optuna_optimization": false,
     "n_trials": 30,
     "optuna_parameters": {
         "sampler_algorithm": ["tpe"],

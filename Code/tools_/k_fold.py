@@ -402,4 +402,5 @@ class KFold_Stratified:
             'Simulation_01_200428_001_003']}}
         
         print("Cross Validation experiment. Loading precomputed fold ", fold)
+        print(precomputed_folds[f"fold_{fold}"])
         return precomputed_folds[f"fold_{fold}"]

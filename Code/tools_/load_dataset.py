@@ -1081,9 +1081,6 @@ class LoadDataset_BSPS:
             matrix_num=0
             # 2) Compute the Forward problem with each of the transfer matrices
             for matrix in transfer_matrices:
-
-                
-
                 # Forward problem
                 y = self.forward_problem(x, matrix[0])
                 bsps_64 = y[matrix[1].ravel(), :]
@@ -1096,8 +1093,6 @@ class LoadDataset_BSPS:
                         bsps_64_filt, self.fs_sub, 500, axis=1
                     )
                     x_sub = signal.resample_poly(x, self.fs_sub, 500, axis=1)
-
-                    
 
                 else:
 
@@ -1180,8 +1175,11 @@ class LoadDataset_BSPS:
                     egm_tensor.extend(x_sub.T)
 
 
-                else:
-                    X.extend(bsps_64.T)
+                elif self.data_type == "Flat":
+                    print('Data loaded in flat mode')
+                    tensor_model=bsps_64.T
+
+                    X.extend(tensor_model)
                     egm_tensor.extend(x_sub.T)
 
                 if not self.classification:

@@ -249,9 +249,9 @@ class CORRELATION_3D_PLOTTER:
             elif elevation_value == 30:
                 view = "back"
             if self.tikhonov:
-                output_video = os.path.join(self.output_directory, f"correlation_{view}.gif")
+                output_video = os.path.join(self.output_directory, f"correlation_{view}_tik.gif")
             else:
-                output_video = os.path.join(self.output_directory, f"correlation_{view}.gif")
+                output_video = os.path.join(self.output_directory, f"correlation_{view}_dl.gif")
 
             fps = 10  # Frames por segundo
 
@@ -412,7 +412,11 @@ class CORRELATION_3D_PLOTTER:
         window_to_image_filter = vtk.vtkWindowToImageFilter()
         window_to_image_filter.SetInput(render_window)
         window_to_image_filter.Update()
-        output_file = os.path.join(self.output_directory, "Correlation.png")
+        if self.tikhonov:
+            output_file = os.path.join(self.output_directory, "Correlation_tik.png")
+        else:
+            output_file = os.path.join(self.output_directory, "Correlation_dl.png")
+
         
         writer = vtk.vtkPNGWriter()
         writer.SetFileName(output_file)

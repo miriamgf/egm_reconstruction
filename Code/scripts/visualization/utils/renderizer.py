@@ -2,7 +2,7 @@ from scipy.ndimage import uniform_filter1d
 import vtk
 from scipy.interpolate import interp1d
 from vtk.util.numpy_support import numpy_to_vtk
-
+import os
 
 
 class EGMRenderer_EGM:

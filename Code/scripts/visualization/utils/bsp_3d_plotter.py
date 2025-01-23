@@ -89,7 +89,7 @@ class BSP_3D_PLOTTER:
         # Split and reshape BSPM data for visualization
         X_1channel_split = np.array_split(self.X_1channel, 10)
         bsp_64 = X_1channel_split[torso_index]
-        bsp_64_reshaped = bsp_64.reshape(2001, -1)
+        bsp_64_reshaped = bsp_64.reshape(bsp_64.shape[0], -1)
 
         if normalizar_bsp_64:
             bsp_64_n = np.zeros_like(bsp_64_reshaped)
@@ -102,7 +102,7 @@ class BSP_3D_PLOTTER:
                 else:
                     bsp_64_n[:, nodo] = 0  
         
-        bsp_64 = bsp_64_n.reshape(2001, 12, 32)
+        bsp_64 = bsp_64_n.reshape(bsp_64_n.shape[0], 12, 32)
         return bsp_64, bspm_signal, faces, vertices
 
     def plot_64_videos(self, bsp_64):
@@ -168,7 +168,7 @@ class BSP_3D_PLOTTER:
         renderer_label.renderer.SetBackground(1, 1, 1)
 
         title_var = vtk.vtkTextActor()
-        title_var.SetInput(f"Front")
+        title_var.SetInput(f"Torso {self.torso_num} (Front)")
         title_varprop = title_var.GetTextProperty()
         title_varprop.SetFontFamilyToArial()
         title_varprop.SetFontSize(25)
@@ -177,7 +177,7 @@ class BSP_3D_PLOTTER:
         renderer_var.renderer.AddActor2D(title_var)
 
         title_label = vtk.vtkTextActor()
-        title_label.SetInput("Back")
+        title_label.SetInput(f"Torso {self.torso_num} (Back)")
         title_labelprop = title_label.GetTextProperty()
         title_labelprop.SetFontFamilyToArial()
         title_labelprop.SetFontSize(25)

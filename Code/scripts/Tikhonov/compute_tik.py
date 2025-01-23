@@ -9,6 +9,9 @@ import time
 import scripts.Tikhonov.forward_inverse_problem as fip
 import numpy as np
 import scripts.Tikhonov.precompute_matrix as pre_m
+from numpy import reshape
+from scripts.evaluation.tools_evaluate import normalize_array, downsampling
+
 
 class TikhonovReconstruction:
 
@@ -26,3 +29,19 @@ class TikhonovReconstruction:
         x_hat, lambda_opt, magnitude_term, error_term, maxcurve_index = (
         fip.classical_tikhonov_noiter_global(A, AA, L, LL, self.bsp))
         return x_hat
+    
+    def tik_post_process_to_plot(self,tik_rec, fs, divisible_rows, n_batch):
+        tik_rec_mod = tik_rec[:, :-1]
+        tik_rec_mod_T = tik_rec_mod.T
+        tik_rec_down =downsampling(tik_rec_mod_T, fs)
+        tik_trunc=tik_rec_down[:divisible_rows]
+        tik_batches = reshape(
+                        tik_trunc,
+                        (
+                            int(len(tik_trunc) / n_batch),
+                            n_batch,
+                            tik_trunc.shape[1],
+                            1,
+                        ),
+                    )
+        return tik_batches

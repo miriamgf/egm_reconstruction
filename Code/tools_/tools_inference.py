@@ -468,19 +468,28 @@ def normalize_by_models(data, Y_model):
     return data_n
 
 
-def normalize_array(array, high, low, axis_n=0):
-    """
-    This functions normalized a 2D 'array' along axis 'axis_n' and between the values 'high' and 'low'
+import numpy as np
 
-    To normalize a full signal, indicate the index dimension
-
+def normalize_array(array, high=1, low=-1,axis_n=0):
     """
-    mins = np.min(array, axis=axis_n)
-    maxs = np.max(array, axis=axis_n)
-    rng = maxs - mins
-    # if axis_n==1:
-    # array=array.T
-    norm_array = high - (((high - low) * (maxs - array)) / rng)
-    # if axis_n==1:
-    # norm_array=norm_array.T
+    Normalizes a 2D array along the specified axis to be between -1 and 1.
+
+    Parameters:
+    - array: 2D numpy array to be normalized.
+    - axis_n: Axis along which normalization is applied (default is 0).
+
+    Returns:
+    - norm_array: A numpy array with normalized values between -1 and 1 along the specified axis.
+    """
+    # Compute the minimum and maximum along the specified axis
+    mins = np.min(array, axis=axis_n, keepdims=True)
+    maxs = np.max(array, axis=axis_n, keepdims=True)
+    rng = maxs - mins  # Range of the values
+
+    # Handle division by zero
+    rng[rng == 0] = 1  # Avoid division by zero by setting range to 1
+
+    # Perform normalization to range [-1, 1]
+    norm_array = -1 + 2 * (array - mins) / rng
+    
     return norm_array

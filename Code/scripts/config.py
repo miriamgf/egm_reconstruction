@@ -28,6 +28,11 @@ class ParseHiperparams(object):
         optuna_params = data["optuna_parameters"]
         return optuna_params
     
+    def load_best_hyperparams(self, custom_path):
+        with open(custom_path, "r") as file:
+            data = json.load(file)  # Load the JSON data into a dictionary
+        return data
+    
 def str_to_bool(value):
     """Convierte una cadena en booleano"""
     if isinstance(value, bool):

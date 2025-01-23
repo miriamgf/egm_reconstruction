@@ -249,9 +249,9 @@ class DF_MAPS_3D_PLOTTER:
             elif elevation_value == 30:
                 view = "back"
             if self.tikhonov:
-                output_video = os.path.join(self.output_directory, f"df_map_{view}.gif")
+                output_video = os.path.join(self.output_directory, f"df_map_{view}_tik.gif")
             else:
-                output_video = os.path.join(self.output_directory, f"df_map_{view}.gif")
+                output_video = os.path.join(self.output_directory, f"df_map_{view}_dl.gif")
 
             fps = 10  # Frames por segundo
 
@@ -406,8 +406,11 @@ class DF_MAPS_3D_PLOTTER:
                 view = "front"
             elif elevation_value == 30:
                 view = "back"
+            if self.tikhonov:
+                output_video = os.path.join(self.output_directory, f"df_map_{view}_tik.gif")
+            else:
+                output_video = os.path.join(self.output_directory, f"df_map_{view}_dl.gif")
 
-            output_video = os.path.join(self.output_directory, f"correlation_{view}.gif")
             instant=0
             array_frames=[]
             # Iterar sobre instantes y generar frames

@@ -186,7 +186,6 @@ class TrainModel:
             callbacks_list.append(pruning_callback)
 
         
-        
         # Choose algorithm {OMAMI, OMAMI_VAE, OMAMI_ski, OMAMI_VAE_ski} 
 
         if self.params["algorithm"] == "OMAMI":

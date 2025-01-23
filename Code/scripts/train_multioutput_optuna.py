@@ -79,6 +79,23 @@ print(type(patches_oclussion))
 
 params = ParseHiperparams().parse_default_hyperparams()
 
+if params["algorithm"]=='OMAMI':
+
+    print('Load OMAMI Optimal hyperparams')
+    path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_repeated/hyperparams.json'
+    params=ParseHiperparams().load_best_hyperparams(path_best_params)
+    params['optuna_optimization']=False
+    params["n_epochs"]=50
+
+elif params["algorithm"]=='OMAMI_VAE':
+    
+    print('Load OMAMI VAE Optimal hyperparams')
+    path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_VAE_Optuna/hyperparams.json'
+    params=ParseHiperparams().load_best_hyperparams(path_best_params)
+    params['optuna_optimization']=False
+    params["n_epochs"]=50
+
+
 try:
     print("parsing")
     parser = argparse.ArgumentParser(description="Noise params")
@@ -93,21 +110,26 @@ try:
     optuna = args.optuna
     n_nodes = args.n_nodes
     filter_EGM= args.filter_EGM
+    fold=args.fold
 
     params["algorithm"]=algorithm
     params["n_nodes_regression"]=n_nodes
 
-    if params["cross_validation"]:
-        fold=args.fold
-        params["fold"] = fold
-    
     if filter_EGM is not None:  
         params["filter_EGM"] = filter_EGM
+    
+    if fold is not None:
+        fold=args.fold
+        params['cross_validation']=True
+        params["fold"]=fold
 
 except:
     algorithm = params["algorithm"]
 
 print('Params to train: ', params)
+
+params['cross_validation']=True
+params["fold"] = fold
 
 SNR_em_noise = None
 SNR_white_noise = 100
@@ -119,6 +141,7 @@ experiment_name = algorithm
 
 if params["cross_validation"]:
     experiment_name = f"{experiment_name}_fold_{params['fold']}"
+    print('Cross validation')
 
 if not params["filter_EGM"]:  
     experiment_name = f"{experiment_name}_no_filt"
@@ -131,7 +154,7 @@ if params["optuna_optimization"]:
     experiment_name = f"{experiment_name}_Optuna"
 
 
-#experiment_name = f"{experiment_name}"
+#experiment_name = f"{experiment_name}_toy"
 
 #experiment_name='pruebas interpol'
 print('Experiment name: ', experiment_name)
@@ -380,7 +403,7 @@ x_fl = reshape(
 
 
 # Reconstruction predictions
-for i in range(0, 60):
+for i in range(0, 30):
     interv = random.randrange(1, len(pred_test_egm_fl) - 1, 50)
     node = random.randrange(1, estimate_egms_n.shape[-1], 1)
     normalize_ = True
