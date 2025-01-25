@@ -235,7 +235,10 @@ signal_file = "../01 - data/electric_data_Exx_Fxx_Rxx_filtered.mat"
 electrodes_idx_file = '../01 - data/eletrodos_LR.mat'
 heart_geo_file = "../01 - data/../../01 - data/heart_geometry_20000_exp14.mat"
 tank_geo_file = "../01 - data/tank_geometry.mat"
-mtransfer_file = "../01 - data/MTransfer_exp14_LR_20000.mat"
+#mtransfer_file = "../01 - data/MTransfer_exp14_LR_20000.mat"
+#New MTransfer
+mtransfer_file = "../01 - data/projections/MTransfer_exp14_HR.mat"
+
 
 #read data
 
@@ -388,7 +391,17 @@ for i in range(signal.shape[0]):
     plt.waitforbuttonpress()  # Wait for a key press
     plt.close() 
 
+#%% One example
+f, psd_f = welch(y_filtered[0,950:3200], fs=fs, nperseg=len(interp_signal[i,950:3200]/20),nfft= 1e5)
 
+
+idx = f<60
+
+plt.figure()
+plt.subplot(121)
+plt.plot(y_filtered[0,950:3200])
+plt.subplot(122)
+plt.plot(f[idx],psd_f[idx])
 #%% Several options to perform the tikhonov
 
 #%%1. Downsampling
@@ -723,9 +736,13 @@ else:
 
 
 #%%
+
+
 plt.figure()
-plt.plot(np.log(error_term_pca_atria),np.log(magnitude_term_pca_atria),'.-',label = "L_curve pca atria")
-plt.plot(np.log(error_term_pca_atria)[maxcurve_index_pca_atria],np.log(magnitude_term_pca_atria)[maxcurve_index_pca_atria],'rX')
+
+
+#plt.plot(np.log(error_term_pca_atria),np.log(magnitude_term_pca_atria),'.-',label = "L_curve pca atria")
+#plt.plot(np.log(error_term_pca_atria)[maxcurve_index_pca_atria],np.log(magnitude_term_pca_atria)[maxcurve_index_pca_atria],'rX')
 
 
 plt.plot(np.log(error_term_pca_v),np.log(magnitude_term_pca_v),'.-',label = "L_curve pca vnetricl")
@@ -736,6 +753,18 @@ plt.plot(np.log(error_term_pca_2_v),np.log(magnitude_term_pca_2_v),'.-',label = 
 plt.plot(np.log(error_term_pca_2_v)[maxcurve_index_pca_2_v],np.log(magnitude_term_pca_2_v)[maxcurve_index_pca_2_v],'rX')
 
 
+plt.plot(np.log(error_term),np.log(magnitude_term),'.-',label = "L_curve all")
+plt.plot(np.log(error_term)[maxcurve_index],np.log(magnitude_term)[maxcurve_index],'rX')
+
+
+plt.plot(np.log(error_term_norm),np.log(magnitude_term_norm),'.-',label = "L_curve all_norm")
+plt.plot(np.log(error_term_norm)[maxcurve_index_norm],np.log(magnitude_term_norm)[maxcurve_index_norm],'rX')
+
+
+plt.xlabel(r'$\|Ax -y \|_2$')
+plt.ylabel(r'$\|x \|_2$')
+
+plt.legend()
 #%%
 plt.close('all')
 for i in range(0,x_hat_pca_atria.shape[0],50):    
@@ -809,3 +838,154 @@ for i in range(0,x_hat_pca_atria.shape[0],50):
     print(f"Displaying row {i + 1}. Close the plot and press any key to continue.")
     plt.waitforbuttonpress()  # Wait for a key press
     plt.close() 
+    
+    
+#%%plotting according to projection
+#read data projection
+
+proj_m = scipy.io.loadmat('../01 - data/projections/vertex_meas_projections.mat')["localization"]
+
+#convert to 0-index python
+proj_m  = proj_m - 1
+
+
+#%%ventricles
+
+t = np.linspace(0,1,4000)
+tt = np.arange(x_hat_pca_atria.shape[1])/fs_d
+
+for i in range(16,32):
+    
+    plt. figure()
+    
+    idx_egm = proj_m[i,0]
+    idx_recons = proj_m[i,1]
+    plt.plot(t,r_signal[idx_egm,4000*2:4000*3]/np.max(np.abs(r_signal[idx_egm,4000*2:4000*3])),label = 'original')
+    plt.plot(tt,x_hat[idx_recons,:]/np.max(np.abs(x_hat[idx_recons,:])),label = 'reconstructed all')
+    plt.plot(tt,x_hat_pca_v[idx_recons,:]/np.max(np.abs(x_hat_pca_v[idx_recons,:])),label = 'reconstructed v')
+    plt.plot(tt,x_hat_pca_2_v[idx_recons,:]/np.max(np.abs(x_hat_pca_2_v[idx_recons,:])),label = 'reconstructed v 2')
+    
+    plt.legend()
+    plt.xlabel('Time (s)')
+    plt.ylabel('n.u')    
+    plt.title("Ventricle")
+    
+    filename = f"output_figs/ventri_{i}.png"
+    plt.savefig(filename)
+
+
+t = np.linspace(0,1,4000)
+tt = np.arange(x_hat_pca_atria.shape[1])/fs_d
+
+for i in range(16,32):
+    
+    plt. figure()
+    
+    idx_egm = proj_m[i,0]
+    idx_recons = proj_m[i,1]
+    plt.plot(t,r_signal[idx_egm,4000*2:4000*3]/np.max(np.abs(r_signal[idx_egm,4000*2:4000*3])),label = 'original')
+    plt.plot(tt,-x_hat[idx_recons,:]/np.max(np.abs(x_hat[idx_recons,:])),label = 'reconstructed all')
+    plt.plot(tt,-x_hat_pca_v[idx_recons,:]/np.max(np.abs(x_hat_pca_v[idx_recons,:])),label = 'reconstructed v')
+    plt.plot(tt,-x_hat_pca_2_v[idx_recons,:]/np.max(np.abs(x_hat_pca_2_v[idx_recons,:])),label = 'reconstructed v 2')
+    
+    plt.legend()
+    plt.xlabel('Time (s)')
+    plt.ylabel('n.u')    
+    plt.title("Ventricle")
+    
+    filename = f"output_figs/Change_pol_ventri_{i}.png"
+    plt.savefig(filename)
+    
+#%%atria
+
+t = np.linspace(0,1,4000)
+tt = np.arange(x_hat_pca_atria.shape[1])/fs_d
+
+for i in range(0,16):
+    
+    plt. figure()
+    
+    idx_egm = proj_m[i,0]
+    idx_recons = proj_m[i,1]
+    plt.plot(t,r_signal[idx_egm,4000*2:4000*3]/np.max(np.abs(r_signal[idx_egm,4000*2:4000*3])),label = 'original')
+    plt.plot(tt,x_hat[idx_recons,:]/np.max(np.abs(x_hat[idx_recons,:])),label = 'reconstructed all')
+    plt.plot(tt,x_hat_pca_atria[idx_recons,:]/np.max(np.abs(x_hat_pca_atria[idx_recons,:])),color = 'black',label = 'reconstructed v',linewidth = 0.6,alpha = 0.6,linestyle = ':')
+    plt.plot(tt,x_hat_pca_2_atria[idx_recons,:]/np.max(np.abs(x_hat_pca_2_atria[idx_recons,:])),color = 'black',label = 'reconstructed v 2',linewidth = 0.6,alpha = 0.6)
+    
+    plt.legend()
+    plt.xlabel('Time (s)')
+    plt.ylabel('n.u')    
+    plt.title("right atria")
+    
+    filename = f"output_figs/atria_R{i}.png"
+    plt.savefig(filename)
+
+
+t = np.linspace(0,1,4000)
+tt = np.arange(x_hat_pca_atria.shape[1])/fs_d
+
+for i in range(0,16):
+    
+    plt. figure()
+    
+    idx_egm = proj_m[i,0]
+    idx_recons = proj_m[i,1]
+    plt.plot(t,r_signal[idx_egm,4000*2:4000*3]/np.max(np.abs(r_signal[idx_egm,4000*2:4000*3])),label = 'original')
+    plt.plot(tt,-x_hat[idx_recons,:]/np.max(np.abs(x_hat[idx_recons,:])),label = 'reconstructed all')
+    plt.plot(tt,-x_hat_pca_atria[idx_recons,:]/np.max(np.abs(x_hat_pca_atria[idx_recons,:])),color = 'black',label = 'reconstructed v',linewidth = 0.6,alpha = 0.6,linestyle = ':')
+    plt.plot(tt,-x_hat_pca_2_atria[idx_recons,:]/np.max(np.abs(x_hat_pca_2_atria[idx_recons,:])),color = 'black',label = 'reconstructed v 2',linewidth = 0.6,alpha = 0.6)
+    
+    plt.legend()
+    plt.xlabel('Time (s)')
+    plt.ylabel('n.u')    
+    plt.title("right atria")
+    
+    filename = f"output_figs/Change_pol_atria_R{i}.png"
+    plt.savefig(filename)
+    
+    
+#%%
+t = np.linspace(0,1,4000)
+tt = np.arange(x_hat_pca_atria.shape[1])/fs_d
+
+for i in range(33,48):
+    
+    plt. figure()
+    
+    idx_egm = proj_m[i,0]
+    idx_recons = proj_m[i,1]
+    plt.plot(t,r_signal[idx_egm,4000*2:4000*3]/np.max(np.abs(r_signal[idx_egm,4000*2:4000*3])),label = 'original')
+    plt.plot(tt,x_hat[idx_recons,:]/np.max(np.abs(x_hat[idx_recons,:])),label = 'reconstructed all')
+    plt.plot(tt,x_hat_pca_atria[idx_recons,:]/np.max(np.abs(x_hat_pca_atria[idx_recons,:])),color = 'black',label = 'reconstructed v',linewidth = 0.6,alpha = 0.6,linestyle = ':')
+    plt.plot(tt,x_hat_pca_2_atria[idx_recons,:]/np.max(np.abs(x_hat_pca_2_atria[idx_recons,:])),color = 'black',label = 'reconstructed v 2',linewidth = 0.6,alpha = 0.6)
+    
+    plt.legend()
+    plt.xlabel('Time (s)')
+    plt.ylabel('n.u')    
+    plt.title("right atria")
+    
+    filename = f"output_figs/atria_L{i}.png"
+    plt.savefig(filename)
+
+
+t = np.linspace(0,1,4000)
+tt = np.arange(x_hat_pca_atria.shape[1])/fs_d
+
+for i in range(33,48):
+    
+    plt. figure()
+    
+    idx_egm = proj_m[i,0]
+    idx_recons = proj_m[i,1]
+    plt.plot(t,r_signal[idx_egm,4000*2:4000*3]/np.max(np.abs(r_signal[idx_egm,4000*2:4000*3])),label = 'original')
+    plt.plot(tt,-x_hat[idx_recons,:]/np.max(np.abs(x_hat[idx_recons,:])),label = 'reconstructed all')
+    plt.plot(tt,-x_hat_pca_atria[idx_recons,:]/np.max(np.abs(x_hat_pca_atria[idx_recons,:])),color = 'black',label = 'reconstructed v',linewidth = 0.6,alpha = 0.6,linestyle = ':')
+    plt.plot(tt,-x_hat_pca_2_atria[idx_recons,:]/np.max(np.abs(x_hat_pca_2_atria[idx_recons,:])),color = 'black',label = 'reconstructed v 2',linewidth = 0.6,alpha = 0.6)
+    
+    plt.legend()
+    plt.xlabel('Time (s)')
+    plt.ylabel('n.u')    
+    plt.title("right atria")
+    
+    filename = f"output_figs/Change_pol_atria_L{i}.png"
+    plt.savefig(filename)
