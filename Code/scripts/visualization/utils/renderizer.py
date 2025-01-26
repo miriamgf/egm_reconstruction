@@ -6,11 +6,12 @@ import os
 
 
 class EGMRenderer_EGM:
-    def __init__(self, faces, vertices, min_val, max_val):
+    def __init__(self, faces, vertices, min_val, max_val, view=None):
         self.faces = faces
         self.vertices = vertices
         self.min_val = min_val
         self.max_val = max_val
+        self.view=view
 
         # Inicializar malla
         self.mesh = vtk.vtkPolyData()
@@ -33,6 +34,8 @@ class EGMRenderer_EGM:
         self.actor.SetMapper(self.mapper)
         #self.actor.RotateZ(-90)  # Rota 30 grados hacia la derecha
         #self.actor.RotateX(10)  # Rota 30 grados hacia la derecha
+        if self.view == "back":
+            self.actor.RotateZ(180)  # Rota 30 grados hacia la derecha
 
 
         # Configure renderer and camera

@@ -2,25 +2,23 @@ import sys
 sys.path.append("../Code")
 import os
 import json
-import pandas as pd
 import argparse
-
+import matplotlib.pyplot as plt
+import pandas as pd
+sys.stdout.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
+import time
 
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
 
 from tools_.preprocess_data import Preprocess_Dataset
-from scripts.visualization.utils.renderizer import EGMRenderer_BSP
 from scripts.config import ParseHiperparams
-from tools_.load_dataset import LoadDataset_BSPS
-from scripts.visualization.utils.bsp_3d_plotter import BSP_3D_PLOTTER
-from scripts.visualization.utils.egm_3d_plotter import EGM_3D_PLOTTER
-from scripts.visualization.utils.corr_3d_plotter import CORRELATION_3D_PLOTTER
-from scripts.visualization.utils.rmse_3d_plotter import RMSE_3D_PLOTTER
-from scripts.visualization.utils.df_map_3d_plotter import DF_MAPS_3D_PLOTTER
 from models.multioutput_VAE import MultiOutput_VAE, SamplingLayer
 from scripts.evaluation.tools_evaluate import normalize_array, downsampling
-from scripts.evaluation.metrics import rmse_by_node, correlation_by_node
+from scripts.evaluation.metrics import Metrics
+from tools_.load_dataset import LoadDataset_BSPS
+
 
 from scripts.Tikhonov.compute_tik import TikhonovReconstruction
 from scripts.evaluate_function import *
@@ -28,233 +26,227 @@ from tools_.tools import corr_pearson_cols
 from tools_.tools_inference import *
 from tools_ import freq_phase_analysis as freq_pha
 
-os.environ["LIBGL_ALWAYS_SOFTWARE"] = "1"
-os.environ["MESA_LOADER_DRIVER_OVERRIDE"] = "llvmpipe"
-
-
-try:
-    print("Parsing")
-    parser = argparse.ArgumentParser(description="Noise params")
-    parser.add_argument("--algorithm_ID", type=str, help="experiment name", required=True)
-    args = parser.parse_args()
-    algorithm_ID = args.algorithm_ID
-
-except:
-    algorithm_ID = "OMAMI_VAE"
-
-#---------------------------------------------------------------------------------------------------------------------
-# CONFIGURE
-#---------------------------------------------------------------------------------------------------------------------
-
-
-torso_num=2
-time_duration=500 # num of samples to represent
-
-
-torso_path=f"/home/pdi/miriamgf/tesis/Autoencoders/Labeled_torsos/Torso{torso_num}_mod.mat"
-geom_path_CF = "/home/pdi/miriamgf/tesis/Autoencoders/geometries/Atria_geom/Modelos_computacionales_Carlos_Fambuena/Atria.mat"
-geom_path_edgar= "/home/pdi/miriamgf/tesis/Autoencoders/geometries/Atria_geom/Modelos_Edgar/Atria.mat"
-data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
-torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
-
-experiment_dir=f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/{algorithm_ID}/"
-model_path_DL=experiment_dir+f"reconstructions_by_model_{algorithm_ID}.mat"
-weights_path = experiment_dir + "model_weights.h5"
-params_path=experiment_dir+'hyperparams.json'
-
-#Load params dictionary
-with open(experiment_dir+"hyperparams.json") as file:
-    params = json.load(file)  # Load the JSON data into a dictionary
-
-if params["algorithm"]=="OMAMI_VAE":
-    fs=100
-    n_batch=200
-elif params["algorithm"]=="OMAMI":
-    fs=200
-    n_batch=400
-
-print(params)
-print('fs:', fs, ' batch size: ', n_batch)
-
-#---------------------------------------------------------------------------------------------------------------------
-# LOAD DATA
-#---------------------------------------------------------------------------------------------------------------------
-
-
-
-# Cargar datos del modelo y la geometría
-
-all_torsos_names = []
-for subdir, dirs, files in os.walk(torsos_dir):
-    for file in files:
-        if file.endswith(".mat"):
-            all_torsos_names.append(file)
-
-#Load geometry
-
-SNR_em_noise = None
-SNR_white_noise = 100
-patches_oclussion = "PT"
-experiment_number = 0
-unfold_code = 1
-
 test_patients = [
-                        "LA_PLAW_140711_arm",
-                        "LA_RSPV_CAF_150115",
-                        "Simulation_01_200212_001_  5",
-                        "Simulation_01_200212_001_ 10",
-                        "Simulation_01_200316_001_  3",
-                        "Simulation_01_200316_001_  4",
-                        "Simulation_01_200316_001_  8",
-                        "Simulation_01_200428_001_004",
-                        "Simulation_01_200428_001_008",
-                        "Simulation_01_200428_001_010",
-                        "Simulation_01_210119_001_001",
-                        "Simulation_01_210208_001_002",
-                    ]
+            "LA_PLAW_140711_arm", "LA_RSPV_CAF_150115",
+            "Simulation_01_200212_001_  5", "Simulation_01_200212_001_ 10",
+            "Simulation_01_200316_001_  3", "Simulation_01_200316_001_  4",
+            "Simulation_01_200316_001_  8", "Simulation_01_200428_001_004",
+            "Simulation_01_200428_001_008", "Simulation_01_200428_001_010",
+            "Simulation_01_210119_001_001", "Simulation_01_210208_001_002"
+        ]
+
+class EvaluateDL:
 
 
-corr_list = []
-rmse_list = []
-
-for patient in test_patients:
-     
-    model_name=[patient]
-
-    # Load test model
-    (
-        X_1channel,
-        Y,
-        Y_model,
-        egm_tensor,
-        length_list,
-        AF_models,
-        all_model_names,
-        transfer_matrices,
-        y_list
-    ) = LoadDataset_BSPS(
-        params,
-        directory=data_dir,
-        data_type="1channelTensor",
-        n_classes=params["n_classes"],
-        downsampling=False,
-        fs=params["fs"],
-        norm=False,
-        SR=True,
-        n_batch=params["batch_size"],
-        sinusoid=False,
-        SNR_em_noise=SNR_em_noise,
-        SNR_white_noise=SNR_white_noise,
-        patches_oclussion=patches_oclussion,
-        unfold_code=unfold_code,
-        inference=False,
-        select_model = model_name
-    )()
-
-    X_1channel_or=X_1channel.copy()
-    y_list_or=y_list.copy()
-
-    #Unpack
-    torso_name = f"Torso{torso_num}_mod.mat"
-    torso_index = all_torsos_names.index(torso_name)
-    bspm_signal = y_list[torso_index]['y']
-    transfer_matrix= transfer_matrices[torso_index][0]
-
-    #Select only specified torso signals
-    egm_single=np.split(egm_tensor, 10)[torso_index]
-    X_1channel_single=np.split(X_1channel, 10)[torso_index]
-    AF_models_single=np.split(np.array(AF_models), 10)[torso_index]
-    Y_model_single=np.split(np.array(Y_model), 10)[torso_index]
-
-    #normalize 
-    bspm_signal_norm = normalize_array(bspm_signal.T, high=1, low=-1, axis_n=1) 
-    egm_single_norm = normalize_array(egm_single, high=1, low=-1, axis_n=0) 
-
-    dic_vars={}
-
-    # Preprocess data
-    (
-    X_1channel, egm_tensor, AF_models, Y_model
-    ) = Preprocess_Dataset(
-        params,
-        X_1channel_single,
-        egm_single,
-        list(AF_models_single),
-        Y_model,
-        dic_vars,
-        Y,
-        all_model_names,
-        transfer_matrices,
-        experiment_dir,
-        norm_egm=True,
-        inference=True
-    )()
-
-    rows = X_1channel.shape[0]
-    divisible_rows = (rows // n_batch) * n_batch
-    #batch gen
-    bsps_batches = reshape(
-                    X_1channel,
-                    (
-                        int(len(X_1channel) / n_batch),
-                        n_batch,
-                        X_1channel.shape[1],
-                        X_1channel.shape[2],
-                        1,
-                    ),
-                )
-    egm_batches = reshape(
-                    egm_tensor,
-                    (
-                        int(len(egm_tensor) / n_batch),
-                        n_batch,
-                        egm_tensor.shape[1],
-                        1,
-                    ),
-                )
+    def __init__(self, algorithm_ID, test_patients, torso_num = 2):
+        self.algorithm_ID = algorithm_ID
+        self.start_time = time.time()
+        self.torso_num = torso_num
+        self.test_patients=test_patients
 
 
+    def configure(self):
+        # Configuración inicial
+        self.torso_num = 2
+        self.time_duration = 500
 
-    print("Computing inference")
+        self.torso_path = f"/home/pdi/miriamgf/tesis/Autoencoders/Labeled_torsos/Torso{self.torso_num}_mod.mat"
+        self.geom_path_CF = "/home/pdi/miriamgf/tesis/Autoencoders/geometries/Atria_geom/Modelos_computacionales_Carlos_Fambuena/Atria.mat"
+        self.geom_path_edgar = "/home/pdi/miriamgf/tesis/Autoencoders/geometries/Atria_geom/Modelos_Edgar/Atria.mat"
+        self.data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
+        self.torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
 
-    # Inference
-    try:
-        model = load_model(weights_path)
-    except:
-        model = load_model(weights_path, custom_objects={'SamplingLayer': SamplingLayer})
+        self.experiment_dir = f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/{self.algorithm_ID}/"
+        self.model_path_DL = self.experiment_dir + f"reconstructions_by_model_{self.algorithm_ID}.mat"
+        self.weights_path = self.experiment_dir + "model_weights.h5"
+        self.params_path = self.experiment_dir + 'hyperparams.json'
+
+        # Cargar parámetros del modelo
+        with open(self.params_path) as file:
+            self.params = json.load(file)
+
+        if self.params["algorithm"] == "OMAMI_VAE":
+            self.fs = 100
+            self.n_batch = 200
+        elif self.params["algorithm"] == "OMAMI":
+            self.fs = 200
+            self.n_batch = 400
+        
+        # Cargar nombres de torsos
+        self.all_torsos_names = [
+            file for _, _, files in os.walk(self.torsos_dir) for file in files if file.endswith(".mat")
+        ]
+
+        self.SNR_em_noise = None
+        self.SNR_white_noise = 100
+        self.patches_oclussion = "PT"
+        self.unfold_code = 1
+
+        # Cargar nombres de torsos
+        self.all_torsos_names = [
+            file for _, _, files in os.walk(self.torsos_dir) for file in files if file.endswith(".mat")
+        ]
+
+        self.SNR_em_noise = None
+        self.SNR_white_noise = 100
+        self.patches_oclussion = "PT"
+        self.unfold_code = 1
+        
+
+    def load_and_process_patient(self, patient, cont):
+        print(f"LOADING PATIENT {cont}/{len(self.test_patients)}")
+        model_name = [patient]
+
+        # Cargar dataset
+        (
+            X_1channel,
+            Y,
+            Y_model,
+            egm_tensor,
+            length_list,
+            AF_models,
+            all_model_names,
+            transfer_matrices,
+            y_list,
+        ) = LoadDataset_BSPS(
+            self.params,
+            directory=self.data_dir,
+            data_type="1channelTensor",
+            n_classes=self.params["n_classes"],
+            downsampling=False,
+            fs=self.params["fs"],
+            norm=False,
+            SR=True,
+            n_batch=self.params["batch_size"],
+            sinusoid=False,
+            SNR_em_noise=self.SNR_em_noise,
+            SNR_white_noise=self.SNR_white_noise,
+            patches_oclussion=self.patches_oclussion,
+            unfold_code=self.unfold_code,
+            inference=False,
+            select_model=model_name,
+        )()
+
+        # Preparar datos para inferencia
+        torso_index = self.all_torsos_names.index(f"Torso{self.torso_num}_mod.mat")
+        bspm_signal = y_list[torso_index]["y"]
+        transfer_matrix = transfer_matrices[torso_index][0]
+        egm_single = normalize_array(np.split(egm_tensor, 10)[torso_index], high=1, low=-1, axis_n=0)
+
+        #Select only specified torso signals
+        egm_single=np.split(egm_tensor, 10)[torso_index]
+        X_1channel_single=np.split(X_1channel, 10)[torso_index]
+        AF_models_single=np.split(np.array(AF_models), 10)[torso_index]
+        Y_model_single=np.split(np.array(Y_model), 10)[torso_index]
+
+        #normalize 
+        bspm_signal_norm = normalize_array(bspm_signal.T, high=1, low=-1, axis_n=1) 
+        egm_single_norm = normalize_array(egm_single, high=1, low=-1, axis_n=0) 
+
+        print(X_1channel.shape, egm_tensor.shape, Y_model.shape)    
+
+        dic_vars={}
+        (
+        X_1channel, egm_tensor, AF_models, Y_model
+        ) = Preprocess_Dataset(
+            self.params,
+            X_1channel_single,
+            egm_single,
+            list(AF_models_single),
+            Y_model,
+            dic_vars,
+            Y,
+            all_model_names,
+            transfer_matrices,
+            self.experiment_dir,
+            norm_egm=True,
+            inference=True
+        )()
+
+        rows = X_1channel.shape[0]
+        n_batch=self.params["batch_size"]
+        divisible_rows = (rows // n_batch) * n_batch
+        #batch gen
+        bsps_batches = reshape(
+                        X_1channel,
+                        (
+                            int(len(X_1channel) / n_batch),
+                            n_batch,
+                            X_1channel.shape[1],
+                            X_1channel.shape[2],
+                            1,
+                        ),
+                    )
+        egm_batches = reshape(
+                        egm_tensor,
+                        (
+                            int(len(egm_tensor) / n_batch),
+                            n_batch,
+                            egm_tensor.shape[1],
+                            1,
+                        ),
+                    )
 
 
-    prediction = model.predict(
-        bsps_batches, batch_size=1
-    )  # x_test=[#batches, batch_size, 12, 32, 1]
 
-    prediction = prediction[1]
-    prediction_flat = prediction.reshape(
-        (prediction.shape[0] * prediction.shape[1], prediction.shape[2])
-    )
-    egm_flat = egm_batches.reshape(
-        (prediction.shape[0] * prediction.shape[1], prediction.shape[2])
-    )
+        print(X_1channel.shape)
 
-    prediction = normalize_by_models(prediction_flat, Y_model)
-    y_label=normalize_by_models(egm_flat, Y_model)
+        return bsps_batches, egm_batches, Y_model, transfer_matrix, bspm_signal, egm_single
 
-    # Calcular correlación por nodo
-    corr = correlation_by_node(prediction, y_label)
-    RMSE = rmse_by_node(prediction, y_label)
+    def run_inference(self, X_1channel, egm_tensor, Y_model):
+        # Cargar modelo
+        try:
+            model = load_model(self.weights_path)
+        except:
+            model = load_model(self.weights_path, custom_objects={"SamplingLayer": SamplingLayer})
 
-    corr_list.append(np.mean(corr))
-    rmse_list.append(np.mean(RMSE))
+        # Inferencia
+        prediction = model.predict(X_1channel, batch_size=1)[1]
+        prediction_flat = prediction.reshape(prediction.shape[0] * prediction.shape[1], prediction.shape[2])
+        egm_flat = egm_tensor.reshape(prediction.shape[0] * prediction.shape[1], prediction.shape[2])
+
+        # Normalización
+        prediction = normalize_by_models(prediction_flat, Y_model)
+        y_label = normalize_by_models(egm_flat, Y_model)
+
+        return prediction, y_label
+    
+    
+    def run(self):
+
+        self.configure()
+
+        df_metrics_all_patients = []
+        all_nodes_list = []
+
+        for cont, patient in enumerate(self.test_patients, start=1):
+            X_1channel, egm_tensor, Y_model, _, _, _ = self.load_and_process_patient(patient, cont)
+            prediction, y_label = self.run_inference(X_1channel, egm_tensor, Y_model)
+            MetricsObj = Metrics(algorithm_ID=self.algorithm_ID, model_name=patient)
+            df_metrics, metrics_all_nodes = MetricsObj.compute_metrics(prediction, y_label, fs=self.fs)
+            df_metrics_all_patients.append(df_metrics)
+            all_nodes_list.append(metrics_all_nodes)
+
+        # Guardar métricas
+        #df = pd.DataFrame({"name": self.test_patients, "mean correlation": corr_list, "mean RMSE": rmse_list})
+        df=pd.DataFrame(df_metrics_all_patients)
+        df_all_nodes=pd.DataFrame(all_nodes_list)
+        output_path1 = self.experiment_dir + "metrics_dl.csv"
+        df.to_csv(output_path1, index=False)
+        output_path2 = self.experiment_dir + "metrics_all_nodes_dl.csv"
+        df_all_nodes.to_csv(output_path2, index=False)
 
 
-df_metrics = pd.DataFrame({
-    "name": test_patients,
-    "mean correlation": corr_list,  # Corrige el nombre de la columna eliminando el typo ("orrelation" a "correlation")
-    "mean RMSE": rmse_list
-})
-df_metrics.head()
-# Guardar el DataFrame como un archivo CSV
-output_path = experiment_dir + "metrics_dl.csv" 
-df_metrics.to_csv(output_path, index=False)
-print('Metrics saved in',  output_path)
+        print("Metrics saved in", output_path1)
+        print("Metrics lists saved in", output_path2)
 
+        print("Execution time of DL evaluation:", time.time() - self.start_time, "sec")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Evaluate DL script")
+    parser.add_argument("--algorithm_ID", type=str, help="experiment name", default="OMAMI_VAE_no_filt")
+    args = parser.parse_args()
+
+    evaluator = EvaluateDL(algorithm_ID=args.algorithm_ID, test_patients=test_patients)
+    evaluator.run()

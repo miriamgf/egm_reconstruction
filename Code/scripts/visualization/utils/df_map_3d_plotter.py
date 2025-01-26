@@ -451,7 +451,7 @@ class DF_MAPS_3D_PLOTTER:
 
             print(f"Video guardado en {output_video}")
 
-    def create_custom_colormap(self,min_val_value,max_val_value ):
+    def create_custom_colormap(self, min_val_value, max_val_value):
         # Crear una tabla de colores
         lookup_table = vtk.vtkLookupTable()
         lookup_table.SetNumberOfTableValues(256)  # Número de colores en la tabla
@@ -461,16 +461,18 @@ class DF_MAPS_3D_PLOTTER:
         # Configurar la interpolación de colores (azul -> rojo)
         for i in range(256):
             t = i / 255.0  # Normalizar entre 0 y 1
-            if t > 0.5:
+            if t < 0.5:
+                # De azul (t=0) a blanco (t=0.5)
                 r = t * 2  # Rojo aumenta
                 g = t * 2  # Verde aumenta
                 b = 1.0    # Azul se mantiene máximo
             else:
-
+                # De blanco (t=0.5) a rojo (t=1)
                 r = 1.0    # Rojo se mantiene máximo
                 g = 2 * (1 - t)  # Verde disminuye
                 b = 2 * (1 - t)  # Azul disminuye
             lookup_table.SetTableValue(i, r, g, b, 1.0)  # Último valor es la opacidad
+
 
         return lookup_table
 

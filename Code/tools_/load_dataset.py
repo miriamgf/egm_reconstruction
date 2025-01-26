@@ -232,8 +232,9 @@ class LoadDataset:
         
                 # Forward problem
                 y = self.forward_problem(x, matrix[0])
-                
+    
                 bsps_64 = y[matrix[1].ravel(), :]
+
                 bsps_64_or = bsps_64
                 bsps_64_filt = bsps_64_or
 
@@ -1064,7 +1065,13 @@ class LoadDataset_BSPS:
 
             # 1.2)  EGMs filtering.
             #x=egms
-            x = self.ECG_filtering(egms, fs=self.fs)
+            # 1.2)  EGMs filtering.
+
+            if self.params["filter_EGM"]:
+                x = self.ECG_filtering(egms, fs=self.fs)
+            else:
+                x = egms
+                print('Not filtering EGM')
 
             # 1.3 Normalize EGMS
             if self.norm:

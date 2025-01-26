@@ -30,24 +30,27 @@ from tools_ import freq_phase_analysis as freq_pha
 os.environ["LIBGL_ALWAYS_SOFTWARE"] = "1"
 os.environ["MESA_LOADER_DRIVER_OVERRIDE"] = "llvmpipe"
 
+import time
+start = time.time()
+
 #---------------------------------------------------------------------------------------------------------------------
 # CONFIGURE
 #---------------------------------------------------------------------------------------------------------------------
 
-plot_BSP = False
+plot_BSP = True
 plot_Tikhonov = True
-plot_DL= False
-plot_DF_maps_DL = False
-plot_DF_maps_tik = False
-plot_correlation_DL = False
-plot_correlation_tik = False
+plot_DL= True
+plot_correlation_DL = True
+plot_correlation_tik = True
 plot_rmse_DL = True
 plot_rmse_tik = True
 
+plot_DF_maps_DL = False
+plot_DF_maps_tik = False
+
 torso_num=2
-model_name = ["Simulation_01_200212_001_  5"]
-algorithm_ID= "OMAMI_repeated"
-time_duration=500 # num of samples to represent
+model_name = ["Simulation_01_200316_001_  8"]
+algorithm_ID= "OMAMI_VAE_Optuna_1"
 
 
 torso_path=f"/home/pdi/miriamgf/tesis/Autoencoders/Labeled_torsos/Torso{torso_num}_mod.mat"
@@ -74,8 +77,10 @@ elif params["algorithm"]=="OMAMI":
     fs=200
     n_batch=400
 
+params["filter_EGM"]=True
 print(params)
 print('fs:', fs, ' batch size: ', n_batch)
+
 
 #---------------------------------------------------------------------------------------------------------------------
 # LOAD DATA
@@ -220,6 +225,8 @@ egm_flat = egm_batches.reshape(
 
 prediction = normalize_by_models(prediction_flat, Y_model)
 y_label=normalize_by_models(egm_flat, Y_model)
+time_duration=y_label.shape[0] # num of samples to represent
+
 
 #BSPM
 #---------------------------------------------------------------------------------------------------------------------------------------
@@ -238,8 +245,7 @@ if plot_BSP:
 #Tikhonov
 #---------------------------------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------------------
-
-if plot_Tikhonov:
+if plot_Tikhonov or plot_correlation_tik or plot_rmse_tik or plot_correlation_tik or plot_DF_maps_tik:
 
     ObjTik=TikhonovReconstruction(bspm_signal_norm.T, transfer_matrix, order=0)
     tik_rec=ObjTik() 
@@ -250,7 +256,6 @@ if plot_Tikhonov:
 )
     tik_rec_norm = normalize_array(tik_flat, high=1, low=-1, axis_n=0) 
 
-    print("Plotting Tikhonov...")
     EGM_3d_object=EGM_3D_PLOTTER(model_name,
                 model_path_DL,
                 geom_path_CF,
@@ -261,6 +266,9 @@ if plot_Tikhonov:
 
     _, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
 
+if plot_Tikhonov:
+
+    print("Plotting Tikhonov...")
     EGM_3d_object.plot_3d_mesh_prediction(tik_rec_norm, y_label, faces_heart, vertices_heart)
 
 
@@ -288,15 +296,16 @@ if plot_DL:
 #DF Mapping
 #---------------------------------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------------------
-print("Plotting DF Maps for ZOT")
+
 if plot_DF_maps_tik:
+
 
     df_reconstructed, sig_k_rec, phase_rec = freq_pha.kuklik_DF_phase(tik_rec_norm.T, fs=params["fs_sub"])
     df_label, sig_k_rec, phase_rec = freq_pha.kuklik_DF_phase(y_label.T, fs=params["fs_sub"]) 
 
     df_reconstructed = np.squeeze(df_reconstructed)
     df_label = np.squeeze(df_label)
-
+    print("Plotting DF Maps for ZOT")
     # Creación del objeto para mapas DF
     DFMapObject = DF_MAPS_3D_PLOTTER(
         model_name,
@@ -317,9 +326,10 @@ if plot_DF_maps_tik:
 #DF Mapping
 #---------------------------------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------------------
-print("Plotting DF Maps for DL")
+
 if plot_DF_maps_DL:
 
+    print("Plotting DF Maps for DL")
     df_reconstructed, sig_k_rec, phase_rec = freq_pha.kuklik_DF_phase(prediction.T, fs=params["fs_sub"])
     df_label, sig_k_rec, phase_rec = freq_pha.kuklik_DF_phase(y_label.T, fs=params["fs_sub"])
 
@@ -364,7 +374,7 @@ if plot_correlation_DL:
     # Usar el método del objeto para plotear
 
     CorrelationObject.plot_3d_mesh_label(
-        corr, faces_heart, vertices_heart, np.min(corr), np.max(corr)
+        corr, faces_heart, vertices_heart, min_val_value=-1, max_val_value=1
     )
 
 #Correlation TIK
@@ -398,8 +408,9 @@ if plot_correlation_tik:
 #---------------------------------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------------------
 
-print("Plotting RMSE Maps for DL")
+
 if plot_rmse_DL:
+    print("Plotting RMSE Maps for DL")
     # Creación del objeto para correlación
     RMSEObject = RMSE_3D_PLOTTER(
         model_name,
@@ -417,15 +428,16 @@ if plot_rmse_DL:
     # Usar el método del objeto para plotear
 
     RMSEObject.plot_3d_mesh_label(
-        RMSE, faces_heart, vertices_heart, min_val_value=-1, max_val_value=1
+        RMSE, faces_heart, vertices_heart, min_val_value=0, max_val_value=1
     )
 
 #RMSE maps DL
 #---------------------------------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------------------
 
-print("Plotting RMSE Maps for Tik")
+
 if plot_rmse_tik:
+    print("Plotting RMSE Maps for Tik")
     # Creación del objeto para correlación
     RMSEObject = RMSE_3D_PLOTTER(
         model_name,
@@ -443,7 +455,9 @@ if plot_rmse_tik:
     # Usar el método del objeto para plotear
 
     RMSEObject.plot_3d_mesh_label(
-        RMSE, faces_heart, vertices_heart, min_val_value=-1, max_val_value=1
+        RMSE, faces_heart, vertices_heart, min_val_value=0, max_val_value=1
     )
 
-    print('Chapao')
+print('Chapao')
+end = time.time()
+print('Execution time: ', end-start, 'min')

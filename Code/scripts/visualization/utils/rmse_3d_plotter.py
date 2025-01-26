@@ -338,7 +338,7 @@ class RMSE_3D_PLOTTER:
         # Añadir títulos a cada subplot
         # -----------------------------------------------------------------------------
         title_var = vtk.vtkTextActor()
-        title_var.SetInput("Ángulo 1 (Elevación 270°)")
+        title_var.SetInput("Front")
         title_varprop = title_var.GetTextProperty()
         title_varprop.SetFontFamilyToArial()
         title_varprop.SetFontSize(20)
@@ -347,7 +347,7 @@ class RMSE_3D_PLOTTER:
         renderer_var.renderer.AddActor2D(title_var)
         
         title_var2 = vtk.vtkTextActor()
-        title_var2.SetInput("Ángulo 2 (Elevación 30°)")
+        title_var2.SetInput("Back")
         title_var2prop = title_var2.GetTextProperty()
         title_var2prop.SetFontFamilyToArial()
         title_var2prop.SetFontSize(20)
@@ -423,29 +423,36 @@ class RMSE_3D_PLOTTER:
         writer.Write()
 
     def create_custom_colormap(self, min_val_value, max_val_value):
+        """
+        Crear un colormap personalizado que va de blanco (valores bajos)
+        a rojo (valores altos).
+
+        Args:
+            min_val_value: Valor mínimo del rango.
+            max_val_value: Valor máximo del rango.
+
+        Returns:
+            vtkLookupTable: Tabla de colores personalizada.
+        """
         # Crear una tabla de colores
         lookup_table = vtk.vtkLookupTable()
         lookup_table.SetNumberOfTableValues(256)  # Número de colores en la tabla
         lookup_table.SetRange(min_val_value, max_val_value)  # Rango de valores para la interpolación
         lookup_table.Build()
 
-        # Configurar la interpolación de colores (azul -> rojo)
+        # Configurar la interpolación de colores (blanco -> rojo)
         for i in range(256):
             t = i / 255.0  # Normalizar entre 0 y 1
-            if t < 0.5:
-                # De azul (t=0) a blanco (t=0.5)
-                r = t * 2  # Rojo aumenta
-                g = t * 2  # Verde aumenta
-                b = 1.0    # Azul se mantiene máximo
-            else:
-                # De blanco (t=0.5) a rojo (t=1)
-                r = 1.0    # Rojo se mantiene máximo
-                g = 2 * (1 - t)  # Verde disminuye
-                b = 2 * (1 - t)  # Azul disminuye
+            r = 1.0  # Rojo siempre máximo
+            g = 1.0 - t  # Verde disminuye linealmente (de blanco a rojo)
+            b = 1.0 - t  # Azul disminuye linealmente (de blanco a rojo)
             lookup_table.SetTableValue(i, r, g, b, 1.0)  # Último valor es la opacidad
 
-
         return lookup_table
+
+
+
+
 
     def rmse_by_node(self,array1, array2):
         """

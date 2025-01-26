@@ -2,6 +2,8 @@
 
 import sys
 sys.path.append("../Code")
+sys.stdout.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
 import argparse
 import datetime
 import os
@@ -45,7 +47,7 @@ from tools_.preprocess_data import Preprocess_Dataset
 from tools_.preprocessing_compression import *
 from tools_.train_model import TrainModel
 
-print("end imports")
+
 # Clear GPU
 K.clear_session()
 tf.keras.backend.clear_session()
@@ -97,7 +99,7 @@ elif params["algorithm"]=='OMAMI_VAE':
 
 
 try:
-    print("parsing")
+    print("Parsing bash params")
     parser = argparse.ArgumentParser(description="Noise params")
     parser.add_argument("--algorithm", type=str, help="experiment name", required=True)
     parser.add_argument("--optuna", type=str_to_bool, help="True or False", required=False)
@@ -112,24 +114,34 @@ try:
     filter_EGM= args.filter_EGM
     fold=args.fold
 
+
     params["algorithm"]=algorithm
     params["n_nodes_regression"]=n_nodes
 
+    if optuna:
+        params["optuna_optimization"] = True
+        print('Optuna activated. Launching', params["n_trials"], 'trials')
+
+
     if filter_EGM is not None:  
         params["filter_EGM"] = filter_EGM
+        print('EGM filtering activated (not filtering)')
+
     
     if fold is not None:
         fold=args.fold
         params['cross_validation']=True
         params["fold"]=fold
+        print('Cross val activated with fold: ', fold)
 
 except:
     algorithm = params["algorithm"]
+    print('Failed in parsing bash params :( ')
 
 print('Params to train: ', params)
 
-params['cross_validation']=True
-params["fold"] = fold
+#params['cross_validation']=True
+#params["fold"] = fold
 
 SNR_em_noise = None
 SNR_white_noise = 100
@@ -141,7 +153,6 @@ experiment_name = algorithm
 
 if params["cross_validation"]:
     experiment_name = f"{experiment_name}_fold_{params['fold']}"
-    print('Cross validation')
 
 if not params["filter_EGM"]:  
     experiment_name = f"{experiment_name}_no_filt"
@@ -154,10 +165,11 @@ if params["optuna_optimization"]:
     experiment_name = f"{experiment_name}_Optuna"
 
 
-#experiment_name = f"{experiment_name}_toy"
+experiment_name = f"{experiment_name}"
 
 #experiment_name='pruebas interpol'
 print('Experiment name: ', experiment_name)
+
 
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")

@@ -338,7 +338,7 @@ class CORRELATION_3D_PLOTTER:
         # Añadir títulos a cada subplot
         # -----------------------------------------------------------------------------
         title_var = vtk.vtkTextActor()
-        title_var.SetInput("Ángulo 1 (Elevación 270°)")
+        title_var.SetInput("Front")
         title_varprop = title_var.GetTextProperty()
         title_varprop.SetFontFamilyToArial()
         title_varprop.SetFontSize(20)
@@ -347,7 +347,7 @@ class CORRELATION_3D_PLOTTER:
         renderer_var.renderer.AddActor2D(title_var)
         
         title_var2 = vtk.vtkTextActor()
-        title_var2.SetInput("Ángulo 2 (Elevación 30°)")
+        title_var2.SetInput("Back")
         title_var2prop = title_var2.GetTextProperty()
         title_var2prop.SetFontFamilyToArial()
         title_var2prop.SetFontSize(20)

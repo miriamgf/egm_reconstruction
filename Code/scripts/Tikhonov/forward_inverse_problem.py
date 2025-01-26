@@ -294,7 +294,7 @@ def classical_tikhonov_noiter(A, AA, L, LL, y, size_chunk=50):
     )
 
 
-def classical_tikhonov_noiter_global(A, AA, L, LL, y):
+def classical_tikhonov_noiter_global(A, AA, L, LL, y, lambda_test):
     """
     Tikhonov global method reconstruction.
     The analytical solution of the inverse problem in terms of Tikhonov regularization is:
@@ -311,7 +311,7 @@ def classical_tikhonov_noiter_global(A, AA, L, LL, y):
         x_hat (matrix): epicardial potentials reconstruction.
         lambda_opt: regularization parameter.
     """
-    lambda_test = np.logspace(-10, -10, 500)
+    #lambda_test = np.logspace(-7, -0.5,  50)
 
     # Initialize magnitude and error terms
     magnitude_term = np.zeros(lambda_test.shape[0])

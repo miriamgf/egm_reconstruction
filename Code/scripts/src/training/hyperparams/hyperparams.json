@@ -1,5 +1,5 @@
 {       
-    "n_epochs": 1,
+    "n_epochs": 50,
     "batch_size": 400,
     "fs_sub": 200, 
     "algorithm": "OMAMI_VAE",
@@ -33,7 +33,7 @@
         "sampler_algorithm": ["tpe"],
         "loss_weight_1": ["grid", [0.1, 4, 6, 8, 10, 100]],
         "loss_weight_2":  ["grid", [0.1, 4, 6, 8, 10, 100]],
-        "3D_depth": ["grid", [3,5,10]],
+        "3D_depth": ["grid", [3,5,10,15]],
         "LSTM_units": ["grid", [ 10, 25, 40, 100]]
   
     }

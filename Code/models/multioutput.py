@@ -2,6 +2,8 @@ import tensorflow as tf
 from keras import layers
 from keras.layers import BatchNormalization
 from tensorflow.keras import layers, Model
+from tensorflow.keras.layers import MultiHeadAttention
+
 
 # referencia: https://towardsdatascience.com/building-a-multi-output-convolutional-neural-network-with-keras-ed24c7bc1178
 
@@ -113,6 +115,8 @@ class MultiOutput:
         x = layers.TimeDistributed(layers.Flatten())(x)
         x = BatchNormalization(axis=1)(x)
         x = layers.LSTM(self.params["LSTM_units"], return_sequences=True)(x)
+        #x = MultiHeadAttention(num_heads=4, key_dim=self.params["LSTM_units"])(x, x)
+
         x = layers.Dropout(0.3)(x)
         x = layers.Dense(n_nodes, activation="leaky_relu", name="reconstruction")(x)
 
