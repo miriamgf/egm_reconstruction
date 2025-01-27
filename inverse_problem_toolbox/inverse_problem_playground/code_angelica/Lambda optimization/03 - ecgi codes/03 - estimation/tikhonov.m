@@ -1,4 +1,4 @@
-function [x_hat, lambda_opt] = tikhonov (A, L, AA, LL, y, lambda, SNR, order, reg_param_method, compute_params)
+function [x_hat, lambda_opt,x,z] = tikhonov (A, L, AA, LL, y, lambda, SNR, order, reg_param_method, compute_params)
 % Tikhonov reconstruction method.
 %
 % This routine by Víctor Suárez Gutiérrez (victor.suarez.gutierrez@urjc.es)
@@ -28,7 +28,7 @@ function [x_hat, lambda_opt] = tikhonov (A, L, AA, LL, y, lambda, SNR, order, re
 if (isempty(reg_param_method) || ~strcmp(reg_param_method,'g'))  % by instants.
     [x_hat, lambda_opt] = tikhonovinstants (y, A, L, lambda, SNR, order, compute_params);
 else    %global
-    [x_hat, lambda_opt] = Tikhonovglobalmethod (A, L, AA, LL, y, lambda, compute_params); 
+    [x_hat, lambda_opt,x,z] = Tikhonovglobalmethod (A, L, AA, LL, y, lambda, compute_params); 
 end
 
 end
@@ -68,7 +68,7 @@ end
 end
 
 
-function [x_hat, lambda_opt] = Tikhonovglobalmethod (A, L, AA, LL, y, lambda, compute_params)
+function [x_hat, lambda_opt,x,z] = Tikhonovglobalmethod (A, L, AA, LL, y, lambda, compute_params)
 %Tikhonov global method reconstruction.
 %
 % This routine by Víctor Suárez Gutiérrez (victor.suarez.gutierrez@urjc.es)

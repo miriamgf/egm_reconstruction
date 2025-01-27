@@ -5,7 +5,7 @@ signal_file = "../../01 - data/electric_data_Exx_Fxx_Rxx_filtered.mat";
 electrodes_idx_file = '../../01 - data/eletrodos_LR.mat';
 heart_geo_file = "../../01 - data/heart_geometry_20000_exp14.mat";
 tank_geo_file = "../../01 - data/tank_geometry.mat";
-mtransfer_file = "../../01 - data/MTransfer_exp14_LR_20000.mat";
+mtransfer_file = "../../01 - data/projections/MTransfer_exp14_HR.mat";
 
 %% Reading Files
 
@@ -14,7 +14,7 @@ signal_data = load(signal_file);
 %signal_data = signal_data.(subsref(fieldnames(signal_data), substruct('{}', {1})));
 signal_data = signal_data.(subsref(fieldnames(signal_data), substruct('{}', {1})));
 signal = signal_data.Data([129:174, 177:190], :); % Keeping only 60 electrodes
-
+raw_signal = signal_data.Data;
 % Electrodes
 electrodes_data = load(electrodes_idx_file);
 electrodes = electrodes_data.(subsref(fieldnames(electrodes_data), substruct('{}', {1})));
@@ -67,7 +67,35 @@ end
 
 %save interp_signal for python here
 
-save('interp_signal.mat',"interp_signal")
+%save('interp_signal.mat',"interp_signal")
+%% Some preprocessing
+
+%detrend signal
+L = size(interp_signal,2);
+t = 1/fs*(0:L-1);
+interp_signal_d = zeros(size(interp_signal));
+
+for m=1:size(interp_signal,1)
+    interp_signal_d(m,:) = detrendSpline(interp_signal(m,:),t,0.2);
+end
+
+%low-pass filtering
+f_cut = 30/(fs/2);
+
+[b,a] = butter(6,f_cut,'low');
+interp_signal_d_f = filtfilt(b,a,interp_signal_d')';
+
+%downsampling 
+%I am not sure if this is needed
+
+% Downsampling factor
+factor = 18;
+
+% Downsample the signal using resample
+y_filt_down = resample(interp_signal_d_f', 1, factor)';
+
+% Update the sampling frequency
+fs_d = fs / factor;
 
 %% Define Transfer Matrix
 
@@ -75,27 +103,74 @@ A = MTransfer;
 
 %% Estimation Calculation
 
+
+
 % Set estimation time window (in seconds)
 est_start = 2;
-est_end = 2.1;
+est_end = 3;%2.1;
 
 % Convert time to samples
-est_start_sample = est_start * fs + 1;
-est_end_sample = est_end * fs;
+%est_start_sample = est_start * fs + 1;
+est_start_sample = est_start * fs_d + 1;
+%est_end_sample = est_end * fs;
+est_end_sample = est_end * fs_d;
 
 % Precompute matrices for the regularization method
 [AA, L, LL] = precompute_matrices(A, order, heart_geo);
 %% Regularization method (comment/uncomment as needed)
+lambda = logspace(-0.5, -12, 10);
+%lambda = 10.^(-0.5:-0.5:-12.5); % Regularization parameter. It will be optmized inside of the regularization code.
+order = 0; % Order of regularization (0, 1, or 2)
+reg_param_method = 'g'; % global (g) or by instant (i) calculation
+compute_params = 1; % 1 if reg_params need to be calculated
+model = 'SAF'; % Model type
+fs = 4000; % Sampling frequency
+SNR = 100; % Signal-to-noise ratio; it will only be used in the l-curve; set it to any number different of 40.
+
 
 % Tikhonov method
-%[x_hat, lambda_opt] = tikhonov(A, L, AA, LL, interp_signal(:, est_start_sample:est_end_sample), lambda, SNR, order, reg_param_method, compute_params);
+%[x_hat, lambda_opt,x,z] = tikhonov(A, L, AA, LL, interp_signal_d_f(:, est_start_sample:est_end_sample), lambda, SNR, order, reg_param_method, compute_params);
+[x_hat, lambda_opt,x,z] = tikhonov(A, L, AA, LL, y_filt_down(:, est_start_sample:est_end_sample), lambda, SNR, order, reg_param_method, compute_params);
 
 % TSVD method
 %[x_hat, k] = tsvd(A, L, interp_signal(:, est_start_sample:est_end_sample), lambda, SNR, order, compute_params);
 
 % DSVD
-[x_hat, lambda_opt] = dsvd (A, interp_signal(:, est_start_sample:est_end_sample), lambda, SNR, compute_params);
+%[x_hat, lambda_opt] = dsvd (A, interp_signal(:, est_start_sample:est_end_sample), lambda, SNR, compute_params);
 
+
+%% Plot signals and compare them with real electrograms
+
+close all 
+
+figure()
+
+plot(x,z,'.-')
+xlabel('magnitude residue')
+ylabel('magnitude solution')
+hold on
+
+projec = load('../../01 - data/projections/vertex_meas_projections.mat');
+
+proj_m = projec.localization;
+
+t= linspace(0,1,4000);
+tt= (0:size(x_hat,2)-1)/fs_d;
+
+
+for i = 17:32
+    figure()
+
+    idx_egm = proj_m(i,1);
+    idx_recons = proj_m(i,2);
+    %you can further correct the delay
+    d = 50;
+    plot(t,raw_signal(idx_egm,4000*2-d:4000*3-(d+1))/max(abs(raw_signal(idx_egm,4000*2:4000*2.3))))
+    hold on
+    plot(tt,-x_hat(idx_recons,:)/max(abs(x_hat(idx_recons,:))))
+    legend('EGM','Recons')
+
+end
 %% Plot All Signals
 
 figure();

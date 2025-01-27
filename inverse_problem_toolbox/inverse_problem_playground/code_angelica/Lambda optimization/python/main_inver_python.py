@@ -854,6 +854,8 @@ proj_m  = proj_m - 1
 t = np.linspace(0,1,4000)
 tt = np.arange(x_hat_pca_atria.shape[1])/fs_d
 
+x_hat_000 = scipy.io.loadmat("../03 - ecgi codes/03 - estimation/x_hat.mat")['x_hat']
+
 for i in range(16,32):
     
     plt. figure()
@@ -862,13 +864,14 @@ for i in range(16,32):
     idx_recons = proj_m[i,1]
     plt.plot(t,r_signal[idx_egm,4000*2:4000*3]/np.max(np.abs(r_signal[idx_egm,4000*2:4000*3])),label = 'original')
     plt.plot(tt,x_hat[idx_recons,:]/np.max(np.abs(x_hat[idx_recons,:])),label = 'reconstructed all')
-    plt.plot(tt,x_hat_pca_v[idx_recons,:]/np.max(np.abs(x_hat_pca_v[idx_recons,:])),label = 'reconstructed v')
-    plt.plot(tt,x_hat_pca_2_v[idx_recons,:]/np.max(np.abs(x_hat_pca_2_v[idx_recons,:])),label = 'reconstructed v 2')
+    plt.plot(tt,x_hat_000[proj_m[i,1]]/np.max(np.abs(x_hat_000[proj_m[i,1],:])),label='matlab')
+    #plt.plot(tt,x_hat_pca_v[idx_recons,:]/np.max(np.abs(x_hat_pca_v[idx_recons,:])),label = 'reconstructed v')
+    #plt.plot(tt,x_hat_pca_2_v[idx_recons,:]/np.max(np.abs(x_hat_pca_2_v[idx_recons,:])),label = 'reconstructed v 2')
     
     plt.legend()
     plt.xlabel('Time (s)')
     plt.ylabel('n.u')    
-    plt.title("Ventricle")
+    plt.title(f"Ventricle - Node {proj_m[i,0]}")
     
     filename = f"output_figs/ventri_{i}.png"
     plt.savefig(filename)
@@ -885,13 +888,14 @@ for i in range(16,32):
     idx_recons = proj_m[i,1]
     plt.plot(t,r_signal[idx_egm,4000*2:4000*3]/np.max(np.abs(r_signal[idx_egm,4000*2:4000*3])),label = 'original')
     plt.plot(tt,-x_hat[idx_recons,:]/np.max(np.abs(x_hat[idx_recons,:])),label = 'reconstructed all')
-    plt.plot(tt,-x_hat_pca_v[idx_recons,:]/np.max(np.abs(x_hat_pca_v[idx_recons,:])),label = 'reconstructed v')
-    plt.plot(tt,-x_hat_pca_2_v[idx_recons,:]/np.max(np.abs(x_hat_pca_2_v[idx_recons,:])),label = 'reconstructed v 2')
+    plt.plot(tt,-x_hat_000[proj_m[i,1]]/np.max(np.abs(x_hat_000[proj_m[i,1],:])),label='matlab')
+   # plt.plot(tt,-x_hat_pca_v[idx_recons,:]/np.max(np.abs(x_hat_pca_v[idx_recons,:])),label = 'reconstructed v')
+   # plt.plot(tt,-x_hat_pca_2_v[idx_recons,:]/np.max(np.abs(x_hat_pca_2_v[idx_recons,:])),label = 'reconstructed v 2')
     
     plt.legend()
     plt.xlabel('Time (s)')
     plt.ylabel('n.u')    
-    plt.title("Ventricle")
+    plt.title(f"Ventricle - Node {proj_m[i,0]}")
     
     filename = f"output_figs/Change_pol_ventri_{i}.png"
     plt.savefig(filename)
