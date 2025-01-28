@@ -40,6 +40,8 @@ class EvaluateTikhonov:
         os.makedirs(self.path_output_l_curva, exist_ok=True)
         self.output_directory = self.experiment_dir
         self.params_path = self.experiment_dir + 'hyperparams.json'
+        self.tik= True
+
 
         with open(self.params_path) as file:
             self.params = json.load(file)
@@ -62,6 +64,15 @@ class EvaluateTikhonov:
         self.unfold_code = 1
 
     def load_and_process_patient(self, patient, cont):
+        '''
+        This function loads and preprocess test data for ZOT reconstruction
+        Preprocessing includes:
+            - BSPM reduced from the original number of nodes to 64 leads 
+            - BSPM norm
+            - EGM norm
+            - EGM downsampled and batch split (only for visualization purposes, not for reconstruction)
+        
+        '''
         print(f"LOADING PATIENT {cont}/{len(self.test_patients)}")
         model_name = [patient]
 
@@ -95,7 +106,7 @@ class EvaluateTikhonov:
             select_model=model_name,
         )()
 
-            #Unpack
+        #Unpack
         torso_name = f"Torso{self.torso_num}_mod.mat"
         torso_index = self.all_torsos_names.index(torso_name)
         bspm_signal = y_list[torso_index]['y']
@@ -186,9 +197,9 @@ class EvaluateTikhonov:
         all_nodes_list = []
 
         for cont, patient in enumerate(self.test_patients, start=1):
-            X_1channel, egm_tensor, Y_model, _, _, _ = self.load_and_process_patient(patient, cont)
-            prediction, y_label = self.run_inference(X_1channel, egm_tensor, Y_model)
-            MetricsObj = Metrics(algorithm_ID=self.algorithm_ID, model_name=patient)
+            bspm_signal_norm, egm_flat, Y_model, transfer_matrix_64= self.load_and_process_patient(patient, cont)
+            prediction, y_label = self.inference_tik(bspm_signal_norm, egm_flat, Y_model, transfer_matrix_64)
+            MetricsObj = Metrics(algorithm_ID=self.algorithm_ID, model_name=patient, tik=self.tik)
             df_metrics, metrics_all_nodes = MetricsObj.compute_metrics(prediction, y_label, fs=self.fs)
             df_metrics_all_patients.append(df_metrics)
             all_nodes_list.append(metrics_all_nodes)

@@ -1066,12 +1066,14 @@ class LoadDataset_BSPS:
             # 1.2)  EGMs filtering.
             #x=egms
             # 1.2)  EGMs filtering.
-
-            if self.params["filter_EGM"]:
+            try:
+                if self.params["filter_EGM"]:
+                    x = self.ECG_filtering(egms, fs=self.fs)
+                else:
+                    x = egms
+                    print('Not filtering EGM')
+            except:
                 x = self.ECG_filtering(egms, fs=self.fs)
-            else:
-                x = egms
-                print('Not filtering EGM')
 
             # 1.3 Normalize EGMS
             if self.norm:

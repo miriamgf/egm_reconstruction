@@ -2,7 +2,7 @@ import sys
 sys.path.append("../Code")
 import os
 import json
-sys.path.append("../Code")
+from scipy.io import loadmat
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import matplotlib.pyplot as plt
@@ -19,7 +19,8 @@ from scripts.visualization.utils.rmse_3d_plotter import RMSE_3D_PLOTTER
 from scripts.visualization.utils.df_map_3d_plotter import DF_MAPS_3D_PLOTTER
 from models.multioutput_VAE import MultiOutput_VAE, SamplingLayer
 from scripts.evaluation.tools_evaluate import normalize_array, downsampling
-from scripts.evaluation.metrics import rmse_by_node, correlation_by_node
+from scripts.evaluation.metrics import Metrics
+
 
 from scripts.Tikhonov.compute_tik import TikhonovReconstruction
 from scripts.evaluate_function import *
@@ -52,7 +53,6 @@ torso_num=2
 model_name = ["Simulation_01_200316_001_  8"]
 algorithm_ID= "OMAMI_VAE_Optuna_1"
 
-
 torso_path=f"/home/pdi/miriamgf/tesis/Autoencoders/Labeled_torsos/Torso{torso_num}_mod.mat"
 geom_path_CF = "/home/pdi/miriamgf/tesis/Autoencoders/geometries/Atria_geom/Modelos_computacionales_Carlos_Fambuena/Atria.mat"
 geom_path_edgar= "/home/pdi/miriamgf/tesis/Autoencoders/geometries/Atria_geom/Modelos_Edgar/Atria.mat"
@@ -60,6 +60,7 @@ output_directory = f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstructi
 os.makedirs(output_directory, exist_ok=True)
 data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
 torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
+regions_path = "/home/pdi/miriamgf/tesis/Autoencoders/Regions/regions.mat"
 
 experiment_dir=f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/{algorithm_ID}/"
 model_path_DL=experiment_dir+f"reconstructions_by_model_{algorithm_ID}.mat"
@@ -82,9 +83,56 @@ print(params)
 print('fs:', fs, ' batch size: ', n_batch)
 
 
+#Borrar
+
+regions=data = loadmat(regions_path)['regions']
+
+missing_values = 2048 - regions.shape[1]
+
+# Toma los últimos valores del array y repítelos para rellenar
+last_values = regions[0, -missing_values:]  # Últimos valores necesarios
+last_values = np.zeros(last_values.shape)
+repeated_values = np.tile(last_values, (missing_values // len(last_values) + 1))[:missing_values]
+
+# Concatenar el array original con los valores repetidos
+extended_regions_dic = np.hstack((regions, repeated_values.reshape(1, -1)))
+extended_regions= {
+    'regions':extended_regions_dic
+}
+import scipy.io
+
+scipy.io.savemat('/home/pdi/miriamgf/tesis/Autoencoders/Regions/extended_regions.mat', extended_regions)
+
+
+EGM_3d_object=EGM_3D_PLOTTER(model_name,
+            model_path_DL,
+            geom_path_CF,
+            output_directory,
+            labels_mode=False,
+            tikhonov=True,
+            time=12)
+
+_, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
+
+EGM_3d_object.plot_3d_regions(extended_regions, extended_regions, faces_heart, vertices_heart)
+
+sys.exit()
+
+
+
+
+
+
+
+
+
+
+
+
 #---------------------------------------------------------------------------------------------------------------------
 # LOAD DATA
 #---------------------------------------------------------------------------------------------------------------------
+
 
 
 
@@ -228,6 +276,9 @@ y_label=normalize_by_models(egm_flat, Y_model)
 time_duration=y_label.shape[0] # num of samples to represent
 
 
+#METRIC OBJECT INSTANCIATION
+
+MetricsObj = Metrics(algorithm_ID=algorithm_ID, model_name=model_name)
 #BSPM
 #---------------------------------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------------------
@@ -369,7 +420,7 @@ if plot_correlation_DL:
     )
 
     # Calcular correlación por nodo
-    corr = correlation_by_node(prediction, y_label)
+    corr = MetricsObj.correlation_by_node(prediction, y_label)
 
     # Usar el método del objeto para plotear
 
@@ -394,7 +445,7 @@ if plot_correlation_tik:
     )
 
     # Calcular correlación por nodo
-    corr = correlation_by_node(tik_rec_norm, y_label)
+    corr = MetricsObj.correlation_by_node(tik_rec_norm, y_label)
 
     # Usar el método del objeto para plotear
 
@@ -423,7 +474,7 @@ if plot_rmse_DL:
     )
 
     # Calcular correlación por nodo
-    RMSE = rmse_by_node(prediction, y_label)
+    RMSE = MetricsObj.rmse_by_node(prediction, y_label)
 
     # Usar el método del objeto para plotear
 
@@ -450,7 +501,7 @@ if plot_rmse_tik:
     )
 
     # Calcular correlación por nodo
-    RMSE = rmse_by_node(tik_rec_norm, y_label)
+    RMSE = MetricsObj.rmse_by_node(tik_rec_norm, y_label)
 
     # Usar el método del objeto para plotear
 

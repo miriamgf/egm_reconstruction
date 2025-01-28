@@ -39,6 +39,12 @@ class TikhonovReconstruction:
         return x_hat
     
     def tik_post_process_to_plot(self,tik_rec, fs, divisible_rows, n_batch):
+        '''
+        This function postprocess ZOT reconstructions: downsamples and changes batch size according
+        to experiment_ID to enable a fair evaluation and visualization
+
+        
+        '''
         tik_rec_mod = tik_rec[:, :-1]
         tik_rec_mod_T = tik_rec_mod.T
         tik_rec_down =downsampling(tik_rec_mod_T, fs)

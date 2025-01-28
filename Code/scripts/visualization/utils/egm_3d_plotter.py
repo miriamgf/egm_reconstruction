@@ -144,8 +144,11 @@ class EGM_3D_PLOTTER:
         return y_reconstructed, y_label, faces, vertices
     
     def plot_egm_front_back(self, y_reconstructed, y_label, faces, vertices, normalizar=True):  
-        # Crear renderizadores para var_represent y var_represent_original
-        # Crear renderizadores para var_represent y var_represent_original
+        
+        '''
+        This functions 
+        
+        '''
         renderer_var = EGMRenderer_EGM(faces, vertices, min_val=-0.6, max_val=0.6)
         try:
             renderer_label = EGMRenderer_EGM(faces, vertices,  min_val=-0.6, max_val=0.6)
@@ -197,7 +200,7 @@ class EGM_3D_PLOTTER:
             title_varprop.SetFontSize(25)
             #title_varprop.BoldOn()
             title_varprop.SetColor(0, 0, 0)  # Black color
-            title_var.SetPosition(300, 500)  # Adjust position manually as needed
+            title_var.SetPosition(200, 500)  # Adjust position manually as needed
             renderer_var.renderer.AddActor2D(title_var)
 
             # Create a text actor for label
@@ -649,6 +652,159 @@ class EGM_3D_PLOTTER:
             imageio.mimsave(output_video, array_frames,format='GIF', fps=10)
 
             print(f"Video guardado en {output_video}")
+    
+
+
+    def plot_3d_regions(self, y_reconstructed, y_label, faces, vertices, normalizar=True):
+
+        print("Rango de valores escalares reconstruidos:", np.min(y_reconstructed), np.max(y_reconstructed))
+
+    # Crear renderizadores para var_represent y var_represent_original
+        renderer_var = EGMRenderer_EGM(faces, vertices, min_val=1, max_val=7)
+        try:
+            renderer_label = EGMRenderer_EGM(faces, vertices, min_val=1, max_val=7)
+        except:
+            y_label = y_label[0][0]
+            renderer_label = EGMRenderer_EGM(faces, vertices, min_val=1, max_val=7)
+
+        # Verificar el rango de la tabla de colores
+        print("Rango de la tabla de colores:", renderer_var.mapper.GetLookupTable().GetRange())
+
+        # Asegurar que y_reconstructed sea unidimensional
+        if y_reconstructed.ndim > 2:
+            y_reconstructed = y_reconstructed.reshape(-1, y_reconstructed.shape[2])
+
+        # Asegurarse de que los valores sean enteros y estén aplanados
+        var_represent = y_reconstructed.flatten().astype(np.int32)
+        var_represent_original = y_label.flatten().astype(np.int32)
+
+        print("Rango de valores escalares reconstruidos:", np.min(var_represent), np.max(var_represent))
+
+        elevation_values_range = [270, 30]
+
+        for elevation_value in elevation_values_range:
+            # Configurar los subplots
+            renderer_var.renderer.SetViewport(0.0, 0.0, 0.5, 1.0)  # Subplot izquierdo
+            renderer_label.renderer.SetViewport(0.5, 0.0, 1.0, 1.0)  # Subplot derecho
+
+            # Configurar fondo blanco
+            renderer_var.renderer.SetBackground(1, 1, 1)
+            renderer_label.renderer.SetBackground(1, 1, 1)
+
+            # Configurar texto
+            title_var = vtk.vtkTextActor()
+            title_var.SetInput(f"Front")
+            title_varprop = title_var.GetTextProperty()
+            title_varprop.SetFontFamilyToArial()
+            title_varprop.SetFontSize(25)
+            title_varprop.SetColor(0, 0, 0)
+            title_var.SetPosition(200, 500)
+            renderer_var.renderer.AddActor2D(title_var)
+
+            title_label = vtk.vtkTextActor()
+            title_label.SetInput("Real")
+            title_labelprop = title_label.GetTextProperty()
+            title_labelprop.SetFontFamilyToArial()
+            title_labelprop.SetFontSize(25)
+            title_labelprop.SetColor(0, 0, 0)
+            title_label.SetPosition(300, 500)
+            renderer_label.renderer.AddActor2D(title_label)
+
+            
+
+            # Configurar la tabla de colores
+            lookup_table = vtk.vtkLookupTable()
+            lookup_table.SetNumberOfTableValues(7)
+            lookup_table.SetRange(1, 7)
+            colors = [
+               
+                (1.0, 0.0, 0.0),  # Rojo
+                (0.0, 1.0, 0.0),  # Verde
+                (0.0, 0.0, 1.0),  # Azul
+                (1.0, 1.0, 0.0),  # Amarillo
+                (0.0, 1.0, 1.0),  # Cyan
+                (1.0, 0.0, 1.0),  # Magenta
+                (0.5, 0.5, 0.5),  # Gris
+            ]
+
+            for i, color in enumerate(colors):
+                lookup_table.SetTableValue(i, *color, 1.0)
+            lookup_table.Build()
+            # Configurar sombreado plano para eliminar la interpolación
+            renderer_var.actor.GetProperty().SetInterpolationToFlat()
+
+
+            # Configurar el mapper y actor para renderizador
+            renderer_var.mapper.SetLookupTable(lookup_table)
+            renderer_var.mapper.SetScalarVisibility(True)
+            renderer_var.mapper.SetScalarModeToUsePointData()
+            renderer_var.mapper.SetColorModeToMapScalars()
+            renderer_var.mapper.SetScalarRange(1, 7)
+
+            renderer_label.mapper.SetLookupTable(lookup_table)
+            renderer_label.mapper.SetScalarVisibility(True)
+            renderer_label.mapper.SetScalarModeToUsePointData()
+            renderer_label.mapper.SetColorModeToMapScalars()
+            renderer_label.mapper.SetScalarRange(1, 7)
+
+            # Configurar barras de colores
+            scalar_bar_var = vtk.vtkScalarBarActor()
+            scalar_bar_var.SetLookupTable(renderer_var.mapper.GetLookupTable())
+            scalar_bar_var.GetLabelTextProperty().SetColor(0, 0, 0)
+            scalar_bar_var.SetNumberOfLabels(5)
+
+            scalar_bar_label = vtk.vtkScalarBarActor()
+            scalar_bar_label.SetLookupTable(renderer_label.mapper.GetLookupTable())
+            scalar_bar_label.GetLabelTextProperty().SetColor(0, 0, 0)
+            scalar_bar_label.SetNumberOfLabels(5)
+
+            renderer_var.renderer.AddActor2D(scalar_bar_var)
+            renderer_label.renderer.AddActor2D(scalar_bar_label)
+
+            # Configurar la ventana de renderizado
+            render_window = vtk.vtkRenderWindow()
+            render_window.SetOffScreenRendering(True)
+            render_window.SetSize(1600, 600)
+            render_window.AddRenderer(renderer_var.renderer)
+            render_window.AddRenderer(renderer_label.renderer)
+
+            # Configurar la cámara
+            center = renderer_var.mesh.GetCenter()
+            for renderer in [renderer_var, renderer_label]:
+                renderer.camera.SetPosition(center[0], center[1], center[2] + 35)
+                renderer.camera.SetFocalPoint(center[0], center[1], center[2])
+                renderer.camera.SetViewUp(1, 0, 0)
+                renderer.camera.Elevation(elevation_value)
+                renderer.renderer.ResetCameraClippingRange()
+
+            # Captura y guarda de frames
+            array_frames = []
+            for instant in range(1):
+                vtk_scalars_var = numpy_to_vtk(var_represent, deep=True)
+                vtk_scalars_label = numpy_to_vtk(var_represent_original, deep=True)
+
+                renderer_var.mesh.GetPointData().SetScalars(vtk_scalars_var)
+                renderer_label.mesh.GetPointData().SetScalars(vtk_scalars_label)
+
+                renderer_var.mesh.Modified()
+                renderer_label.mesh.Modified()
+
+                render_window.Render()
+                window_to_image_filter = vtk.vtkWindowToImageFilter()
+                window_to_image_filter.SetInput(render_window)
+                window_to_image_filter.Modified()
+                window_to_image_filter.Update()
+
+                image_data = window_to_image_filter.GetOutput()
+                dims = image_data.GetDimensions()
+                vtk_array = vtk.util.numpy_support.vtk_to_numpy(image_data.GetPointData().GetScalars())
+                frame = vtk_array.reshape((dims[1], dims[0], 3))[::-1]
+                array_frames.append(frame)
+
+            # Guardar video
+            output_video = os.path.join(self.output_directory, f"REGIONS_{elevation_value}.gif")
+            imageio.mimsave(output_video, array_frames, format="GIF", fps=10)
+            print(f"Video guardado en {output_video}")
 
     def __call__(self):
         y_reconstructed, y_label, faces, vertices=self.load_geometry_and_egm()      
@@ -657,4 +813,5 @@ class EGM_3D_PLOTTER:
             self.plot_3d_mesh_label(y_reconstructed, y_label, faces, vertices)
         else:
             self.plot_3d_mesh_prediction(y_reconstructed, y_label, faces, vertices)
+
 

@@ -165,11 +165,10 @@ if params["optuna_optimization"]:
     experiment_name = f"{experiment_name}_Optuna"
 
 
-experiment_name = f"{experiment_name}"
+experiment_name = f"{experiment_name}_bs_fs"
 
 #experiment_name='pruebas interpol'
 print('Experiment name: ', experiment_name)
-
 
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")

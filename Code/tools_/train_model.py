@@ -222,7 +222,7 @@ class TrainModel:
                 n_nodes=y_train.shape[-1],
                 tensorboard_logs=self.experiment_dir + "tb_logs/",
             )
-
+        
             print(model.model.summary())
 
             # Compile the model
@@ -256,6 +256,11 @@ class TrainModel:
 
             # Compile the model
             model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0)) 
+        
+        else: 
+            print('Error: Model name not identified. Terminating training...')
+            sys.exit()
+
 
         try:
             print(model.model.summary())

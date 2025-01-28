@@ -143,16 +143,15 @@ def deflexion_detection(array, fs, amplitude_threshold=0.25, prominence_value=0.
 
     return peaks_list
 
-# METRICAS morfología y puntos fiduciales
-    # Metrica 1: Detector núm deflexiones
-    # Metrica 2: DTW
+from scipy.signal import butter, filtfilt
 
-# MÉTRICAS frecuencia
-    # Metrica 1: Coherencia
+# Función para aplicar filtro Butterworth pasa-banda
+def bandpass_filter(signal, fs, lowcut, highcut):
+    nyquist = 0.5 * fs  # Frecuencia de Nyquist
+    low = lowcut / nyquist
+    high = highcut / nyquist
+    b, a = butter(4, [low, high], btype="band")  # Orden 4 del filtro
+    return filtfilt(b, a, signal)
 
-# MÉTRICAS espaciales
-    # Calcular métricas instante a instante, para ver si hay desviaciones al principio o al final secuencia
-    # Arreglar DF Maps
-    # Generar Activation Maps
 
 

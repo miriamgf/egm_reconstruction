@@ -5,6 +5,7 @@ import json
 import argparse
 import matplotlib.pyplot as plt
 import pandas as pd
+import argparse
 sys.stdout.reconfigure(line_buffering=True)
 sys.stderr.reconfigure(line_buffering=True)
 import time
@@ -14,11 +15,30 @@ from scripts.evaluate_function import *
 from tools_.tools_inference import *
 from scripts.evaluation.evaluate_dl import EvaluateDL
 from scripts.evaluation.evaluate_tik import EvaluateTikhonov
+from scripts.config import str_to_bool
+
+#Argparse
+try:
+    print("Parsing bash params")
+    parser = argparse.ArgumentParser(description="Noise params")
+    parser.add_argument("--algorithm_ID", type=str, help="experiment name", required=True)
+    parser.add_argument("--ev_DL", type=str_to_bool, help="True or False", required=False)
+    parser.add_argument("--ev_TIK", type=str_to_bool, help="True or False", required=False)
+
+    args = parser.parse_args()
+    algorithm_ID = args.algorithm_ID
+    evaluate_dl = args.ev_DL
+    evaluate_tik = args.ev_TIK
+
+    print(algorithm_ID, evaluate_dl, evaluate_tik)
 
 
-algorithm_ID = "OMAMI_VAE_Optuna_1"
-evaluate_dl=True
-evaluate_tik=False
+
+except:
+    algorithm_ID = "OMAMI_VAE_Optuna_1"
+    evaluate_dl=False
+    evaluate_tik=True
+
 
 test_patients = [
             "LA_PLAW_140711_arm", "LA_RSPV_CAF_150115",
@@ -31,13 +51,14 @@ test_patients = [
 
 # DL -->  284 /12 = 23.666 seconds per patient (all the pipeline)
 # TIK --> 777/ 12 = 64.75 seconds per patient (all the pipeline)
+if evaluate_tik:
+    print("Evaluating Tikhonov")
+    evaluator_tik = EvaluateTikhonov(test_patients=test_patients,algorithm_ID=algorithm_ID)
+    evaluator_tik.run()
 if evaluate_dl:
     print("Evaluating DL")
     evaluator_dl = EvaluateDL(test_patients=test_patients,algorithm_ID=algorithm_ID)
     evaluator_dl.run()
 
-if evaluate_tik:
-    print("Evaluating Tikhonov")
-    evaluator_tik = EvaluateTikhonov(test_patients=test_patients,algorithm_ID=algorithm_ID)
-    evaluator_tik.run()
+
 

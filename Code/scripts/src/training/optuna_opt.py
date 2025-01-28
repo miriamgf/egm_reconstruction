@@ -1,8 +1,9 @@
 import json
 from pathlib import Path
-
+import sys
+sys.path.append("../Code")
 import optuna
-from config import ParseHiperparams
+from scripts.config import ParseHiperparams
 from optuna.samplers import NSGAIISampler, RandomSampler, TPESampler
 from optuna.visualization import (
     plot_optimization_history,
@@ -206,6 +207,10 @@ class OptunaOpt:
                 )
                 # Overwrite in dictionary
                 self.params[param_name] = optuna_params[param_name]
+
+        if self.params["batch_size"] < self.params["fs_sub"]: #batch size never smaller than batch size
+            self.params["batch_size"]=self.params["fs_sub"]
+
 
         return self.params
 
