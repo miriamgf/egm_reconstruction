@@ -16,6 +16,7 @@ from tools_.tools_inference import *
 from scripts.evaluation.evaluate_dl import EvaluateDL
 from scripts.evaluation.evaluate_tik import EvaluateTikhonov
 from scripts.config import str_to_bool
+from scripts.evaluation.evaluate_regions import EvaluateRegions
 
 #Argparse
 try:
@@ -32,12 +33,10 @@ try:
 
     print(algorithm_ID, evaluate_dl, evaluate_tik)
 
-
-
 except:
-    algorithm_ID = "OMAMI_VAE_Optuna_1"
+    algorithm_ID = "OMAMI_repeated"
     evaluate_dl=False
-    evaluate_tik=True
+    evaluate_tik=False
 
 
 test_patients = [
@@ -48,6 +47,9 @@ test_patients = [
             "Simulation_01_200428_001_008", "Simulation_01_200428_001_010",
             "Simulation_01_210119_001_001", "Simulation_01_210208_001_002"
         ]
+
+experiment_ID_list=[["OMAMI_repeated"], ["OMAMI_VAE_Optuna_1"], ['OMAMI_no_filt'], ['OMAMI_VAE_no_filt']]
+
 
 # DL -->  284 /12 = 23.666 seconds per patient (all the pipeline)
 # TIK --> 777/ 12 = 64.75 seconds per patient (all the pipeline)
@@ -60,5 +62,7 @@ if evaluate_dl:
     evaluator_dl = EvaluateDL(test_patients=test_patients,algorithm_ID=algorithm_ID)
     evaluator_dl.run()
 
+# Evaluate in regions
+EvaluateRegionsObj=EvaluateRegions(experiment_ID_list=experiment_ID_list)()
 
 

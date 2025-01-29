@@ -12,7 +12,7 @@ from scipy.ndimage import uniform_filter1d
 from scripts.evaluation.tools_evaluate import deflexion_detection, compare_r_peaks, normalize_array, bandpass_filter
 
 class Metrics:  
-    def __init__(self, algorithm_ID, model_name, tik):
+    def __init__(self, algorithm_ID, model_name, tik=False):
         self.algorithm_ID = algorithm_ID
         self.model_name = model_name
         self.tik = tik
@@ -120,8 +120,33 @@ class Metrics:
             precision_list.append(metrics['Precision'])
             recall_list.append(metrics['Sensitivity'])
             error_list.append(metrics['Error'])
+        
+        best_node_recall=np.argmax(recall_list)
+        best_node_precision=np.argmax(precision_list)
+        worst_node_recall=np.argmin(recall_list)
+        worst_node_precision=np.argmin(precision_list)
 
-            if plot:
+        nodes_to_plot=[best_node_recall,best_node_precision, worst_node_recall, worst_node_precision ]
+
+        if plot:
+            
+            for lead in nodes_to_plot:
+                print(lead)
+                if lead==best_node_recall:
+                    target='best_node_recall'
+                elif lead==best_node_precision:
+                    target='best_node_precision'
+                elif lead==worst_node_precision:
+                    target='worst_node_precision'
+                elif lead==worst_node_recall:
+                    target='worst_node_recall'
+
+                peaks_i=peak_list[lead]
+                lead_i=y_label[:, lead]
+                peaks_pred_i=peak_list_pred[lead]
+                lead_pred_i=prediction[:, lead]
+                metrics, matching_peaks, matched_peaks_r=compare_r_peaks(peaks_i, peaks_pred_i,lead_i,lead_pred_i, tolerance_samples=distance_in_samples)
+                
                 plt.figure(figsize=(20, 10), tight_layout=True)
                 plt.subplot(2, 1, 1)
                 plt.plot(y_label[:, lead], color='royalblue')
@@ -146,9 +171,9 @@ class Metrics:
                 plt.scatter(peaks_i, lead_i[peaks_i], color='purple', marker='o', label='Picos real', alpha=0.3)
                 plt.suptitle(f"Peak detection {self.algorithm_ID}   {self.model_name}.")
                 if self.tik:
-                    path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/tik/peak_detection_{lead}.png"
+                    path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/tik/peak_detection_{target}.png"
                 else:                    
-                    path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/peak_detection_{lead}.png"
+                    path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/peak_detection_{target}.png"
                 os.makedirs(os.path.dirname(path_to_save), exist_ok=True)
                 plt.savefig(path_to_save)
                 print("Peak detection figure saved in: ", path_to_save)
@@ -422,11 +447,11 @@ class Metrics:
                 "Coherence": np.mean(coh_list)}
     
         metrics_all_nodes={"name": self.model_name,
-            "Correlation": corr,
-            "RMSE": rmse,
+            "Correlation": list(corr),
+            "RMSE": list(rmse),
             "Peak_detector_Recall": recall,
             "Peak_detector_Precision": precision,
-            "Peak_detector_Error": error_peak_det_norm, 
+            "Peak_detector_Error": list(error_peak_det_norm), 
             "DTW":dtw, 
             "Coherence": coh_list}
                 

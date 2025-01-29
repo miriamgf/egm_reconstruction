@@ -32,7 +32,7 @@ os.environ["LIBGL_ALWAYS_SOFTWARE"] = "1"
 os.environ["MESA_LOADER_DRIVER_OVERRIDE"] = "llvmpipe"
 
 import time
-start = time.time()
+
 
 #---------------------------------------------------------------------------------------------------------------------
 # CONFIGURE
@@ -50,465 +50,447 @@ plot_DF_maps_DL = False
 plot_DF_maps_tik = False
 
 torso_num=2
-model_name = ["Simulation_01_200316_001_  8"]
-algorithm_ID= "OMAMI_VAE_Optuna_1"
 
-torso_path=f"/home/pdi/miriamgf/tesis/Autoencoders/Labeled_torsos/Torso{torso_num}_mod.mat"
-geom_path_CF = "/home/pdi/miriamgf/tesis/Autoencoders/geometries/Atria_geom/Modelos_computacionales_Carlos_Fambuena/Atria.mat"
-geom_path_edgar= "/home/pdi/miriamgf/tesis/Autoencoders/geometries/Atria_geom/Modelos_Edgar/Atria.mat"
-output_directory = f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/renderized_heart/{algorithm_ID}_{model_name[0]}"
-os.makedirs(output_directory, exist_ok=True)
-data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
-torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
-regions_path = "/home/pdi/miriamgf/tesis/Autoencoders/Regions/regions.mat"
+test_patients = [
+            ["LA_PLAW_140711_arm"], ["LA_RSPV_CAF_150115"],
+            ["Simulation_01_200212_001_  5"], ["Simulation_01_200212_001_ 10"],
+            ["Simulation_01_200316_001_  3"], ["Simulation_01_200316_001_  4"],
+            ["Simulation_01_200316_001_  8"], ["Simulation_01_200428_001_004"],
+            ["Simulation_01_200428_001_008"], ["Simulation_01_200428_001_010"],
+            ["Simulation_01_210119_001_001"], ["Simulation_01_210208_001_002"]
+        ]
+test_patients = [["Simulation_01_200212_001_  5"],  
+                ["Simulation_01_210119_001_001"], 
+                ["Simulation_01_200428_001_010"],["Simulation_01_200212_001_ 10"]]
 
-experiment_dir=f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/{algorithm_ID}/"
-model_path_DL=experiment_dir+f"reconstructions_by_model_{algorithm_ID}.mat"
-weights_path = experiment_dir + "model_weights.h5"
-params_path=experiment_dir+'hyperparams.json'
+experiment_ID_list=[["OMAMI_repeated"], ["OMAMI_VAE_Optuna_1"], ['OMAMI_no_filt'], ['OMAMI_VAE_no_filt']]
+start = time.time()
+cont=0
+for model_name in test_patients:
 
-#Load params dictionary
-with open(experiment_dir+"hyperparams.json") as file:
-    params = json.load(file)  # Load the JSON data into a dictionary
+    print(f"Loading patient {cont}/{len(test_patients)}")
+    cont+=1
 
-if params["algorithm"]=="OMAMI_VAE":
-    fs=100
-    n_batch=200
-elif params["algorithm"]=="OMAMI":
-    fs=200
-    n_batch=400
+    start_=time.time()
+    for algorithm_ID in experiment_ID_list: 
 
-params["filter_EGM"]=True
-print(params)
-print('fs:', fs, ' batch size: ', n_batch)
+        model_name=model_name
+        algorithm_ID=algorithm_ID[0]
+
+        torso_path=f"/home/pdi/miriamgf/tesis/Autoencoders/Labeled_torsos/Torso{torso_num}_mod.mat"
+        geom_path_CF = "/home/pdi/miriamgf/tesis/Autoencoders/geometries/Atria_geom/Modelos_computacionales_Carlos_Fambuena/Atria.mat"
+        geom_path_edgar= "/home/pdi/miriamgf/tesis/Autoencoders/geometries/Atria_geom/Modelos_Edgar/Atria.mat"
+        output_directory = f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/renderizations/{algorithm_ID}/{model_name[0]}"
+        os.makedirs(output_directory, exist_ok=True)
+        data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
+        torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
+        regions_path = "/home/pdi/miriamgf/tesis/Autoencoders/Regions/regions.mat"
+
+        experiment_dir=f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/{algorithm_ID}/"
+        model_path_DL=experiment_dir+f"reconstructions_by_model_{algorithm_ID}.mat"
+        weights_path = experiment_dir + "model_weights.h5"
+        params_path=experiment_dir+'hyperparams.json'
+
+        #Load params dictionary
+        with open(experiment_dir+"hyperparams.json") as file:
+            params = json.load(file)  # Load the JSON data into a dictionary
+
+        if params["algorithm"]=="OMAMI_VAE":
+            fs=100
+            n_batch=200
+        elif params["algorithm"]=="OMAMI":
+            fs=200
+            n_batch=400
+
+        params["filter_EGM"]=True
+        print(params)
+        print('fs:', fs, ' batch size: ', n_batch)
 
 
-#Borrar
-
-regions=data = loadmat(regions_path)['regions']
-
-missing_values = 2048 - regions.shape[1]
-
-# Toma los últimos valores del array y repítelos para rellenar
-last_values = regions[0, -missing_values:]  # Últimos valores necesarios
-last_values = np.zeros(last_values.shape)
-repeated_values = np.tile(last_values, (missing_values // len(last_values) + 1))[:missing_values]
-
-# Concatenar el array original con los valores repetidos
-extended_regions_dic = np.hstack((regions, repeated_values.reshape(1, -1)))
-extended_regions= {
-    'regions':extended_regions_dic
-}
-import scipy.io
-
-scipy.io.savemat('/home/pdi/miriamgf/tesis/Autoencoders/Regions/extended_regions.mat', extended_regions)
-
-
-EGM_3d_object=EGM_3D_PLOTTER(model_name,
-            model_path_DL,
-            geom_path_CF,
-            output_directory,
-            labels_mode=False,
-            tikhonov=True,
-            time=12)
-
-_, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
-
-EGM_3d_object.plot_3d_regions(extended_regions, extended_regions, faces_heart, vertices_heart)
-
-sys.exit()
+        #---------------------------------------------------------------------------------------------------------------------
+        # LOAD DATA
+        #---------------------------------------------------------------------------------------------------------------------
 
 
 
 
+        # Cargar datos del modelo y la geometría
+
+        all_torsos_names = []
+        for subdir, dirs, files in os.walk(torsos_dir):
+            for file in files:
+                if file.endswith(".mat"):
+                    all_torsos_names.append(file)
+
+        #Load geometry
+
+        SNR_em_noise = None
+        SNR_white_noise = 100
+        patches_oclussion = "PT"
+        experiment_number = 0
+        unfold_code = 1
 
 
 
+        # Load test model
+        (
+            X_1channel,
+            Y,
+            Y_model,
+            egm_tensor,
+            length_list,
+            AF_models,
+            all_model_names,
+            transfer_matrices,
+            y_list
+        ) = LoadDataset_BSPS(
+            params,
+            directory=data_dir,
+            data_type="1channelTensor",
+            n_classes=params["n_classes"],
+            downsampling=False,
+            fs=params["fs"],
+            norm=False,
+            SR=True,
+            n_batch=params["batch_size"],
+            sinusoid=False,
+            SNR_em_noise=SNR_em_noise,
+            SNR_white_noise=SNR_white_noise,
+            patches_oclussion=patches_oclussion,
+            unfold_code=unfold_code,
+            inference=False,
+            select_model = model_name
+        )()
+
+        X_1channel_or=X_1channel.copy()
+        y_list_or=y_list.copy()
+
+        #Unpack
+        torso_name = f"Torso{torso_num}_mod.mat"
+        torso_index = all_torsos_names.index(torso_name)
+        bspm_signal = y_list[torso_index]['y']
+        transfer_matrix= transfer_matrices[torso_index][0]
+
+        #Select only specified torso signals
+        egm_single=np.split(egm_tensor, 10)[torso_index]
+        X_1channel_single=np.split(X_1channel, 10)[torso_index]
+        AF_models_single=np.split(np.array(AF_models), 10)[torso_index]
+        Y_model_single=np.split(np.array(Y_model), 10)[torso_index]
+
+        #normalize 
+        bspm_signal_norm = normalize_array(bspm_signal.T, high=1, low=-1, axis_n=1) 
+        egm_single_norm = normalize_array(egm_single, high=1, low=-1, axis_n=0) 
 
 
 
+        dic_vars={}
 
+        # Preprocess data
+        (
+        X_1channel, egm_tensor, AF_models, Y_model
+        ) = Preprocess_Dataset(
+            params,
+            X_1channel_single,
+            egm_single,
+            list(AF_models_single),
+            Y_model,
+            dic_vars,
+            Y,
+            all_model_names,
+            transfer_matrices,
+            experiment_dir,
+            norm_egm=True,
+            inference=True
+        )()
 
-#---------------------------------------------------------------------------------------------------------------------
-# LOAD DATA
-#---------------------------------------------------------------------------------------------------------------------
-
-
-
-
-# Cargar datos del modelo y la geometría
-
-all_torsos_names = []
-for subdir, dirs, files in os.walk(torsos_dir):
-    for file in files:
-        if file.endswith(".mat"):
-            all_torsos_names.append(file)
-
-#Load geometry
-
-SNR_em_noise = None
-SNR_white_noise = 100
-patches_oclussion = "PT"
-experiment_number = 0
-unfold_code = 1
-
-
-
-# Load test model
-(
-    X_1channel,
-    Y,
-    Y_model,
-    egm_tensor,
-    length_list,
-    AF_models,
-    all_model_names,
-    transfer_matrices,
-    y_list
-) = LoadDataset_BSPS(
-    params,
-    directory=data_dir,
-    data_type="1channelTensor",
-    n_classes=params["n_classes"],
-    downsampling=False,
-    fs=params["fs"],
-    norm=False,
-    SR=True,
-    n_batch=params["batch_size"],
-    sinusoid=False,
-    SNR_em_noise=SNR_em_noise,
-    SNR_white_noise=SNR_white_noise,
-    patches_oclussion=patches_oclussion,
-    unfold_code=unfold_code,
-    inference=False,
-    select_model = model_name
-)()
-
-X_1channel_or=X_1channel.copy()
-y_list_or=y_list.copy()
-
-#Unpack
-torso_name = f"Torso{torso_num}_mod.mat"
-torso_index = all_torsos_names.index(torso_name)
-bspm_signal = y_list[torso_index]['y']
-transfer_matrix= transfer_matrices[torso_index][0]
-
-#Select only specified torso signals
-egm_single=np.split(egm_tensor, 10)[torso_index]
-X_1channel_single=np.split(X_1channel, 10)[torso_index]
-AF_models_single=np.split(np.array(AF_models), 10)[torso_index]
-Y_model_single=np.split(np.array(Y_model), 10)[torso_index]
-
-#normalize 
-bspm_signal_norm = normalize_array(bspm_signal.T, high=1, low=-1, axis_n=1) 
-egm_single_norm = normalize_array(egm_single, high=1, low=-1, axis_n=0) 
+        rows = X_1channel.shape[0]
+        divisible_rows = (rows // n_batch) * n_batch
+        #batch gen
+        bsps_batches = reshape(
+                        X_1channel,
+                        (
+                            int(len(X_1channel) / n_batch),
+                            n_batch,
+                            X_1channel.shape[1],
+                            X_1channel.shape[2],
+                            1,
+                        ),
+                    )
+        egm_batches = reshape(
+                        egm_tensor,
+                        (
+                            int(len(egm_tensor) / n_batch),
+                            n_batch,
+                            egm_tensor.shape[1],
+                            1,
+                        ),
+                    )
 
 
 
-dic_vars={}
+        print("Computing inference")
 
-# Preprocess data
-(
-  X_1channel, egm_tensor, AF_models, Y_model
-) = Preprocess_Dataset(
-    params,
-    X_1channel_single,
-    egm_single,
-    list(AF_models_single),
-    Y_model,
-    dic_vars,
-    Y,
-    all_model_names,
-    transfer_matrices,
-    experiment_dir,
-    norm_egm=True,
-    inference=True
-)()
-
-rows = X_1channel.shape[0]
-divisible_rows = (rows // n_batch) * n_batch
-#batch gen
-bsps_batches = reshape(
-                X_1channel,
-                (
-                    int(len(X_1channel) / n_batch),
-                    n_batch,
-                    X_1channel.shape[1],
-                    X_1channel.shape[2],
-                    1,
-                ),
-            )
-egm_batches = reshape(
-                egm_tensor,
-                (
-                    int(len(egm_tensor) / n_batch),
-                    n_batch,
-                    egm_tensor.shape[1],
-                    1,
-                ),
-            )
+        # Inference
+        try:
+            model = load_model(weights_path)
+        except:
+            model = load_model(weights_path, custom_objects={'SamplingLayer': SamplingLayer})
 
 
+        prediction = model.predict(
+            bsps_batches, batch_size=1
+        )  # x_test=[#batches, batch_size, 12, 32, 1]
 
-print("Computing inference")
+        prediction = prediction[1]
+        prediction_flat = prediction.reshape(
+            (prediction.shape[0] * prediction.shape[1], prediction.shape[2])
+        )
+        egm_flat = egm_batches.reshape(
+            (prediction.shape[0] * prediction.shape[1], prediction.shape[2])
+        )
 
-# Inference
-try:
-    model = load_model(weights_path)
-except:
-    model = load_model(weights_path, custom_objects={'SamplingLayer': SamplingLayer})
-
-
-prediction = model.predict(
-    bsps_batches, batch_size=1
-)  # x_test=[#batches, batch_size, 12, 32, 1]
-
-prediction = prediction[1]
-prediction_flat = prediction.reshape(
-    (prediction.shape[0] * prediction.shape[1], prediction.shape[2])
-)
-egm_flat = egm_batches.reshape(
-    (prediction.shape[0] * prediction.shape[1], prediction.shape[2])
-)
-
-prediction = normalize_by_models(prediction_flat, Y_model)
-y_label=normalize_by_models(egm_flat, Y_model)
-time_duration=y_label.shape[0] # num of samples to represent
+        prediction = normalize_by_models(prediction_flat, Y_model)
+        y_label=normalize_by_models(egm_flat, Y_model)
+        time_duration=y_label.shape[0] # num of samples to represent
 
 
-#METRIC OBJECT INSTANCIATION
+        #METRIC OBJECT INSTANCIATION
 
-MetricsObj = Metrics(algorithm_ID=algorithm_ID, model_name=model_name)
-#BSPM
-#---------------------------------------------------------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------------------------------------------------------
-if plot_BSP:
-    print("Plotting BSP...")
+        MetricsObj = Metrics(algorithm_ID=algorithm_ID, model_name=model_name)
+        #BSPM
+        #---------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------
+        if plot_BSP:
+            print("Plotting BSP...")
 
-    BSP_3D_PLOTTER(torso_num,
-                all_torsos_names,
-                y_list_or,
-                X_1channel_or,
-                output_directory,
+            BSP_3D_PLOTTER(torso_num,
+                        all_torsos_names,
+                        y_list_or,
+                        X_1channel_or,
+                        output_directory,
+                        torso_path,
+                        time=time_duration)()
+
+        #Tikhonov
+        #---------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------
+        if plot_Tikhonov or plot_correlation_tik or plot_rmse_tik or plot_correlation_tik or plot_DF_maps_tik:
+
+            ObjTik=TikhonovReconstruction(bspm_signal_norm.T, transfer_matrix, order=0)
+            tik_rec=ObjTik() 
+
+            tik_batches=ObjTik.tik_post_process_to_plot(tik_rec, fs, divisible_rows, n_batch)
+            tik_flat = tik_batches.reshape(
+            (tik_batches.shape[0] * tik_batches.shape[1], tik_batches.shape[2])
+        )
+            tik_rec_norm = normalize_array(tik_flat, high=1, low=-1, axis_n=0) 
+
+            EGM_3d_object=EGM_3D_PLOTTER(model_name,
+                        model_path_DL,
+                        geom_path_CF,
+                        output_directory,
+                        labels_mode=False,
+                        tikhonov=True,
+                        time=time_duration)
+
+            _, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
+
+        if plot_Tikhonov:
+
+            print("Plotting Tikhonov...")
+            EGM_3d_object.plot_3d_mesh_prediction(tik_rec_norm, y_label, faces_heart, vertices_heart)
+
+
+        #DL Predictions
+        #---------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------
+
+        if plot_DL:
+
+            EGM_3d_object=EGM_3D_PLOTTER(model_name,
+                        model_path_DL,
+                        geom_path_CF,
+                        output_directory,
+                        labels_mode=False,
+                        tikhonov=False,
+                        time=time_duration)
+
+            _, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
+
+            print("Plotting DL reconstruction")
+            EGM_3d_object.plot_3d_mesh_prediction(prediction, y_label, faces_heart, vertices_heart)
+
+
+
+        #DF Mapping
+        #---------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------
+
+        if plot_DF_maps_tik:
+
+
+            df_reconstructed, sig_k_rec, phase_rec = freq_pha.kuklik_DF_phase(tik_rec_norm.T, fs=params["fs_sub"])
+            df_label, sig_k_rec, phase_rec = freq_pha.kuklik_DF_phase(y_label.T, fs=params["fs_sub"]) 
+
+            df_reconstructed = np.squeeze(df_reconstructed)
+            df_label = np.squeeze(df_label)
+            print("Plotting DF Maps for ZOT")
+            # Creación del objeto para mapas DF
+            DFMapObject = DF_MAPS_3D_PLOTTER(
+                model_name,
                 torso_path,
-                time=time_duration)()
-
-#Tikhonov
-#---------------------------------------------------------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------------------------------------------------------
-if plot_Tikhonov or plot_correlation_tik or plot_rmse_tik or plot_correlation_tik or plot_DF_maps_tik:
-
-    ObjTik=TikhonovReconstruction(bspm_signal_norm.T, transfer_matrix, order=0)
-    tik_rec=ObjTik() 
-
-    tik_batches=ObjTik.tik_post_process_to_plot(tik_rec, fs, divisible_rows, n_batch)
-    tik_flat = tik_batches.reshape(
-    (tik_batches.shape[0] * tik_batches.shape[1], tik_batches.shape[2])
-)
-    tik_rec_norm = normalize_array(tik_flat, high=1, low=-1, axis_n=0) 
-
-    EGM_3d_object=EGM_3D_PLOTTER(model_name,
-                model_path_DL,
                 geom_path_CF,
                 output_directory,
                 labels_mode=False,
                 tikhonov=True,
-                time=time_duration)
+                time=time_duration
+            )
 
-    _, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
-
-if plot_Tikhonov:
-
-    print("Plotting Tikhonov...")
-    EGM_3d_object.plot_3d_mesh_prediction(tik_rec_norm, y_label, faces_heart, vertices_heart)
+            # Usar el método del objeto para plotear
+            DFMapObject.plot_3d_mesh_label(
+                df_reconstructed, df_label,  vertices_heart,faces_heart, np.min(df_reconstructed), np.max(df_reconstructed)
+            )
 
 
-#DL Predictions
-#---------------------------------------------------------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------------------------------------------------------
+        #DF Mapping
+        #---------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------
 
-if plot_DL:
+        if plot_DF_maps_DL:
 
-    EGM_3d_object=EGM_3D_PLOTTER(model_name,
-                model_path_DL,
+            print("Plotting DF Maps for DL")
+            df_reconstructed, sig_k_rec, phase_rec = freq_pha.kuklik_DF_phase(prediction.T, fs=params["fs_sub"])
+            df_label, sig_k_rec, phase_rec = freq_pha.kuklik_DF_phase(y_label.T, fs=params["fs_sub"])
+
+            df_reconstructed = np.squeeze(df_reconstructed)
+            df_label = np.squeeze(df_label)
+
+            # Creación del objeto para mapas DF
+            DFMapObject = DF_MAPS_3D_PLOTTER(
+                model_name,
+                torso_path,
                 geom_path_CF,
                 output_directory,
                 labels_mode=False,
                 tikhonov=False,
-                time=time_duration)
+                time=time_duration
+            )
 
-    _, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
+            # Usar el método del objeto para plotear
+            DFMapObject.plot_3d_mesh_label(
+                df_reconstructed, df_label,  vertices_heart,faces_heart, np.min(df_reconstructed), np.max(df_reconstructed)
+            )
 
-    print("Plotting DL reconstruction")
-    EGM_3d_object.plot_3d_mesh_prediction(prediction, y_label, faces_heart, vertices_heart)
+        #Correlation DL
+        #---------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------
+        if plot_correlation_DL:
+            print("Plotting Correlation Maps")
+            # Creación del objeto para correlación
+            CorrelationObject = CORRELATION_3D_PLOTTER(
+                model_name,
+                torso_path,
+                geom_path_CF,
+                output_directory,
+                labels_mode=False,
+                tikhonov=False,
+                time=time_duration
+            )
 
+            # Calcular correlación por nodo
+            corr = MetricsObj.correlation_by_node(prediction, y_label)
 
+            # Usar el método del objeto para plotear
 
-#DF Mapping
-#---------------------------------------------------------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------------------------------------------------------
+            CorrelationObject.plot_3d_mesh_label(
+                corr, faces_heart, vertices_heart, min_val_value=-1, max_val_value=1
+            )
 
-if plot_DF_maps_tik:
+        #Correlation TIK
+        #---------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------
+        if plot_correlation_tik:
+            print("Plotting Correlation Maps tik")
+            # Creación del objeto para correlación
+            CorrelationObject = CORRELATION_3D_PLOTTER(
+                model_name,
+                torso_path,
+                geom_path_CF,
+                output_directory,
+                labels_mode=False,
+                tikhonov=True,
+                time=time_duration
+            )
 
+            # Calcular correlación por nodo
+            corr = MetricsObj.correlation_by_node(tik_rec_norm, y_label)
 
-    df_reconstructed, sig_k_rec, phase_rec = freq_pha.kuklik_DF_phase(tik_rec_norm.T, fs=params["fs_sub"])
-    df_label, sig_k_rec, phase_rec = freq_pha.kuklik_DF_phase(y_label.T, fs=params["fs_sub"]) 
+            # Usar el método del objeto para plotear
 
-    df_reconstructed = np.squeeze(df_reconstructed)
-    df_label = np.squeeze(df_label)
-    print("Plotting DF Maps for ZOT")
-    # Creación del objeto para mapas DF
-    DFMapObject = DF_MAPS_3D_PLOTTER(
-        model_name,
-        torso_path,
-        geom_path_CF,
-        output_directory,
-        labels_mode=False,
-        tikhonov=True,
-        time=time_duration
-    )
-
-    # Usar el método del objeto para plotear
-    DFMapObject.plot_3d_mesh_label(
-        df_reconstructed, df_label,  vertices_heart,faces_heart, np.min(df_reconstructed), np.max(df_reconstructed)
-    )
-
-
-#DF Mapping
-#---------------------------------------------------------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------------------------------------------------------
-
-if plot_DF_maps_DL:
-
-    print("Plotting DF Maps for DL")
-    df_reconstructed, sig_k_rec, phase_rec = freq_pha.kuklik_DF_phase(prediction.T, fs=params["fs_sub"])
-    df_label, sig_k_rec, phase_rec = freq_pha.kuklik_DF_phase(y_label.T, fs=params["fs_sub"])
-
-    df_reconstructed = np.squeeze(df_reconstructed)
-    df_label = np.squeeze(df_label)
-
-    # Creación del objeto para mapas DF
-    DFMapObject = DF_MAPS_3D_PLOTTER(
-        model_name,
-        torso_path,
-        geom_path_CF,
-        output_directory,
-        labels_mode=False,
-        tikhonov=False,
-        time=time_duration
-    )
-
-    # Usar el método del objeto para plotear
-    DFMapObject.plot_3d_mesh_label(
-        df_reconstructed, df_label,  vertices_heart,faces_heart, np.min(df_reconstructed), np.max(df_reconstructed)
-    )
-
-#Correlation DL
-#---------------------------------------------------------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------------------------------------------------------
-if plot_correlation_DL:
-    print("Plotting Correlation Maps")
-    # Creación del objeto para correlación
-    CorrelationObject = CORRELATION_3D_PLOTTER(
-        model_name,
-        torso_path,
-        geom_path_CF,
-        output_directory,
-        labels_mode=False,
-        tikhonov=False,
-        time=time_duration
-    )
-
-    # Calcular correlación por nodo
-    corr = MetricsObj.correlation_by_node(prediction, y_label)
-
-    # Usar el método del objeto para plotear
-
-    CorrelationObject.plot_3d_mesh_label(
-        corr, faces_heart, vertices_heart, min_val_value=-1, max_val_value=1
-    )
-
-#Correlation TIK
-#---------------------------------------------------------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------------------------------------------------------
-if plot_correlation_tik:
-    print("Plotting Correlation Maps tik")
-    # Creación del objeto para correlación
-    CorrelationObject = CORRELATION_3D_PLOTTER(
-        model_name,
-        torso_path,
-        geom_path_CF,
-        output_directory,
-        labels_mode=False,
-        tikhonov=True,
-        time=time_duration
-    )
-
-    # Calcular correlación por nodo
-    corr = MetricsObj.correlation_by_node(tik_rec_norm, y_label)
-
-    # Usar el método del objeto para plotear
-
-    CorrelationObject.plot_3d_mesh_label(
-        corr, faces_heart, vertices_heart, min_val_value=-1, max_val_value=1
-    )
+            CorrelationObject.plot_3d_mesh_label(
+                corr, faces_heart, vertices_heart, min_val_value=-1, max_val_value=1
+            )
 
 
 
-#RMSE maps DL
-#---------------------------------------------------------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------------------------------------------------------
+        #RMSE maps DL
+        #---------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------
 
 
-if plot_rmse_DL:
-    print("Plotting RMSE Maps for DL")
-    # Creación del objeto para correlación
-    RMSEObject = RMSE_3D_PLOTTER(
-        model_name,
-        torso_path,
-        geom_path_CF,
-        output_directory,
-        labels_mode=False,
-        tikhonov=False,
-        time=time_duration
-    )
+        if plot_rmse_DL:
+            print("Plotting RMSE Maps for DL")
+            # Creación del objeto para correlación
+            RMSEObject = RMSE_3D_PLOTTER(
+                model_name,
+                torso_path,
+                geom_path_CF,
+                output_directory,
+                labels_mode=False,
+                tikhonov=False,
+                time=time_duration
+            )
 
-    # Calcular correlación por nodo
-    RMSE = MetricsObj.rmse_by_node(prediction, y_label)
+            # Calcular correlación por nodo
+            RMSE = MetricsObj.rmse_by_node(prediction, y_label)
 
-    # Usar el método del objeto para plotear
+            # Usar el método del objeto para plotear
 
-    RMSEObject.plot_3d_mesh_label(
-        RMSE, faces_heart, vertices_heart, min_val_value=0, max_val_value=1
-    )
+            RMSEObject.plot_3d_mesh_label(
+                RMSE, faces_heart, vertices_heart, min_val_value=0, max_val_value=1
+            )
 
-#RMSE maps DL
-#---------------------------------------------------------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------------------------------------------------------
+        #RMSE maps DL
+        #---------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------
 
 
-if plot_rmse_tik:
-    print("Plotting RMSE Maps for Tik")
-    # Creación del objeto para correlación
-    RMSEObject = RMSE_3D_PLOTTER(
-        model_name,
-        torso_path,
-        geom_path_CF,
-        output_directory,
-        labels_mode=False,
-        tikhonov=True,
-        time=time_duration
-    )
+        if plot_rmse_tik:
+            print("Plotting RMSE Maps for Tik")
+            # Creación del objeto para correlación
+            RMSEObject = RMSE_3D_PLOTTER(
+                model_name,
+                torso_path,
+                geom_path_CF,
+                output_directory,
+                labels_mode=False,
+                tikhonov=True,
+                time=time_duration
+            )
 
-    # Calcular correlación por nodo
-    RMSE = MetricsObj.rmse_by_node(tik_rec_norm, y_label)
+            # Calcular correlación por nodo
+            RMSE = MetricsObj.rmse_by_node(tik_rec_norm, y_label)
 
-    # Usar el método del objeto para plotear
+            # Usar el método del objeto para plotear
 
-    RMSEObject.plot_3d_mesh_label(
-        RMSE, faces_heart, vertices_heart, min_val_value=0, max_val_value=1
-    )
+            RMSEObject.plot_3d_mesh_label(
+                RMSE, faces_heart, vertices_heart, min_val_value=0, max_val_value=1
+            )
 
-print('Chapao')
+        print('Chapao')
+        end_ = time.time()
+        print('Execution time one test example : ', end_-start_, 'min')
+
 end = time.time()
-print('Execution time: ', end-start, 'min')
+        
+print('Execution time TOTAL: ', end-start, 'min')

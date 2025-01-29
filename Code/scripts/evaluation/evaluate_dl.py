@@ -222,7 +222,7 @@ class EvaluateDL:
         for cont, patient in enumerate(self.test_patients, start=1):
             X_1channel, egm_tensor, Y_model, _, _, _ = self.load_and_process_patient(patient, cont)
             prediction, y_label = self.run_inference(X_1channel, egm_tensor, Y_model)
-            MetricsObj = Metrics(algorithm_ID=self.algorithm_ID, model_name=patient)
+            MetricsObj = Metrics(algorithm_ID=self.algorithm_ID, model_name=patient, tik=False)
             df_metrics, metrics_all_nodes = MetricsObj.compute_metrics(prediction, y_label, fs=self.fs)
             df_metrics_all_patients.append(df_metrics)
             all_nodes_list.append(metrics_all_nodes)

@@ -30,6 +30,7 @@ class EvaluateTikhonov:
         self.start_time = time.time()
         self.torso_num = torso_num
         self.test_patients=test_patients
+        self.name = ""
 
     def configure(self):
         self.torso_num = 2
@@ -41,6 +42,7 @@ class EvaluateTikhonov:
         self.output_directory = self.experiment_dir
         self.params_path = self.experiment_dir + 'hyperparams.json'
         self.tik= True
+    
 
 
         with open(self.params_path) as file:
@@ -208,9 +210,9 @@ class EvaluateTikhonov:
         #df = pd.DataFrame({"name": self.test_patients, "mean correlation": corr_list, "mean RMSE": rmse_list})
         df=pd.DataFrame(df_metrics_all_patients)
         df_all_nodes=pd.DataFrame(all_nodes_list)
-        output_path1 = self.experiment_dir + "metrics_tik.csv"
+        output_path1 = self.experiment_dir + f"metrics_tik.csv"
         df.to_csv(output_path1, index=False)
-        output_path2 = self.experiment_dir + "metrics_all_nodes_tik.csv"
+        output_path2 = self.experiment_dir + f"metrics_all_nodes_tik.csv"
         df_all_nodes.to_csv(output_path2, index=False)
 
         print("Metrics saved in", output_path1)

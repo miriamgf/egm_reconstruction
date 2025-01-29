@@ -1021,12 +1021,12 @@ class LoadDataset_BSPS:
         )  # instance of class
 
         test_models_deterministic = [
-            "LA_PLAW_140711_arm",
-            "LA_RSPV_CAF_150115",
-            "Simulation_01_200212_001_  5",
-            "Simulation_01_200212_001_ 10",
-            "Simulation_01_200316_001_  3",
-            "Simulation_01_200316_001_  4",
+            "modelLA_PLAW_140711_arm",
+            "modelLA_RSPV_CAF_150115",
+            "modelSimulation_01_200212_001_  5",
+            "modelSimulation_01_200212_001_ 10",
+            "modelSimulation_01_200316_001_  3",
+            "modelSimulation_01_200316_001_  4",
             "Simulation_01_200316_001_  8",
             "Simulation_01_200428_001_004",
             "Simulation_01_200428_001_008",

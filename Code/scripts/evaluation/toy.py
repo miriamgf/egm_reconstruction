@@ -4,19 +4,24 @@ import os
 import json
 sys.path.append("../Code")
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import scipy
 
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
+from scipy.signal import welch, coherence
+from scipy.ndimage import uniform_filter1d
 
 from tools_.preprocess_data import Preprocess_Dataset
 from tools_.load_dataset import LoadDataset_BSPS
 from models.multioutput_VAE import MultiOutput_VAE, SamplingLayer
-from scripts.evaluation.tools_evaluate import normalize_array, downsampling
+from scripts.evaluation.tools_evaluate import normalize_array, downsampling, bandpass_filter
 from scripts.evaluate_function import *
 from tools_.tools_inference import *
 import numpy as np
 from fastdtw import fastdtw
 from scipy.spatial.distance import euclidean
+
+
 
 
 
@@ -219,71 +224,144 @@ prediction = normalize_by_models(prediction_flat, Y_model)
 y_label=normalize_by_models(egm_flat, Y_model)
 
 time_duration=y_label.shape[0] # num of samples to represent
-y_label_red=y_label[0:100, :]
-y_pred_red=prediction[0:100, :]
+
+channel=0
+y_label_red=y_label[:, channel]
+y_pred_red=prediction[:, channel]
 
 
-import numpy as np
-import matplotlib.pyplot as plt
-from fastdtw import fastdtw
-from scipy.spatial.distance import euclidean
 
-# Parámetros
-n_samples = 400  # Número de muestras
-fs = 1000  # Frecuencia de muestreo (Hz)
-t = np.arange(n_samples) / fs  # Vector de tiempo
 
-# Crear señales senoidales con desfase y amplitud sinusoidal
-frequency = 10  # Frecuencia de las señales (Hz)
-base_amplitude = 1  # Amplitud base de las señales
+# Filtrar señales
+y_label_filtered = bandpass_filter(y_label_red, fs, 0.5, 30)
+y_pred_filtered = bandpass_filter(y_pred_red, fs, 0.5, 30)
 
-# Desfase sinusoidal, cambia rápidamente
-A_phase = np.pi / 4  # Amplitud del desfase
-omega_phase = 2 * np.pi * 0.5  # Frecuencia del desfase (mayor para cambio rápido)
+# Alinear las señales
+lag = np.argmax(np.correlate(y_label_filtered, y_pred_filtered, mode="full")) - len(y_label_filtered)
+y_pred_aligned = np.roll(y_pred_filtered, lag)
 
-# Amplitud sinusoidal, cambia con el tiempo
-A_amp = 0.5  # Amplitud de la modulación de amplitud
-omega_amp = 2 * np.pi * 3  # Frecuencia de la modulación de la amplitud
+# Calcular coherencia con señales alineadas
+nperseg_val = 100  # Ajustar tamaño de ventana
+noverlap_val = nperseg_val // 2  # 50% de solapamiento
 
-# Desfase y amplitud sinusoidal
-phase_shift_sine = A_phase * np.sin(omega_phase * t)  # Desfase sinusoidal
-amplitude_sine = base_amplitude + A_amp * np.sin(omega_amp * t)  # Amplitud sinusoidal
-# Señal "real" (sin desfase y amplitud variable)
-y_label_channel = base_amplitude * np.sin(2 * np.pi * frequency * t)
+f_coh, Cxy = coherence(y_pred_aligned, y_label_filtered, fs=fs, nperseg=nperseg_val, noverlap=noverlap_val)
 
-# Señal "predicha" (con desfase y amplitud sinusoidal)
-prediction_channel = amplitude_sine * np.sin(2 * np.pi * frequency * t + phase_shift_sine)
 
-# Convertir las señales a una lista de tuplas para DTW (requiere formato de tuplas)
-y_label_tuples = [(y,) for y in y_label_channel]
-prediction_tuples = [(p,) for p in prediction_channel]
+# Suavizar coherencia para reducir ruido
+Cxy_smoothed = uniform_filter1d(Cxy, size=5)
 
-# Calcular DTW para el canal
-distance, path = fastdtw(y_label_tuples, prediction_tuples, dist=euclidean)
+# Calcular promedio de coherencia en el ROI
+ROI_indices = (f_coh >= 0.5) & (f_coh <= 30)
+coherence_mean_ROI = np.mean(Cxy[ROI_indices])
+print(f"Mean Coherence in ROI (0.5–30 Hz): {coherence_mean_ROI:.3f}")
 
-# Mostrar resultados
-print(f"Distancia DTW: {distance}")
-print(f"Camino óptimo (primeros 10 pares): {path[:10]}")
-
-# Visualizar la alineación temporal
-plt.figure(figsize=(12, 6))
-plt.plot(t, y_label_channel, label="Señal Real", color="blue")
-plt.plot(t, prediction_channel, label="Señal Predicha", color="orange", alpha=0.7)
-
-# Añadir líneas que conecten las muestras alineadas
-for (i, j) in path:
-    plt.plot([t[i], t[j]], [y_label_channel[i], prediction_channel[j]], color="gray", alpha=0.5)
-
-plt.title(f"Alineación Temporal con DTW. Distancia = {distance}")
-plt.xlabel("Tiempo (s)")
-plt.ylabel("Amplitud")
+# Graficar coherencia
+plt.figure()
+plt.plot(f_coh, Cxy, label="Coherence (Original)")
+plt.plot(f_coh, Cxy_smoothed, label="Coherence (Smoothed)")
+plt.xlabel("Frequency [Hz]")
+plt.ylabel("Coherence")
+plt.title("Coherence with Butterworth Filtering")
+plt.xlim([0, 40])
+plt.ylim([0, 1])
 plt.legend()
-plt.grid(alpha=0.3)
-
-# Guardar la imagen
-output_directory = "./scripts/output/metrics_figures/"  # Asegúrate de tener un directorio de salida
-path_to_save = output_directory + f"Sinusoidal_DTW_Distance_senoid_{distance:.2f}.png"
-plt.savefig(path_to_save)
-print('saved in:', path_to_save)
-plt.close()
+plt.grid()
+plt.savefig(output_directory + f"coh_Coherence_smooth.png")
+print('Saved in ', output_directory + "coh_Power_Spectral_Density.png")
 plt.show()
+
+# Graficar señales originales y filtradas
+plt.figure()
+plt.plot(y_label_red, label="Ground truth (Original)", alpha=0.5)
+plt.plot(y_label_filtered, label="Ground truth (Filtered)")
+plt.plot(y_pred_filtered, label="Prediction (Filtered)")
+plt.plot(y_pred_aligned, label="Prediction (Aligned)")
+plt.xlabel("Samples")
+plt.ylabel("Amplitude")
+plt.title("Signals (Original, Filtered, and Aligned)")
+plt.legend()
+plt.grid()
+plt.show()
+
+
+
+nperseg_range=[25,50, 100, 125, 150, 200, 250, 300, 350]
+for nperseg_i in nperseg_range:
+    nperseg_val=nperseg_i
+
+    f_coh, Cxy = coherence(y_pred_aligned, y_label_filtered, fs=fs, nperseg=nperseg_val, noverlap=nperseg_val//2)
+
+    # Suavizar coherencia para reducir ruido
+    Cxy_smoothed = uniform_filter1d(Cxy, size=5)
+
+    f1, Pxx1 = scipy.signal.welch(
+                y_pred_filtered,
+                fs,
+                nperseg=nperseg_val,
+                noverlap=nperseg_val // 2,
+                scaling="density",
+                detrend="linear"
+            )
+
+    f2, Pxx2 = scipy.signal.welch(
+                y_label_filtered,
+                fs,
+                nperseg=nperseg_val,
+                noverlap=nperseg_val // 2,
+                scaling="density",
+                detrend="linear"
+            )
+
+
+    # Calcular la coherencia espectral entre las dos señales
+    f_coh, Cxy = coherence(y_pred_filtered, y_label_filtered, fs=fs, nperseg=nperseg_val)#,noverlap=nperseg_val // 2  )#, noverlap=256)
+
+
+    # Gráfica 2: Densidad espectral de potencia
+    plt.figure(tight_layout=True)
+    plt.plot(f1, Pxx1, label="Prediction")
+    plt.plot(f2, Pxx2, label="Ground truth")
+    plt.xlim([0, 40])
+    plt.xlabel("Frequency [Hz]")
+    plt.ylabel("Power spectral density")
+    plt.title("Power spectral density")
+    plt.legend()
+    plt.grid()
+    plt.savefig(output_directory + f"coh_Power_Spectral_Density{nperseg_i}.png")
+    print('Saved in ', output_directory + "coh_Power_Spectral_Density.png")
+    plt.close()
+
+    # Calcular promedio de coherencia en el ROI
+    ROI_indices = (f_coh >= 0.5) & (f_coh <= 30)
+    coherence_mean_ROI = np.mean(Cxy[ROI_indices])
+    print(f"Mean Coherence in ROI (0.5–30 Hz): {coherence_mean_ROI:.3f}")
+
+    # Graficar coherencia
+    plt.figure()
+    plt.plot(f_coh, Cxy, label="Coherence (Original)")
+    plt.plot(f_coh, Cxy_smoothed, label="Coherence (Smoothed)")
+    plt.xlabel("Frequency [Hz]")
+    plt.ylabel("Coherence")
+    plt.title("Coherence with Butterworth Filtering")
+    plt.xlim([0, 40])
+    plt.ylim([0, 1])
+    plt.legend()
+    plt.grid()
+    plt.savefig(output_directory + f"coh_Coherence_smooth_{nperseg_i}.png")
+    print('Saved in ', output_directory + "coh_Power_Spectral_Density.png")
+    plt.show()
+
+# Graficar señales originales y filtradas
+plt.figure()
+plt.plot(y_label_red, label="Ground truth (Original)", alpha=0.5)
+plt.plot(y_label_filtered, label="Ground truth (Filtered)")
+plt.plot(y_pred_filtered, label="Prediction (Filtered)")
+plt.plot(y_pred_aligned, label="Prediction (Aligned)")
+plt.xlabel("Samples")
+plt.ylabel("Amplitude")
+plt.title("Signals (Original, Filtered, and Aligned)")
+plt.legend()
+plt.grid()
+plt.show()
+
+    
