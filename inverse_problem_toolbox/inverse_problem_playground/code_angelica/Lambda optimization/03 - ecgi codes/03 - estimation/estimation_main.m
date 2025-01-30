@@ -101,7 +101,11 @@ fs_d = fs / factor;
 
 A = MTransfer;
 
+%% to do PCA
+%PCA
+
 %% Estimation Calculation
+
 
 
 
