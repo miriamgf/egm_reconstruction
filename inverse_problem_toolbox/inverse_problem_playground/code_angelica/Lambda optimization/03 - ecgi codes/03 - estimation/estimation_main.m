@@ -101,8 +101,89 @@ fs_d = fs / factor;
 
 A = MTransfer;
 
-%% to do PCA
-%PCA
+%% PCA
+
+%Compute PCA on bsps
+% Normalize rows of y_filt_down
+row_max = max(abs(y_filt_down), [], 2);
+y_normalized = bsxfun(@rdivide, y_filt_down, row_max);
+
+data_centered = y_normalized - mean(y_normalized, 1);
+
+%[coeff, score, latent] = pca(y_normalized'); % coeff = components, score = transformed data
+% Step 2: Perform SVD
+[U, S, V] = svd(data_centered, 'econ');  % 'econ' returns the economical decomposition
+
+% U contains the left singular vectors (scores)
+% S contains the singular values (root of eigenvalues)
+% V contains the right singular vectors (principal components)
+% Singular values (sqrt of eigenvalues)
+singular_values = diag(S);
+
+% Variance explained by each principal component (in percentage)
+explained_variance = (singular_values.^2) / sum(singular_values.^2) * 100;
+
+% Step 4: The transformed data (scores) is given by U * S
+transformed = U * S;  % This is the projection of the data onto the principal components
+
+% Step 5: Visualize the explained variance
+figure;
+plot(cumsum(explained_variance), 'o-');
+title('Cumulative Explained Variance');
+xlabel('Number of Components');
+ylabel('Explained Variance (%)');
+grid on;
+
+
+% Visualize principal components
+t = (0:size(signal,2)-1) / fs; 
+tt = (0:size(y_normalized,2)-1) / fs_d; 
+figure;
+for i = 1:25
+    subplot(25, 1, i);
+    if i == 1
+        plot(t,raw_signal(1,:), 'b');
+        title('Atrial signal');
+        axis off;
+    elseif i == 2
+        plot(t,raw_signal(28,:), 'b');
+        title('Ventricle signal');
+        axis off;
+    else
+        plot(tt,score(:,i-2), 'b');
+        title(['Component ', num2str(i-2)], 'FontSize', 10);
+        axis off;  % Remove axes for better visualization
+    end
+end
+
+% Allow user to select components interactively or specify indices
+disp(['Total Components: ', num2str(size(coeff, 1))]);
+selected_components = input('Enter the the max number of components to recons (e.g., 10): ', 's');
+selected_indices = str2num(selected_components); % Convert input string to numeric array
+
+% Assuming U, S, V from the SVD of the centered data matrix
+
+% Step 1: Select the desired components
+% For example, let's say we want to use the first 'k' components for reconstruction
+k = 5;  % Number of components to retain
+V_selected = V(:, 1:k);  % Select the first k principal components (basis)
+U_selected = U(:, 1:k);  % Select the first k left singular vectors (scores)
+S_selected = S(1:k, 1:k);  % Select the first k singular values (diagonal matrix)
+%V_selected = V(:, 1:k);  % Select the first k right singular vectors (principal components)
+reconstructed_data = U_selected * S_selected * V_selected';  % Matrix multiplication
+% Step 2: Calculate the scores (projection of the data onto the selected components)
+%scores_selected = data_centered * V_selected;  % Project the data onto the selected components
+
+% Step 3: Reconstruct the data using the selected components and scores
+%reconstructed_data = scores_selected * V_selected';  % Multiply scores by the selected components' transpose
+
+% Step 4: If the data was centered initially, add back the mean to get the full reconstruction
+reconstructed_data_full = reconstructed_data + mean(data_centered, 1);
+figure()
+plot(y_filt_down(130,:)/max(y_filt_down(130,:)))
+hold on
+plot(reconstructed_data_full(130,:)/max(reconstructed_data_full(130,:)))
+
 
 %% Estimation Calculation
 
@@ -142,6 +223,12 @@ SNR = 100; % Signal-to-noise ratio; it will only be used in the l-curve; set it 
 % DSVD
 %[x_hat, lambda_opt] = dsvd (A, interp_signal(:, est_start_sample:est_end_sample), lambda, SNR, compute_params);
 
+%% Reconstruction using PCA filtered torso
+% Reconstruct with selected ventricle components and Tikhonov regularization
+[x_hat_pca_v, lambda_opt_pca_v, magnitude_term_pca_v, error_term_pca_v] = tikhonov(A, AA, L, LL, reconstructed_data_full(:, est_start_sample:est_end_sample), lambda, SNR, order, reg_param_method, compute_params);
+    
+% Non-selected atria
+%[x_hat_pca_a, lambda_opt_pca_a, magnitude_term_pca_a, error_term_pca_a] = tikhonov(A, AA, L, LL, reconstructed_not_selected(:, est_start_sample:est_end_sample), lambda, SNR, order, reg_param_method, compute_params);
 
 %% Plot signals and compare them with real electrograms
 
@@ -172,7 +259,8 @@ for i = 17:32
     plot(t,raw_signal(idx_egm,4000*2-d:4000*3-(d+1))/max(abs(raw_signal(idx_egm,4000*2:4000*2.3))))
     hold on
     plot(tt,-x_hat(idx_recons,:)/max(abs(x_hat(idx_recons,:))))
-    legend('EGM','Recons')
+    plot(tt,-x_hat_pca_v(idx_recons,:)/max(abs(x_hat_pca_v(idx_recons,:))))
+    legend('EGM','Recons','PCA_v')
 
 end
 %% Plot All Signals
