@@ -5,7 +5,7 @@ import json
 sys.path.append("../Code")
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import scipy
-
+import pywt
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
 from scipy.signal import welch, coherence
@@ -14,17 +14,17 @@ from scipy.ndimage import uniform_filter1d
 from tools_.preprocess_data import Preprocess_Dataset
 from tools_.load_dataset import LoadDataset_BSPS
 from models.multioutput_VAE import MultiOutput_VAE, SamplingLayer
+from tools_.tools_inference import postprocess_prediction
 from scripts.evaluation.tools_evaluate import normalize_array, downsampling, bandpass_filter
 from scripts.evaluate_function import *
 from tools_.tools_inference import *
+from scripts.evaluation.metrics import Metrics
+
 import numpy as np
 from fastdtw import fastdtw
 from scipy.spatial.distance import euclidean
-
-
-
-
-
+from scripts.evaluation.metrics import deflexion_detection
+from scripts.evaluation.tools_evaluate import *
 import time
 start = time.time()
 
@@ -44,10 +44,19 @@ plot_DF_maps_DL = False
 plot_DF_maps_tik = False
 
 torso_num=2
-model_name = ["Simulation_01_200212_001_  5"]
-#model_name = ["LA_RSPV_CAF_150115"]
+test_patients = ["Simulation_01_200316_001_  3","Simulation_01_200212_001_ 10",
+            "LA_PLAW_140711_arm", "LA_RSPV_CAF_150115",
+            "Simulation_01_200212_001_  5", "Simulation_01_200212_001_ 10",
+            "Simulation_01_200316_001_  3", "Simulation_01_200316_001_  4",
+            "Simulation_01_200316_001_  8", "Simulation_01_200428_001_004",
+            "Simulation_01_200428_001_008", "Simulation_01_200428_001_010",
+            "Simulation_01_210119_001_001", "Simulation_01_210208_001_002"
+        ]
 
-algorithm_ID= "OMAMI_VAE_Optuna_1"
+#model_name = ["Simulation_01_200212_001_  5"]
+#model_name = ["Simulation_01_200316_001_  3"]
+algorithm_ID= ["OMAMI_VAE_no_filt", "OMAMI_no_filt"]
+algorithm_ID= "OMAMI_VAE_no_filt"
 
 
 torso_path=f"/home/pdi/miriamgf/tesis/Autoencoders/Labeled_torsos/Torso{torso_num}_mod.mat"
@@ -67,14 +76,13 @@ params_path=experiment_dir+'hyperparams.json'
 with open(experiment_dir+"hyperparams.json") as file:
     params = json.load(file)  # Load the JSON data into a dictionary
 
-if params["algorithm"]=="OMAMI_VAE":
+if params["algorithm"]=="OMAMI_VAE" or params["algorithm"]=="OMAMI_VAE_no_filt":
     fs=100
     n_batch=200
-elif params["algorithm"]=="OMAMI":
+elif params["algorithm"]=="OMAMI" or params["algorithm"]=="OMAMI_no_filt":
     fs=200
     n_batch=400
 
-params["filter_EGM"]=True
 print(params)
 print('fs:', fs, ' batch size: ', n_batch)
 
@@ -100,268 +108,273 @@ SNR_white_noise = 100
 patches_oclussion = "PT"
 experiment_number = 0
 unfold_code = 1
+global_better_settings=[]
+for patient in test_patients:
+    model_name=[patient]
+    # Load test model
+    (
+        X_1channel,
+        Y,
+        Y_model,
+        egm_tensor,
+        length_list,
+        AF_models,
+        all_model_names,
+        transfer_matrices,
+        y_list
+    ) = LoadDataset_BSPS(
+        params,
+        directory=data_dir,
+        data_type="1channelTensor",
+        n_classes=params["n_classes"],
+        downsampling=False,
+        fs=params["fs"],
+        norm=False,
+        SR=True,
+        n_batch=params["batch_size"],
+        sinusoid=False,
+        SNR_em_noise=SNR_em_noise,
+        SNR_white_noise=SNR_white_noise,
+        patches_oclussion=patches_oclussion,
+        unfold_code=unfold_code,
+        inference=False,
+        select_model = model_name
+    )()
+
+    X_1channel_or=X_1channel.copy()
+    y_list_or=y_list.copy()
+
+    #Unpack
+    torso_name = f"Torso{torso_num}_mod.mat"
+    torso_index = all_torsos_names.index(torso_name)
+    bspm_signal = y_list[torso_index]['y']
+    transfer_matrix= transfer_matrices[torso_index][0]
+
+    #Select only specified torso signals
+    egm_single=np.split(egm_tensor, 10)[torso_index]
+    X_1channel_single=np.split(X_1channel, 10)[torso_index]
+    AF_models_single=np.split(np.array(AF_models), 10)[torso_index]
+    Y_model_single=np.split(np.array(Y_model), 10)[torso_index]
+
+    #normalize 
+    bspm_signal_norm = normalize_array(bspm_signal.T, high=1, low=-1, axis_n=1) 
+    egm_single_norm = normalize_array(egm_single, high=1, low=-1, axis_n=0) 
+
+    dic_vars={}
+
+    # Preprocess data
+    (
+    X_1channel, egm_tensor, AF_models, Y_model
+    ) = Preprocess_Dataset(
+        params,
+        X_1channel_single,
+        egm_single,
+        list(AF_models_single),
+        Y_model,
+        dic_vars,
+        Y,
+        all_model_names,
+        transfer_matrices,
+        experiment_dir,
+        norm_egm=True,
+        inference=True
+    )()
+
+    rows = X_1channel.shape[0]
+    divisible_rows = (rows // n_batch) * n_batch
+    #batch gen
+    bsps_batches = reshape(
+                    X_1channel,
+                    (
+                        int(len(X_1channel) / n_batch),
+                        n_batch,
+                        X_1channel.shape[1],
+                        X_1channel.shape[2],
+                        1,
+                    ),
+                )
+    egm_batches = reshape(
+                    egm_tensor,
+                    (
+                        int(len(egm_tensor) / n_batch),
+                        n_batch,
+                        egm_tensor.shape[1],
+                        1,
+                    ),
+                )
 
 
 
-# Load test model
-(
-    X_1channel,
-    Y,
-    Y_model,
-    egm_tensor,
-    length_list,
-    AF_models,
-    all_model_names,
-    transfer_matrices,
-    y_list
-) = LoadDataset_BSPS(
-    params,
-    directory=data_dir,
-    data_type="1channelTensor",
-    n_classes=params["n_classes"],
-    downsampling=False,
-    fs=params["fs"],
-    norm=False,
-    SR=True,
-    n_batch=params["batch_size"],
-    sinusoid=False,
-    SNR_em_noise=SNR_em_noise,
-    SNR_white_noise=SNR_white_noise,
-    patches_oclussion=patches_oclussion,
-    unfold_code=unfold_code,
-    inference=False,
-    select_model = model_name
-)()
+    print("Computing inference")
 
-X_1channel_or=X_1channel.copy()
-y_list_or=y_list.copy()
-
-#Unpack
-torso_name = f"Torso{torso_num}_mod.mat"
-torso_index = all_torsos_names.index(torso_name)
-bspm_signal = y_list[torso_index]['y']
-transfer_matrix= transfer_matrices[torso_index][0]
-
-#Select only specified torso signals
-egm_single=np.split(egm_tensor, 10)[torso_index]
-X_1channel_single=np.split(X_1channel, 10)[torso_index]
-AF_models_single=np.split(np.array(AF_models), 10)[torso_index]
-Y_model_single=np.split(np.array(Y_model), 10)[torso_index]
-
-#normalize 
-bspm_signal_norm = normalize_array(bspm_signal.T, high=1, low=-1, axis_n=1) 
-egm_single_norm = normalize_array(egm_single, high=1, low=-1, axis_n=0) 
+    # Inference
+    try:
+        model = load_model(weights_path)
+    except:
+        model = load_model(weights_path, custom_objects={'SamplingLayer': SamplingLayer})
 
 
+    prediction = model.predict(
+        bsps_batches, batch_size=1
+    )  # x_test=[#batches, batch_size, 12, 32, 1]
 
-dic_vars={}
+    prediction = prediction[1]
+    prediction_flat = prediction.reshape(
+        (prediction.shape[0] * prediction.shape[1], prediction.shape[2])
+    )
+    egm_flat = egm_batches.reshape(
+        (prediction.shape[0] * prediction.shape[1], prediction.shape[2])
+    )
 
-# Preprocess data
-(
-  X_1channel, egm_tensor, AF_models, Y_model
-) = Preprocess_Dataset(
-    params,
-    X_1channel_single,
-    egm_single,
-    list(AF_models_single),
-    Y_model,
-    dic_vars,
-    Y,
-    all_model_names,
-    transfer_matrices,
-    experiment_dir,
-    norm_egm=True,
-    inference=True
-)()
+    # Postprocess prediction
+    prediction_post=postprocess_prediction(prediction_flat, fs=fs,cutoff_DC=1.5)
+    y_label = tools.remove_mean(egm_flat, cutoff=1.5) 
+    y_label=normalize_array(egm_flat, high=1, low=-1, axis_n=1)
 
-rows = X_1channel.shape[0]
-divisible_rows = (rows // n_batch) * n_batch
-#batch gen
-bsps_batches = reshape(
-                X_1channel,
-                (
-                    int(len(X_1channel) / n_batch),
-                    n_batch,
-                    X_1channel.shape[1],
-                    X_1channel.shape[2],
-                    1,
-                ),
-            )
-egm_batches = reshape(
-                egm_tensor,
-                (
-                    int(len(egm_tensor) / n_batch),
-                    n_batch,
-                    egm_tensor.shape[1],
-                    1,
-                ),
-            )
-
-
-
-print("Computing inference")
-
-# Inference
-try:
-    model = load_model(weights_path)
-except:
-    model = load_model(weights_path, custom_objects={'SamplingLayer': SamplingLayer})
-
-
-prediction = model.predict(
-    bsps_batches, batch_size=1
-)  # x_test=[#batches, batch_size, 12, 32, 1]
-
-prediction = prediction[1]
-prediction_flat = prediction.reshape(
-    (prediction.shape[0] * prediction.shape[1], prediction.shape[2])
-)
-egm_flat = egm_batches.reshape(
-    (prediction.shape[0] * prediction.shape[1], prediction.shape[2])
-)
-
-prediction = normalize_by_models(prediction_flat, Y_model)
-y_label=normalize_by_models(egm_flat, Y_model)
-
-time_duration=y_label.shape[0] # num of samples to represent
-
-channel=0
-y_label_red=y_label[:, channel]
-y_pred_red=prediction[:, channel]
+    custom_path= "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/toy/coherence"
+    coh_list=Metrics().compute_spectral_coherence(prediction_post, y_label, fs, ROI_freq=[1.5,10], nperseg_val=200, plot=True)
+    print(np.mean(coh_list))
+    sys.exit()
 
 
 
 
-# Filtrar señales
-y_label_filtered = bandpass_filter(y_label_red, fs, 0.5, 30)
-y_pred_filtered = bandpass_filter(y_pred_red, fs, 0.5, 30)
-
-# Alinear las señales
-lag = np.argmax(np.correlate(y_label_filtered, y_pred_filtered, mode="full")) - len(y_label_filtered)
-y_pred_aligned = np.roll(y_pred_filtered, lag)
-
-# Calcular coherencia con señales alineadas
-nperseg_val = 100  # Ajustar tamaño de ventana
-noverlap_val = nperseg_val // 2  # 50% de solapamiento
-
-f_coh, Cxy = coherence(y_pred_aligned, y_label_filtered, fs=fs, nperseg=nperseg_val, noverlap=noverlap_val)
-
-
-# Suavizar coherencia para reducir ruido
-Cxy_smoothed = uniform_filter1d(Cxy, size=5)
-
-# Calcular promedio de coherencia en el ROI
-ROI_indices = (f_coh >= 0.5) & (f_coh <= 30)
-coherence_mean_ROI = np.mean(Cxy[ROI_indices])
-print(f"Mean Coherence in ROI (0.5–30 Hz): {coherence_mean_ROI:.3f}")
-
-# Graficar coherencia
-plt.figure()
-plt.plot(f_coh, Cxy, label="Coherence (Original)")
-plt.plot(f_coh, Cxy_smoothed, label="Coherence (Smoothed)")
-plt.xlabel("Frequency [Hz]")
-plt.ylabel("Coherence")
-plt.title("Coherence with Butterworth Filtering")
-plt.xlim([0, 40])
-plt.ylim([0, 1])
-plt.legend()
-plt.grid()
-plt.savefig(output_directory + f"coh_Coherence_smooth.png")
-print('Saved in ', output_directory + "coh_Power_Spectral_Density.png")
-plt.show()
-
-# Graficar señales originales y filtradas
-plt.figure()
-plt.plot(y_label_red, label="Ground truth (Original)", alpha=0.5)
-plt.plot(y_label_filtered, label="Ground truth (Filtered)")
-plt.plot(y_pred_filtered, label="Prediction (Filtered)")
-plt.plot(y_pred_aligned, label="Prediction (Aligned)")
-plt.xlabel("Samples")
-plt.ylabel("Amplitude")
-plt.title("Signals (Original, Filtered, and Aligned)")
-plt.legend()
-plt.grid()
-plt.show()
 
 
 
-nperseg_range=[25,50, 100, 125, 150, 200, 250, 300, 350]
-for nperseg_i in nperseg_range:
-    nperseg_val=nperseg_i
-
-    f_coh, Cxy = coherence(y_pred_aligned, y_label_filtered, fs=fs, nperseg=nperseg_val, noverlap=nperseg_val//2)
-
-    # Suavizar coherencia para reducir ruido
-    Cxy_smoothed = uniform_filter1d(Cxy, size=5)
-
-    f1, Pxx1 = scipy.signal.welch(
-                y_pred_filtered,
-                fs,
-                nperseg=nperseg_val,
-                noverlap=nperseg_val // 2,
-                scaling="density",
-                detrend="linear"
-            )
-
-    f2, Pxx2 = scipy.signal.welch(
-                y_label_filtered,
-                fs,
-                nperseg=nperseg_val,
-                noverlap=nperseg_val // 2,
-                scaling="density",
-                detrend="linear"
-            )
 
 
-    # Calcular la coherencia espectral entre las dos señales
-    f_coh, Cxy = coherence(y_pred_filtered, y_label_filtered, fs=fs, nperseg=nperseg_val)#,noverlap=nperseg_val // 2  )#, noverlap=256)
 
 
-    # Gráfica 2: Densidad espectral de potencia
-    plt.figure(tight_layout=True)
-    plt.plot(f1, Pxx1, label="Prediction")
-    plt.plot(f2, Pxx2, label="Ground truth")
-    plt.xlim([0, 40])
-    plt.xlabel("Frequency [Hz]")
-    plt.ylabel("Power spectral density")
-    plt.title("Power spectral density")
-    plt.legend()
-    plt.grid()
-    plt.savefig(output_directory + f"coh_Power_Spectral_Density{nperseg_i}.png")
-    print('Saved in ', output_directory + "coh_Power_Spectral_Density.png")
-    plt.close()
 
-    # Calcular promedio de coherencia en el ROI
-    ROI_indices = (f_coh >= 0.5) & (f_coh <= 30)
-    coherence_mean_ROI = np.mean(Cxy[ROI_indices])
-    print(f"Mean Coherence in ROI (0.5–30 Hz): {coherence_mean_ROI:.3f}")
 
-    # Graficar coherencia
-    plt.figure()
-    plt.plot(f_coh, Cxy, label="Coherence (Original)")
-    plt.plot(f_coh, Cxy_smoothed, label="Coherence (Smoothed)")
-    plt.xlabel("Frequency [Hz]")
-    plt.ylabel("Coherence")
-    plt.title("Coherence with Butterworth Filtering")
-    plt.xlim([0, 40])
-    plt.ylim([0, 1])
-    plt.legend()
-    plt.grid()
-    plt.savefig(output_directory + f"coh_Coherence_smooth_{nperseg_i}.png")
-    print('Saved in ', output_directory + "coh_Power_Spectral_Density.png")
-    plt.show()
 
-# Graficar señales originales y filtradas
-plt.figure()
-plt.plot(y_label_red, label="Ground truth (Original)", alpha=0.5)
-plt.plot(y_label_filtered, label="Ground truth (Filtered)")
-plt.plot(y_pred_filtered, label="Prediction (Filtered)")
-plt.plot(y_pred_aligned, label="Prediction (Aligned)")
-plt.xlabel("Samples")
-plt.ylabel("Amplitude")
-plt.title("Signals (Original, Filtered, and Aligned)")
-plt.legend()
-plt.grid()
-plt.show()
 
+
+
+
+
+
+
+
+
+
+
+'''
+    wavelet_list= ['db6','db8', 'bior3.5', 'coif3', 'bior3.3', 'bior4.4']
+    threshold_list=[0.2,0.5, 0.8, 1, 1.2]
+    level_list=[2, 3, 4]
+    better_settings=[]
+    cont=0
+    cont_0=0
+    for wav in wavelet_list:
+        for level in level_list:
+            for thr in threshold_list:  
+
+                #prediction_filt=wavelet_filter(prediction,wav,level=level, threshold_mult=thr)
+                prediction_filt=wavelet_filter(prediction_post,wav,level=level, threshold_mult=thr)
+
+                recall, precision, error=Metrics().peak_detector_classif(prediction_post, y_label, fs=fs,  prominence_val=0.3)
+                recall_filt, precision_filt, error=Metrics().peak_detector_classif(prediction_filt, y_label, fs=fs, prominence_val=0.3)
+
+                print([wav, thr, level])
+                print('Precision not filt:', np.mean(precision))
+                print('Precision filt:', np.mean(precision_filt))
+
+                if np.mean(precision_filt)<np.mean(precision):
+                    cont_0+=1
+                elif np.mean(precision_filt)>np.mean(precision):
+                    cont+=1
+                    better_settings.append([wav, thr, level]) #[np.mean(precision), np.mean(precision_filt)]])
+
+
+                    # Assuming precision and precision_filt are lists of length 2048
+                    precision = np.array(precision)  # Convert to numpy array if they are lists
+                    precision_filt = np.array(precision_filt)
+
+                    # Find the indices where precision_filt is greater than precision
+                    best_node = np.where(precision_filt > precision)[0][0]
+
+                    lead=best_node
+
+                    peak_list=deflexion_detection(y_label, fs=fs, prominence_value=0.3)
+                    peak_list_pred=deflexion_detection(prediction, fs=fs, prominence_value=0.3)
+                    peak_list_pred_filt=deflexion_detection(prediction_filt, fs=fs, prominence_value=0.3)
+
+                    peaks_i=peak_list[lead]
+                    lead_i=y_label[:, lead]
+
+                    peaks_pred_i=peak_list_pred[lead]
+                    lead_pred_i=prediction[:, lead]
+
+                    peaks_pred_i_filt=peak_list_pred_filt[lead]
+                    lead_pred_i_filt=prediction_filt[:, lead]
+
+                    #
+
+                    HR=compute_HR_from_RR_dist(peaks_i, fs=fs)
+
+                    n_beats_HR= (HR*(len(lead_i)/fs))/60
+
+                    T_samples=int(len(lead_i)/n_beats_HR)
+                    T_seconds= T_samples/fs
+                    distance_in_samples = int(T_samples*0.3)  #30% del periodo
+                    print('Tolerance:', distance_in_samples)
+
+                    metrics, matching_peaks, matched_peaks_r=compare_r_peaks(peaks_i, peaks_pred_i,lead_i,lead_pred_i, tolerance_samples=distance_in_samples)
+                    metrics_filt, matching_peaks_filt, matched_peaks_r_filt=compare_r_peaks(peaks_i, peaks_pred_i_filt,lead_i,lead_pred_i_filt, tolerance_samples=distance_in_samples)
+
+                    plt.figure(figsize=(30, 20), tight_layout=True)
+                    plt.subplot(2, 1, 1)
+                    plt.plot(y_label[:, lead], color='royalblue')
+                    plt.scatter(peaks_i, lead_i[peaks_i], color='purple', marker='o', label='Real peaks')
+                    plt.scatter(matched_peaks_r, lead_i[matched_peaks_r], color='green', marker='x', s=200, label='Detected peaks original')
+                    plt.scatter(matched_peaks_r_filt, lead_i[matched_peaks_r_filt], color='red', marker='x', s=200, label='Detected peaks wavelet')
+
+                    plt.title('Real EGM')
+                    plt.ylabel('Amplitude mV (normalized)')
+                    plt.xlabel('Samples')
+                    plt.legend()
+                    plt.grid(True)
+
+                    plt.subplot(2, 1, 2)
+                    plt.plot(prediction[:, lead], color='green', alpha=0.5, label="pred")
+                    plt.plot(prediction_post[:, lead], color='grey', label='pred postprocessed')
+
+                    plt.plot(prediction_filt[:, lead], color='red', label='pred post filtered')
+                    #plt.plot(prediction_post_filt[:, lead], color='grey', label='pred postprocessed filtered')
+
+                    #plt.scatter(peaks_i, lead_pred_i[peaks_i], c='purple', marker='o', label='Real peaks')
+                    plt.scatter(peaks_pred_i_filt, lead_pred_i_filt[peaks_pred_i_filt], color='red', marker='o', label='Prediction peaks filt')
+                    plt.scatter(peaks_pred_i, lead_pred_i[peaks_pred_i], c='g', marker='o', label='Prediction peaks in original')
+                    plt.scatter(matching_peaks_filt, lead_pred_i_filt[matching_peaks_filt], color='red', marker='x', s=200, label='Detected peaks filt')
+                    plt.scatter(matching_peaks, lead_pred_i[matching_peaks], color='green', marker='x', s=100, label='Detected peaks in original')
+
+                    plt.ylabel('Amplitude mV (normalized)')
+                    plt.xlabel('Samples')
+                    plt.legend()
+                    plt.title(f" margin = {distance_in_samples} samples. Recall: {str(np.round(metrics['Sensitivity'], 2))}vs. filt:{str(np.round(metrics_filt['Sensitivity'], 2))}. Precision: {str(np.round(metrics['Precision'], 2))} vs filt:{str(np.round(metrics_filt['Precision'], 2))} Error: {str(np.round(metrics['Error'], 2))}") 
+                    plt.grid(True)
+                    plt.plot(y_label[:, lead], alpha=0.5,  color='royalblue', label="Ground truth (EGMs)")
+                    plt.scatter(peaks_i, lead_i[peaks_i], color='purple', marker='o', label='Picos real', alpha=0.3)
+                    plt.suptitle(f"Peak detection patient: {algorithm_ID}   {model_name}. HR={HR}. Wavelet: {wav} threshold: {thr} label:{level}")
+                    path=f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/toy/peak_det_filt_{wav}_{thr}_{level}.png"
+                    plt.savefig(path)
+                    print("Peak detection figure saved in: ", path)
+                    plt.close()
+                
+    print(cont,':', cont_0, 'better:worse')
+    print(better_settings)
+    global_better_settings.append([better_settings])
     
+global_better_settings
+patient_settings = [set(tuple(setting) for setting in patient[0]) for patient in global_better_settings]
+
+# Encontrar la intersección de todas las listas de configuraciones
+common_settings = set.intersection(*patient_settings)
+
+# Convertir de nuevo a lista para visualización
+common_settings = [list(setting) for setting in common_settings]
+print('common setings:', common_settings)
+
+'''

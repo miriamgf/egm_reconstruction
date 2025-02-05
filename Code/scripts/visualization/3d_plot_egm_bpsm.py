@@ -20,6 +20,7 @@ from scripts.visualization.utils.df_map_3d_plotter import DF_MAPS_3D_PLOTTER
 from models.multioutput_VAE import MultiOutput_VAE, SamplingLayer
 from scripts.evaluation.tools_evaluate import normalize_array, downsampling
 from scripts.evaluation.metrics import Metrics
+from tools_.tools_inference import postprocess_prediction
 
 
 from scripts.Tikhonov.compute_tik import TikhonovReconstruction
@@ -38,15 +39,15 @@ import time
 # CONFIGURE
 #---------------------------------------------------------------------------------------------------------------------
 
-plot_BSP = True
-plot_Tikhonov = True
+plot_BSP = False
+plot_Tikhonov = False
 plot_DL= True
-plot_correlation_DL = True
-plot_correlation_tik = True
-plot_rmse_DL = True
-plot_rmse_tik = True
+plot_correlation_DL = False
+plot_correlation_tik = False
+plot_rmse_DL = False
+plot_rmse_tik = False
 
-plot_DF_maps_DL = False
+plot_DF_maps_DL = True
 plot_DF_maps_tik = False
 
 torso_num=2
@@ -63,7 +64,10 @@ test_patients = [["Simulation_01_200212_001_  5"],
                 ["Simulation_01_210119_001_001"], 
                 ["Simulation_01_200428_001_010"],["Simulation_01_200212_001_ 10"]]
 
+test_patients=[["Simulation_01_200212_001_  5"]]
+
 experiment_ID_list=[["OMAMI_repeated"], ["OMAMI_VAE_Optuna_1"], ['OMAMI_no_filt'], ['OMAMI_VAE_no_filt']]
+experiment_ID_list=[["OMAMI_VAE_Optuna_1"]]
 start = time.time()
 cont=0
 for model_name in test_patients:
@@ -107,6 +111,7 @@ for model_name in test_patients:
         print('fs:', fs, ' batch size: ', n_batch)
 
 
+
         #---------------------------------------------------------------------------------------------------------------------
         # LOAD DATA
         #---------------------------------------------------------------------------------------------------------------------
@@ -129,8 +134,6 @@ for model_name in test_patients:
         patches_oclussion = "PT"
         experiment_number = 0
         unfold_code = 1
-
-
 
         # Load test model
         (
@@ -251,6 +254,8 @@ for model_name in test_patients:
 
         prediction = normalize_by_models(prediction_flat, Y_model)
         y_label=normalize_by_models(egm_flat, Y_model)
+
+        prediction=postprocess_prediction(prediction_flat, Y_model)
         time_duration=y_label.shape[0] # num of samples to represent
 
 
@@ -322,7 +327,7 @@ for model_name in test_patients:
 
 
 
-        #DF Mapping
+        #DF Mapping tik
         #---------------------------------------------------------------------------------------------------------------------------------------
         #---------------------------------------------------------------------------------------------------------------------------------------
 
@@ -346,6 +351,16 @@ for model_name in test_patients:
                 time=time_duration
             )
 
+            EGM_3d_object=EGM_3D_PLOTTER(model_name,
+                        model_path_DL,
+                        geom_path_CF,
+                        output_directory,
+                        labels_mode=False,
+                        tikhonov=True,
+                        time=time_duration)
+
+            _, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
+
             # Usar el método del objeto para plotear
             DFMapObject.plot_3d_mesh_label(
                 df_reconstructed, df_label,  vertices_heart,faces_heart, np.min(df_reconstructed), np.max(df_reconstructed)
@@ -360,7 +375,7 @@ for model_name in test_patients:
 
             print("Plotting DF Maps for DL")
             df_reconstructed, sig_k_rec, phase_rec = freq_pha.kuklik_DF_phase(prediction.T, fs=params["fs_sub"])
-            df_label, sig_k_rec, phase_rec = freq_pha.kuklik_DF_phase(y_label.T, fs=params["fs_sub"])
+            df_label, sig_k_label, phase_label = freq_pha.kuklik_DF_phase(y_label.T, fs=params["fs_sub"])
 
             df_reconstructed = np.squeeze(df_reconstructed)
             df_label = np.squeeze(df_label)
@@ -375,10 +390,23 @@ for model_name in test_patients:
                 tikhonov=False,
                 time=time_duration
             )
+            EGM_3d_object=EGM_3D_PLOTTER(model_name,
+                        model_path_DL,
+                        geom_path_CF,
+                        output_directory,
+                        labels_mode=False,
+                        tikhonov=False,
+                        time=time_duration)
+
+            _, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
 
             # Usar el método del objeto para plotear
-            DFMapObject.plot_3d_mesh_label(
+            DFMapObject.plot_3d_mesh_df(
                 df_reconstructed, df_label,  vertices_heart,faces_heart, np.min(df_reconstructed), np.max(df_reconstructed)
+            )
+
+            DFMapObject.plot_3d_mesh_phase(
+                phase_rec, phase_label, vertices_heart,faces_heart, np.min(phase_label), np.max(phase_label)
             )
 
         #Correlation DL
@@ -399,6 +427,16 @@ for model_name in test_patients:
 
             # Calcular correlación por nodo
             corr = MetricsObj.correlation_by_node(prediction, y_label)
+
+            EGM_3d_object=EGM_3D_PLOTTER(model_name,
+                        model_path_DL,
+                        geom_path_CF,
+                        output_directory,
+                        labels_mode=False,
+                        tikhonov=True,
+                        time=time_duration)
+
+            _, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
 
             # Usar el método del objeto para plotear
 
@@ -426,7 +464,15 @@ for model_name in test_patients:
             corr = MetricsObj.correlation_by_node(tik_rec_norm, y_label)
 
             # Usar el método del objeto para plotear
+            EGM_3d_object=EGM_3D_PLOTTER(model_name,
+                        model_path_DL,
+                        geom_path_CF,
+                        output_directory,
+                        labels_mode=False,
+                        tikhonov=True,
+                        time=time_duration)
 
+            _, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
             CorrelationObject.plot_3d_mesh_label(
                 corr, faces_heart, vertices_heart, min_val_value=-1, max_val_value=1
             )
@@ -453,6 +499,17 @@ for model_name in test_patients:
 
             # Calcular correlación por nodo
             RMSE = MetricsObj.rmse_by_node(prediction, y_label)
+
+            EGM_3d_object=EGM_3D_PLOTTER(model_name,
+                        model_path_DL,
+                        geom_path_CF,
+                        output_directory,
+                        labels_mode=False,
+                        tikhonov=False,
+                        time=time_duration)
+
+            _, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
+
 
             # Usar el método del objeto para plotear
 
@@ -483,13 +540,20 @@ for model_name in test_patients:
 
             # Usar el método del objeto para plotear
 
-            RMSEObject.plot_3d_mesh_label(
-                RMSE, faces_heart, vertices_heart, min_val_value=0, max_val_value=1
-            )
+            EGM_3d_object=EGM_3D_PLOTTER(model_name,
+                        model_path_DL,
+                        geom_path_CF,
+                        output_directory,
+                        labels_mode=False,
+                        tikhonov=False,
+                        time=time_duration)
+
+            _, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
 
         print('Chapao')
         end_ = time.time()
         print('Execution time one test example : ', end_-start_, 'min')
+        sys.exit()
 
 end = time.time()
         

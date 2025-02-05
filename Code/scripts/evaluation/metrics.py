@@ -4,20 +4,24 @@ import matplotlib.pyplot as plt
 from fastdtw import fastdtw
 from scipy.spatial.distance import euclidean
 import time
-from scipy.signal import welch, coherence
+from scipy.signal import welch, coherence, csd, butter, filtfilt
 import os
 from scipy.ndimage import uniform_filter1d
+import tools_.tools as tools
+from tools_.tools_inference import postprocess_prediction
+from sklearn.metrics.pairwise import cosine_similarity
 
 
-from scripts.evaluation.tools_evaluate import deflexion_detection, compare_r_peaks, normalize_array, bandpass_filter
+
+from scripts.evaluation.tools_evaluate import deflexion_detection,compare_r_peaks, normalize_array, bandpass_filter, compute_HR_from_RR_dist, custom_coherence
 
 class Metrics:  
-    def __init__(self, algorithm_ID, model_name, tik=False):
+    def __init__(self, algorithm_ID=None, model_name=None, tik=False):
         self.algorithm_ID = algorithm_ID
         self.model_name = model_name
         self.tik = tik
         self.output_directory="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/metrics_figures"
-
+        
 
 
     def correlation_by_node(self,array1, array2):
@@ -75,7 +79,7 @@ class Metrics:
 
             return rmse
 
-    def peak_detector_classif(self,prediction, y_label, fs,d=0.1, plot = False):
+    def peak_detector_classif(self,prediction, y_label, fs,d=0.1, prominence_val=0.2, plot = False):
         '''
 
         This function computes the precision, recall and error of the peak detection algorithm
@@ -100,10 +104,10 @@ class Metrics:
             y_label.shape == prediction.shape
         ), "Los arrays deben tener las mismas dimensiones."
 
-        distance_in_samples = int(d * fs)  
 
-        peak_list=deflexion_detection(y_label, fs=fs, prominence_value=0.3)
-        peak_list_pred=deflexion_detection(prediction, fs=fs, prominence_value=0.3)
+
+        peak_list=deflexion_detection(y_label, fs=fs, prominence_value=prominence_val)
+        peak_list_pred=deflexion_detection(prediction, fs=fs, prominence_value=0.2)
 
         precision_list=[]
         recall_list=[]
@@ -115,6 +119,19 @@ class Metrics:
             lead_i=y_label[:, lead]
             peaks_pred_i=peak_list_pred[lead]
             lead_pred_i=prediction[:, lead]
+
+            #compute HR from real EGM
+            HR=compute_HR_from_RR_dist(peaks_i, fs=fs)
+            n_beats_HR= (HR*(len(lead_i)/fs))/60
+            try:
+                T_samples=int(len(lead_i)/n_beats_HR)
+            except:
+                T_samples=int(0.15*fs)
+            T_seconds= T_samples/fs
+
+            #Compute relative refraction time using a 'k' customized % of T (physiological 30-40%)
+            k=0.3
+            distance_in_samples = int(T_samples*k)
             metrics, matching_peaks, matched_peaks_r=compare_r_peaks(peaks_i, peaks_pred_i,lead_i,lead_pred_i, tolerance_samples=distance_in_samples)
             
             precision_list.append(metrics['Precision'])
@@ -285,9 +302,34 @@ class Metrics:
             plt.show()
 
         return distance_list
+    
+    def cosine_similarity(self,prediction, y_label,fs, nperseg_val=256, plot=True):
+
+        cosim_list = []
+        for channel in range(0,y_label.shape[1]):
+            _, Pxx = welch(prediction[:, channel], fs, nperseg=nperseg_val)
+            _, Pyy = welch(y_label[:, channel], fs, nperseg=nperseg_val)
+            Pxx = Pxx / np.linalg.norm(Pxx)
+            Pyy = Pyy / np.linalg.norm(Pyy)
+            similarity = cosine_similarity(Pxx.reshape(1, -1), Pyy.reshape(1, -1))[0, 0]
+            cosim_list.append(similarity)
+        best_channel=np.argmax(cosim_list)
+        worst_channel=np.argmin(cosim_list)
+
+        channels_to_plot=[best_channel, worst_channel]
+        if plot:
+            for channel in channels_to_plot:
+                if channel == best_channel:
+                    id='best'
+                else:
+                    id='worst'
+            
 
 
-    def compute_spectral_coherence(self,prediction, y_label, fs, ROI_freq=[0.5,30], nperseg_val=256, plot=False):
+        return cosim_list
+
+
+    def compute_spectral_coherence(self,prediction, y_label, fs, ROI_freq=[0.5,30], nperseg_val=256, plot=False, custom_path=None):
         '''
         This function computes the spectral coherence between two signals and returns the mean coherence in the ROI_freq range
         
@@ -305,26 +347,23 @@ class Metrics:
 
         print('Computing spectral coherence...')
 
-
         time_start=time.time()
 
         coh_list = []
         for channel in range(0,y_label.shape[1]):
-
         
             y_label_filtered = bandpass_filter(y_label[:, channel], fs, ROI_freq[0], ROI_freq[1])
             y_pred_filtered = bandpass_filter(prediction[:, channel], fs, ROI_freq[0], ROI_freq[1])
 
             # Alinear las señales
             lag = np.argmax(np.correlate(y_label_filtered, y_pred_filtered, mode="full")) - len(y_label_filtered)
-            y_pred_aligned = np.roll(y_pred_filtered, lag)
+            y_pred_filtered = np.roll(y_pred_filtered, lag)
 
-
-            # Calcular los periodogramas de Welch para ambas señales
-            f1, Pxx1 = welch(y_pred_aligned, fs, nperseg=nperseg_val, noverlap=nperseg_val//2)  # Señal 1
-            f2, Pxx2 = welch(y_label_filtered, fs, nperseg=nperseg_val, noverlap=nperseg_val//2)  # Señal 2
-
-            f_coh, Cxy = coherence(y_pred_aligned, y_label_filtered, fs=fs, nperseg=nperseg_val)#, noverlap=nperseg_val//2)
+            y_label_filtered=normalize_array(y_label_filtered, high=1, low=-1, axis_n=0)
+            y_pred_filtered=normalize_array(y_pred_filtered, high=1, low=-1, axis_n=0)
+        
+            #f_coh, Cxy = custom_coherence(y_pred_filtered, y_label_filtered, fs=fs, nperseg=nperseg_val)
+            f_coh, Cxy = coherence(y_pred_filtered, y_label_filtered, fs=fs, nperseg=nperseg_val)
 
             # Suavizar coherencia para reducir ruido
             Cxy_smoothed = uniform_filter1d(Cxy, size=5)
@@ -347,22 +386,20 @@ class Metrics:
                 y_label_filtered = bandpass_filter(y_label[:, channel], fs, ROI_freq[0], ROI_freq[1])
                 y_pred_filtered = bandpass_filter(prediction[:, channel], fs, ROI_freq[0], ROI_freq[1])
 
-                # Alinear las señales
-                lag = np.argmax(np.correlate(y_label_filtered, y_pred_filtered, mode="full")) - len(y_label_filtered)
-                y_pred_aligned = np.roll(y_pred_filtered, lag)
-
+                y_label_filtered=normalize_array(y_label_filtered, high=1, low=-1, axis_n=0)
+                y_pred_filtered=normalize_array(y_pred_filtered, high=1, low=-1, axis_n=0)
 
                 # Calcular los periodogramas de Welch para ambas señales
-                f1, Pxx1 = welch(y_pred_aligned, fs, nperseg=nperseg_val, noverlap=nperseg_val//2)  
-                f2, Pxx2 = welch(y_label_filtered, fs, nperseg=nperseg_val, noverlap=nperseg_val//2)  
+                f1, Pxx = welch(y_pred_filtered, fs, nperseg=nperseg_val)
+                f2, Pyy = welch(y_label_filtered, fs, nperseg=nperseg_val)
+                f_csd, Pxy = csd(y_pred_filtered, y_label_filtered, fs=fs, nperseg=nperseg_val)
 
-                f_coh, Cxy = coherence(y_pred_aligned, y_label_filtered, fs=fs, nperseg=nperseg_val)#, noverlap=nperseg_val)
-
+                f_coh, Cxy = coherence(y_pred_filtered, y_label_filtered, fs=fs, nperseg=nperseg_val)
 
                 # Suavizar coherencia para reducir ruido
                 Cxy_smoothed = uniform_filter1d(Cxy, size=5)
 
-                plt.figure(tight_layout=True)
+                plt.figure(figsize=(24, 12),tight_layout=True)
                 plt.plot(f_coh, Cxy, label="Coherence (Original)")
                 plt.plot(f_coh, Cxy_smoothed, label="Coherence (Smoothed)")
                 plt.xlabel("Frequency [Hz]")
@@ -373,17 +410,20 @@ class Metrics:
                 plt.grid()
                 if self.tik:
                     path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/tik/coh_Coherence.png"
-                else:  
+                elif not self.tik:  
                     path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/coh_Coherence.png"
+                if custom_path:
+                    path_to_save=f"{custom_path}/coh_Coherence_{id}.png"
                 os.makedirs(os.path.dirname(path_to_save), exist_ok=True)
                 plt.savefig(path_to_save)
                 print('Saved in ', path_to_save)
                 plt.close()
 
 
-                plt.figure(tight_layout=True)
-                plt.plot(f1, Pxx1, label="Prediction")
-                plt.plot(f2, Pxx2, label="Ground truth")
+                plt.figure(figsize=(24, 12),tight_layout=True)
+                plt.plot(f1, Pxx, label="Prediction")
+                plt.plot(f2, Pyy, label="Ground truth")
+                plt.plot(f_csd, Pxy, label="Cross Spectrum Density")
                 plt.xlim([0, 40])
                 plt.xlabel("Frequency [Hz]")
                 plt.ylabel("Power spectral density")
@@ -392,17 +432,18 @@ class Metrics:
                 plt.grid()
                 if self.tik:
                     path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/tik/coh_psd.png"
-                else:  
+                elif not self.tik:  
                     path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/coh_psd.png"
+                if custom_path:
+                    path_to_save=f"{custom_path}/coh_psd_{id}.png"
                 os.makedirs(os.path.dirname(path_to_save), exist_ok=True)
                 plt.savefig(path_to_save)
                 print('Saved in ', path_to_save)
                 plt.close()
 
-
-                plt.figure(tight_layout=True)
+                plt.figure(figsize=(24, 12),tight_layout=True)
                 plt.plot(y_label_filtered, label="Ground truth")
-                plt.plot(y_pred_aligned, label="Prediction")
+                plt.plot(y_pred_filtered, label="Prediction")
                 plt.ylabel("Amplitude (normalized)")
                 plt.xlabel("Samples")
                 plt.title("Time domain")
@@ -410,8 +451,10 @@ class Metrics:
                 plt.grid()
                 if self.tik:
                     path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/tik/coh_time.png"
-                else:  
+                elif not self.tik:  
                     path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/coh_time.png"
+                if custom_path:
+                    path_to_save=f"{custom_path}/coh_tim_{id}.png"
 
                 os.makedirs(os.path.dirname(path_to_save), exist_ok=True)
                 plt.savefig(path_to_save)
@@ -429,14 +472,27 @@ class Metrics:
         """
         # Calcular correlación y RMSE para cada paciente
 
+        #Ensure basic preprocessing 
         
+
+        #y_label_detrend = tools.remove_mean(y_label, fs=fs, cutoff=1.0, axis=1) 
+        y_label_detrend_norm=normalize_array(y_label, high=1, low=-1, axis_n=1)   
+
+        plt.figure()
+        plt.plot(y_label_detrend_norm[:,20], label='detrend_norm')
+        plt.plot(y_label[:, 20], label="original")
+        plt.legend()
+        plt.savefig("/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/toy/filtering2.png")
+        print("/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/toy/filtering2.png")
+        plt.close()
+ 
         corr = self.correlation_by_node(prediction, y_label)
         rmse = self.rmse_by_node(prediction, y_label)
         recall, precision, error  = self.peak_detector_classif(prediction, y_label, fs, d=0.05, plot = True)
         dtw=self.dynamic_time_warping(prediction, y_label, plot=True)
         error_no_nan=[x for x in error if str(x) != 'nan']
         error_peak_det_norm=normalize_array(error_no_nan, high=1, low=0, axis_n=0)
-        coh_list=self.compute_spectral_coherence(prediction, y_label, fs, ROI_freq=[0.5,30], nperseg_val=256, plot=True)
+        coh_list=self.compute_spectral_coherence(prediction, y_label, fs, ROI_freq=[1.5, 10], nperseg_val=fs*2, plot=True)
 
         metrics={"name": self.model_name,"Correlation": np.mean(corr),
                 "RMSE": np.mean(rmse),

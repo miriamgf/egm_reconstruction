@@ -56,7 +56,7 @@ torsos_dir = "../../../Labeled_torsos/"
 # directory = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
 torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
 
-fs = 500
+#fs = 500
 
 # %%
 
@@ -74,42 +74,6 @@ def add_noise(X, SNR=20, fs=50):
     return X_noisy
 
 
-def ECG_filtering(signal, fs, order=2, f_low=3, f_high=30):
-    """
-    Frequency filtering of ECG-EGM.
-    SR model: low-pass filtering, 4th-order Butterworth filter.
-    FA models: bandpass filtering, 4th-order Butterworth filter.
-
-    Parameters:
-        signal (array): signal to process
-        fs (int): sampling rate
-        f_low (int-float): low cut-off frecuency (default=3Hz)
-        f_high (int-float): high cut-off frecuency (default=30Hz)
-        model (string): FA model to assess (default: SR)
-    Returns:
-        proc_ECG_EGM (array): filtered ECG-EGM
-    """
-
-    # Remove DC component
-    sig_temp = remove_mean(signal)
-    # sig_temp = signal
-
-    # Bandpass filtering
-    b, a = sigproc.butter(
-        order, [f_low / round((fs / 2)), f_high / round((fs / 2))], btype="bandpass"
-    )
-
-    proc_ECG_EGM = np.zeros(sig_temp.shape)
-    if sig_temp.ndim == 3:
-        for i in range(sig_temp.shape[1]):
-            for j in range(sig_temp.shape[2]):
-                # for index in range(sig_temp.shape[0]):
-                proc_ECG_EGM[:, i, j] = sigproc.filtfilt(b, a, sig_temp[:, i, j])
-    else:
-        for index in range(0, sig_temp.shape[0]):
-            proc_ECG_EGM[index, :] = sigproc.filtfilt(b, a, sig_temp[index, :])
-
-    return proc_ECG_EGM
 
 
 def load_egms_df(data_dir):
@@ -580,22 +544,91 @@ def load_egms(model_name, directory, sinusoid=False):
     return EG
 
 
-def remove_mean(signal):
+def remove_mean(signal, fs=500,order=2, cutoff=1, axis=0):
     """
-    Remove mean from signal
+    Remove the DC component from a signal and apply a high-pass filter.
 
     Parameters:
-        signal (array): signal to process
+        signal (array): Input signal.
+        fs (float): Sampling frequency.
+        cutoff (float): Cutoff frequency for the high-pass filter.
+        axis (int): Axis along which to process the signal.
 
     Returns:
-        signotmean: signal with its mean removed
+        centered_signal (array): Signal with DC component removed.
     """
-    signotmean = np.zeros(signal.shape)
-    for index in range(0, signal.shape[0]):
-        signotmean[index, :] = sigproc.detrend(signal[index, :], type="constant")
+    signotmean = np.zeros_like(signal)
+    
+    for index in range(signal.shape[axis]):
+        # Select the appropriate axis
+        if axis == 0:
+            data = signal[index, :]
+        else:
+            data = signal[:, index]
+
+        # Step 1: Remove DC component (mean)
+        data_mean_removed = data - np.mean(data)
+
+        # Step 2: Apply a high-pass Butterworth filter
+        order = order
+        b, a = sigproc.butter(order, cutoff / (fs / 2), btype='high', analog=False)
+        filtered_signal = sigproc.filtfilt(b, a, data_mean_removed)
+
+        # Step 3: Detrend if needed (optional)
+        final_signal = sigproc.detrend(filtered_signal, type="constant")
+
+        # Assign back to the appropriate axis
+        if axis == 0:
+            signotmean[index, :] = final_signal
+        else:
+            signotmean[:, index] = final_signal
+
     return signotmean
 
 
+def low_pass_filter(signal, fs=500,order=2, cutoff=15, axis=0):
+    """
+    Remove the DC component from a signal and apply a high-pass filter.
+
+    Parameters:
+        signal (array): Input signal.
+        fs (float): Sampling frequency.
+        cutoff (float): Cutoff frequency for the high-pass filter.
+        axis (int): Axis along which to process the signal.
+
+    Returns:
+        centered_signal (array): Signal with DC component removed.
+    """
+    signotmean = np.zeros_like(signal)
+    
+    for index in range(signal.shape[axis]):
+        # Select the appropriate axis
+        if axis == 0:
+            data = signal[index, :]
+        else:
+            data = signal[:, index]
+
+        # Step 1: Remove DC component (mean)
+        data_mean_removed = data - np.mean(data)
+
+        # Step 2: Apply a high-pass Butterworth filter
+        order = order
+        b, a = sigproc.butter(order, cutoff / (fs / 2), btype='low', analog=False)
+        filtered_signal = sigproc.filtfilt(b, a, data_mean_removed)
+
+        # Step 3: Detrend if needed (optional)
+        final_signal = sigproc.detrend(filtered_signal, type="constant")
+
+        # Assign back to the appropriate axis
+        if axis == 0:
+            signotmean[index, :] = final_signal
+        else:
+            signotmean[:, index] = final_signal
+
+    return signotmean
+
+@staticmethod
+@numba.njit(parallel=False, fastmath=True)
 def forward_problem(EGMs, MTransfer):
     """
     Calculate ECGI forward problem from atrial EGMs
@@ -1104,11 +1137,7 @@ def normalize_array(array, high, low, axis_n=0):
     mins = np.min(array, axis=axis_n)
     maxs = np.max(array, axis=axis_n)
     rng = maxs - mins
-    # if axis_n==1:
-    # array=array.T
     norm_array = high - (((high - low) * (maxs - array)) / rng)
-    # if axis_n==1:
-    # norm_array=norm_array.T
     return norm_array
 
 

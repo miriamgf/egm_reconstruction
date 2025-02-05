@@ -18,6 +18,7 @@ from models.multioutput_VAE import MultiOutput_VAE, SamplingLayer
 from scripts.evaluation.tools_evaluate import normalize_array, downsampling
 from scripts.evaluation.metrics import Metrics
 from tools_.load_dataset import LoadDataset_BSPS
+from tools_.tools_inference import postprocess_prediction
 
 
 from scripts.Tikhonov.compute_tik import TikhonovReconstruction
@@ -38,11 +39,12 @@ test_patients = [
 class EvaluateDL:
 
 
-    def __init__(self, algorithm_ID, test_patients, torso_num = 2):
+    def __init__(self, algorithm_ID, test_patients, torso_num = 2, test_id=''):
         self.algorithm_ID = algorithm_ID
         self.start_time = time.time()
         self.torso_num = torso_num
         self.test_patients=test_patients
+        self.test_id=test_id
 
 
     def configure(self):
@@ -127,11 +129,19 @@ class EvaluateDL:
             select_model=model_name,
         )()
 
+        plt.plot(figsize=(20, 10))
+        plt.plot(egm_tensor[0:500, 0])
+        plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/toy/egm_filt.png')
+        print("/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/toy/egm_filt.png")
+        plt.close()
+
+
         # Preparar datos para inferencia
         torso_index = self.all_torsos_names.index(f"Torso{self.torso_num}_mod.mat")
         bspm_signal = y_list[torso_index]["y"]
         transfer_matrix = transfer_matrices[torso_index][0]
-        egm_single = normalize_array(np.split(egm_tensor, 10)[torso_index], high=1, low=-1, axis_n=0)
+        egm_single = np.split(egm_tensor, 10)[torso_index]
+
 
         #Select only specified torso signals
         egm_single=np.split(egm_tensor, 10)[torso_index]
@@ -140,8 +150,8 @@ class EvaluateDL:
         Y_model_single=np.split(np.array(Y_model), 10)[torso_index]
 
         #normalize 
-        bspm_signal_norm = normalize_array(bspm_signal.T, high=1, low=-1, axis_n=1) 
-        egm_single_norm = normalize_array(egm_single, high=1, low=-1, axis_n=0) 
+        #bspm_signal_norm = normalize_array(bspm_signal.T, high=1, low=-1, axis_n=1) 
+        #egm_single_norm = normalize_array(egm_single, high=1, low=-1, axis_n=0) 
 
         print(X_1channel.shape, egm_tensor.shape, Y_model.shape)    
 
@@ -205,11 +215,20 @@ class EvaluateDL:
         prediction_flat = prediction.reshape(prediction.shape[0] * prediction.shape[1], prediction.shape[2])
         egm_flat = egm_tensor.reshape(prediction.shape[0] * prediction.shape[1], prediction.shape[2])
 
-        # Normalización
-        prediction = normalize_by_models(prediction_flat, Y_model)
-        y_label = normalize_by_models(egm_flat, Y_model)
+        return prediction_flat, egm_flat
+    
+    def postprocess_data_DL(self, prediction, y_label):
+        '''
+        This function applies postprocessing to enchance AI predictions including
 
-        return prediction, y_label
+            - removing DC component + detrending
+            - Low pass filter to remove noise (noise considered f> FPA_cutoff)
+            - normalizing -1 and 1
+        '''
+
+        prediction_post=postprocess_prediction(prediction, fs=self.fs, FPA_cutoff=12,cutoff_DC=1, axis=1)
+
+        return prediction_post
     
     
     def run(self):
@@ -222,6 +241,7 @@ class EvaluateDL:
         for cont, patient in enumerate(self.test_patients, start=1):
             X_1channel, egm_tensor, Y_model, _, _, _ = self.load_and_process_patient(patient, cont)
             prediction, y_label = self.run_inference(X_1channel, egm_tensor, Y_model)
+            prediction=self.postprocess_data_DL(prediction)
             MetricsObj = Metrics(algorithm_ID=self.algorithm_ID, model_name=patient, tik=False)
             df_metrics, metrics_all_nodes = MetricsObj.compute_metrics(prediction, y_label, fs=self.fs)
             df_metrics_all_patients.append(df_metrics)
@@ -232,9 +252,9 @@ class EvaluateDL:
         df=pd.DataFrame(df_metrics_all_patients)
         df_all_nodes=pd.DataFrame(all_nodes_list)
         
-        output_path1 = self.experiment_dir + "metrics_dl.csv"
+        output_path1 = self.experiment_dir + f"metrics_dl_{self.test_id}.csv"
         df.to_csv(output_path1, index=False)
-        output_path2 = self.experiment_dir + "metrics_all_nodes_dl.csv"
+        output_path2 = self.experiment_dir + f"metrics_all_nodes_dl_{self.test_id}.csv"
         df_all_nodes.to_csv(output_path2, index=False)
 
 

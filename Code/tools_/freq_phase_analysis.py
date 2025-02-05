@@ -69,10 +69,10 @@ def kuklik_DF_phase(signals, fs):
     """
 
     # Define initial parameters
-    lowf = 1.5
-    highf = 25
-    period_min = 130e-3
-    period_max = 280e-3
+    lowf = 0.5                      #1.5
+    highf = 12                      #25
+    period_min = 0.14               # capturar ritmos rápidos   #Original: 130e-3
+    period_max = 1.4                #capturar ritmos lentos 1 Hz        #Original: 280e-3
 
     # Define sizes
     siglen = np.shape(signals)[1]
@@ -96,7 +96,7 @@ def kuklik_DF_phase(signals, fs):
     pd[:] = np.nan
     tvec = np.arange(1 / fs, siglen / fs, 1 / fs)  # Time at each sample in seconds
     seglength = 2 * fs
-    n_overlap = fs
+    n_overlap = fs//3
     nFFT = np.power(200, 2)
     # Zero pad FFT to get finer resolution (interpolates spectrum)
 
@@ -116,7 +116,9 @@ def kuklik_DF_phase(signals, fs):
             # Find DF of this chunk
             if np.size(sigseg) >= seglength:  # Ensure we hace enough signal
                 f, pxx = sigproc.welch(
-                    sigseg, nperseg=seglength, noverlap=n_overlap, nfft=nFFT, fs=fs
+                    sigseg, nperseg=seglength, #noverlap=n_overlap,
+                    nfft=nFFT,
+                    fs=fs
                 )
                 invf = np.divide(1, f)
                 pxx = pxx[np.logical_and(invf >= period_min, invf <= period_max)]

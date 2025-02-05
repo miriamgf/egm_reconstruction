@@ -449,6 +449,7 @@ class Visualize2D:
         for model_name in self.test_patients:
 
             print(f"Loading patient {cont}/{len(self.test_patients)}" )
+            cont+=1
 
             for algorithm_ID in self.experiment_ID_list:
                 tik_rec_centered, prediction_centered, egm_centered, X_1channel_centered=self.process_patient(model_name, algorithm_ID[0])

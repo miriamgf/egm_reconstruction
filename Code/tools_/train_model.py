@@ -8,6 +8,7 @@ from tensorflow import keras
 from keras.callbacks import TensorBoard
 from optuna.integration import TFKerasPruningCallback
 from keras.optimizers import Adam
+import numpy as np
 
 from models.multioutput import MultiOutput
 from models.multioutput_skip import MultiOutput_skip
@@ -15,6 +16,12 @@ from models.multioutput_VAE import MultiOutput_VAE, SamplingLayer
 from models.multioutput_VAE_skip import MultiOutput_VAE_skip
 from models.gen_vae import Gen_VAE
 
+from tensorflow.keras import mixed_precision
+import gc
+
+mixed_precision.set_global_policy("mixed_float16")
+gc.collect()
+tf.keras.backend.clear_session()
 
 
 tf.random.set_seed(42)
@@ -144,49 +151,25 @@ class TrainModel:
 
         print("Training model...")
 
-        if self.params["set_gpu"] is not False:
-            print("Using GPU:", self.params["set_gpu"])
+ 
+        print("Using GPU:", self.params["set_gpu"])
+        physical_devices = tf.config.experimental.list_physical_devices('GPU')
+
+        try:
             with tf.device(f"/GPU:{self.params['set_gpu']}"):
-                # Train on specified GPU
+                tf.config.experimental.set_memory_growth(physical_devices[self.params['set_gpu']], True)
                 pass
-        else:
-            pass
-
-        # Callbacks
+        except:
+            with tf.device(f"/GPU:{0}"):
+                tf.config.experimental.set_memory_growth(physical_devices[0], True)
+                pass
         
-        cp_callback = tf.keras.callbacks.ModelCheckpoint(
-            filepath=self.experiment_dir+ "model_weights.h5",
-            save_weights_only=False,
-            verbose=1,
-            save_best_only=True,
-        )
-
-        initial_learning_rate = self.params["learning_rate"]
-        lr_schedule = keras.optimizers.schedules.ExponentialDecay(
-            initial_learning_rate,
-            decay_steps=1000,
-            decay_rate=0.96,
-            staircase=True)
-        
-        # Optimizer configuration
-        optimizer = Adam(learning_rate=lr_schedule)
-        early_stopping_callback = tf.keras.callbacks.EarlyStopping(
-            monitor="val_loss", patience=20
-        )
-        
-        tensorboard_callback = TensorBoard(log_dir='output/tensorboard/logs/'+self.params['algorithm'], histogram_freq=1)
-
-        callbacks_list = [early_stopping_callback, tensorboard_callback]
-        print(callbacks_list)
-        #ssh -L 6006:localhost:6006 miriamgf@10.110.100.78 en terminal LOCAL
-        #tensorboard --logdir=output/tensorboard/logs/ en terminal REMOTO
-
-        if self.trial is not None:
-            pruning_callback = TFKerasPruningCallback(self.trial, monitor="val_loss")
-            callbacks_list.append(pruning_callback)
+        callbacks_list, optimizer = self.define_callbacks()
 
         
         # Choose algorithm {OMAMI, OMAMI_VAE, OMAMI_ski, OMAMI_VAE_ski} 
+
+        print("Training model -->", self.params["algorithm"])
 
         if self.params["algorithm"] == "OMAMI":
 
@@ -201,7 +184,7 @@ class TrainModel:
                 
             )
 
-        if self.params["algorithm"] == "OMAMI_ski":
+        elif self.params["algorithm"] == "OMAMI_ski":
 
             model = MultiOutput_skip(params=self.params).assemble_full_model(
                 input_shape=x_train.shape[1:], n_nodes=y_train.shape[-1]
@@ -268,15 +251,33 @@ class TrainModel:
             print(model.summary())
         
         
-        
-        history = model.fit(
-            x=x_train,
-            y=[x_train, y_train],
-            batch_size=1,
+        # Asegurar que los datos sean tensores o arrays de NumPy
+        x_train = tf.convert_to_tensor(np.array(x_train), dtype=tf.float32)
+        y_train = tf.convert_to_tensor(np.array(y_train), dtype=tf.float32)
+        x_val = tf.convert_to_tensor(np.array(x_val), dtype=tf.float32)
+        y_val = tf.convert_to_tensor(np.array(y_val), dtype=tf.float32)
+        x_test = tf.convert_to_tensor(np.array(x_test), dtype=tf.float32)
+        y_val = tf.convert_to_tensor(np.array(y_val), dtype=tf.float32)
+
+        train_dataset = tf.data.Dataset.from_tensor_slices((x_train, (x_train, y_train))) \
+                .batch(self.params["num_batch_iter"]) \
+                .prefetch(tf.data.experimental.AUTOTUNE)
+
+        val_dataset = tf.data.Dataset.from_tensor_slices((x_val, (x_val, y_val))) \
+                .batch(self.params["num_batch_iter"]) \
+                .prefetch(tf.data.experimental.AUTOTUNE)
+        test_dataset = tf.data.Dataset.from_tensor_slices((x_test, (x_test, y_test))) \
+                .batch(self.params["num_batch_iter"]) \
+                .prefetch(tf.data.experimental.AUTOTUNE)
+
+        # Entrenar el modelo con el dataset
+        self.history = model.fit(
+            train_dataset,
             epochs=self.params["n_epochs"],
-            validation_data=(x_val, [x_val, y_val]),
+            validation_data=val_dataset,
             callbacks=callbacks_list,
-            )    
+        )
+        
         # Construir el modelo antes de guardarlo si es un modelo subclasificado
         try:
             model.build(input_shape=(None, *x_train.shape[1:]))  # Define el input shape correcto
@@ -294,26 +295,88 @@ class TrainModel:
             model.model.save(self.experiment_dir+"/model_weights.h5")
             model_loaded = load_model(self.experiment_dir + "/model_weights.h5", custom_objects={'SamplingLayer': SamplingLayer})
         with open(self.experiment_dir+'historial.json', 'w') as json_file:
-                        json.dump(history.history, json_file)
-        # Plot and save training and validation curves
+                        json.dump(self.history.history, json_file)
+
+        #debug predict
+        try:
+            pred_test = model.predict(x_test, batch_size=1)
+            print('Cannot predict test normally')
+        except:
+            pred_test = model.predict(test_dataset)
         
+        try:
+            pred_test = model.predict(x_train, batch_size=1)
+            print('Cannot predict test normally')
+        except:
+            pred_test = model.predict(train_dataset)
+
+
+
+        # Plot and save training and validation curves
+        self.plot_train_curves()
+        
+        return model, self.history
+    
+    def define_callbacks(self):
+         # Callbacks
+        
+        cp_callback = tf.keras.callbacks.ModelCheckpoint(
+            filepath=self.experiment_dir+ "model_weights.h5",
+            save_weights_only=False,
+            verbose=1,
+            save_best_only=True,
+        )
+
+        initial_learning_rate = self.params["learning_rate"]
+        lr_schedule = keras.optimizers.schedules.ExponentialDecay(
+            initial_learning_rate,
+            decay_steps=1000,
+            decay_rate=0.96,
+            staircase=True)
+        
+        # Optimizer configuration
+        if self.params["algorithm"]=="OMAMI_VAE" or self.params["algorithm"]=="OMAMI_VAE_skip":
+            optimizer = Adam(learning_rate=lr_schedule, clipvalue=1.0) #probar clipnorm
+        else:
+            optimizer = Adam(learning_rate=lr_schedule)
+
+
+
+        early_stopping_callback = tf.keras.callbacks.EarlyStopping(
+            monitor="val_loss", patience=20
+        )
+        
+        tensorboard_callback = TensorBoard(log_dir='output/tensorboard/logs/'+self.params['algorithm'], histogram_freq=1)
+
+        callbacks_list = [early_stopping_callback, tensorboard_callback]
+        print(callbacks_list)
+        #ssh -L 6006:localhost:6006 miriamgf@10.110.100.78 en terminal LOCAL
+        #tensorboard --logdir=output/tensorboard/logs/ en terminal REMOTO
+
+        if self.trial is not None:
+            pruning_callback = TFKerasPruningCallback(self.trial, monitor="val_loss")
+            callbacks_list.append(pruning_callback)
+        
+        return callbacks_list, optimizer
+
+    def plot_train_curves(self):
         plt.figure()
-        plt.plot(history.history["val_loss"], label="Global loss (Validation)")
+        plt.plot(self.history.history["val_loss"], label="Global loss (Validation)")
         plt.plot(
-            history.history["val_autoencoder_loss"],
+            self.history.history["val_autoencoder_loss"],
             label="Autoencoder loss (Validation)",
         )
         plt.plot(
-            history.history["val_reconstruction_loss"],
+            self.history.history["val_reconstruction_loss"],
             label="Regressor loss (Validation)",
         )
-        plt.plot(history.history["loss"], label="Global loss (Train)")
+        plt.plot(self.history.history["loss"], label="Global loss (Train)")
         plt.plot(
-            history.history["autoencoder_loss"],
+            self.history.history["autoencoder_loss"],
             label="Autoencoder loss (Train)",
         )
         plt.plot(
-            history.history["reconstruction_loss"],
+            self.history.history["reconstruction_loss"],
             label="Regressor loss (Train)",
         )
         plt.legend(loc="upper left")
@@ -322,36 +385,7 @@ class TrainModel:
         plt.xlabel("Epoch")
         plt.savefig(self.experiment_dir + "Learning_curves.png")
         plt.show()
-        '''
-        except: #VAE
-            plt.figure()
-            plt.plot(history.history["val_loss"], label="Global loss (Validation)")
-            plt.plot(
-                history.history["val_autoencoder_loss"],
-                label="Autoencoder loss (Validation)",
-            )
-            plt.plot(
-                history.history["val_reconstruction_loss"],
-                label="Regressor loss (Validation)",
-            )
-            plt.plot(history.history["loss"], label="Global loss (Train)")
-            plt.plot(
-                history.history["autoencoder_loss"],
-                label="Autoencoder loss (Train)",
-            )
-            plt.plot(
-                history.history["reconstruction_mse"],
-                label="Regressor loss (Train)",
-            )
-            plt.legend(loc="upper left")
-            plt.title("Model Loss During Training and Validation")
-            plt.ylabel("Mean Squared Error (MSE)")
-            plt.xlabel("Epoch")
-            plt.savefig(self.experiment_dir + "Learning_curves.png")
-            plt.show()
-
-        '''
-        return model, history
+         
 
     
 

@@ -201,17 +201,22 @@ class OptunaOpt:
                             # Overwrite in dictionary
                             self.params[param_name] = optuna_params[param_name]
 
+                print("Parameter:", param_name, "-->", optuna_params[param_name])
+
             elif param_config[0] == "grid":
+                
                 optuna_params[param_name] = trial.suggest_categorical(
                     param_name, param_config[1]
                 )
                 # Overwrite in dictionary
                 self.params[param_name] = optuna_params[param_name]
+                print("Parameter:", param_name, "-->", optuna_params[param_name])
 
-        if self.params["batch_size"] < self.params["fs_sub"]: #batch size never smaller than batch size
+        '''
+        if self.params["batch_size"] < self.params["fs_sub"]: #batch size never smaller than fs
             self.params["batch_size"]=self.params["fs_sub"]
-
-
+            print("Batch size truncated. Batch size:", self.params["batch_size"], " Fs sub:", self.params["fs_sub"])
+        '''
         return self.params
 
     def hyperparameter_optimization_optuna(self) -> dict:
@@ -241,6 +246,13 @@ class OptunaOpt:
             float
                 The validation loss after training the model with the trial's suggested hyperparameters.
             """
+
+
+            # Forzar la restricción fs_sub >= batch_size
+            #if self.params["fs_sub"]< self.params["batch_size"]:
+                #raise optuna.TrialPruned()  # Marca el trial como inválido y pasa al siguiente
+            
+
             self.params = self.parse_search_space(trial)
             print("Trial number", trial.number)
 
@@ -276,24 +288,28 @@ class OptunaOpt:
                 norm_egm = True
             )()
 
-            print("Algorithm selected:", self.params["algorithm"])
-            model, history = TrainModel(
-                self.params,
-                x_train, 
-                x_test, 
-                x_val, 
-                y_train, 
-                y_test, 
-                y_val, 
-                self.models_dir, 
-                self.experiment_dir, 
-                trial #to set pruning_callback
-            )()
+            try:
+                print("Algorithm selected:", self.params["algorithm"])
+                model, history = TrainModel(
+                    self.params,
+                    x_train, 
+                    x_test, 
+                    x_val, 
+                    y_train, 
+                    y_test, 
+                    y_val, 
+                    self.models_dir, 
+                    self.experiment_dir, 
+                    trial #to set pruning_callback
+                )()
 
-        
-            val_loss = history.history["val_reconstruction_loss"]
+            
+                val_loss = history.history["val_reconstruction_loss"]
 
-            return val_loss[-1]
+                return val_loss[-1]
+            except:
+                print('Trial failed. Exceeded GPU/Memory resources')
+                return float("inf")
 
         # Perform optimization
         study = optuna.create_study(direction="minimize",pruner=optuna.pruners.MedianPruner(n_startup_trials=2))

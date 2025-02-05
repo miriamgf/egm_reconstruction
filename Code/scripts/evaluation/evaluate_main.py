@@ -34,9 +34,9 @@ try:
     print(algorithm_ID, evaluate_dl, evaluate_tik)
 
 except:
-    algorithm_ID = "OMAMI_repeated"
-    evaluate_dl=False
-    evaluate_tik=False
+    algorithm_ID = "OMAMI_VAE_Optuna_1"
+    evaluate_dl=True
+    evaluate_tik=True
 
 
 test_patients = [
@@ -53,16 +53,17 @@ experiment_ID_list=[["OMAMI_repeated"], ["OMAMI_VAE_Optuna_1"], ['OMAMI_no_filt'
 
 # DL -->  284 /12 = 23.666 seconds per patient (all the pipeline)
 # TIK --> 777/ 12 = 64.75 seconds per patient (all the pipeline)
-if evaluate_tik:
-    print("Evaluating Tikhonov")
-    evaluator_tik = EvaluateTikhonov(test_patients=test_patients,algorithm_ID=algorithm_ID)
-    evaluator_tik.run()
 if evaluate_dl:
     print("Evaluating DL")
-    evaluator_dl = EvaluateDL(test_patients=test_patients,algorithm_ID=algorithm_ID)
+    evaluator_dl = EvaluateDL(test_patients=test_patients,algorithm_ID=algorithm_ID, test_id='0')
     evaluator_dl.run()
+if evaluate_tik:
+    print("Evaluating Tikhonov")
+    evaluator_tik = EvaluateTikhonov(test_patients=test_patients,algorithm_ID=algorithm_ID, test_id='0')
+    evaluator_tik.run()
+
 
 # Evaluate in regions
-EvaluateRegionsObj=EvaluateRegions(experiment_ID_list=experiment_ID_list)()
+#EvaluateRegionsObj=EvaluateRegions(experiment_ID_list=experiment_ID_list, test_id='0')()
 
 

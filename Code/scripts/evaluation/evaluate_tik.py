@@ -12,6 +12,7 @@ from tools_.load_dataset import LoadDataset_BSPS
 from scripts.evaluation.tools_evaluate import normalize_array
 from scripts.evaluation.metrics import Metrics
 from scripts.Tikhonov.compute_tik import TikhonovReconstruction
+from tools_.tools_inference import postprocess_prediction
 from tools_.tools_inference import *
 
 test_patients = [
@@ -24,13 +25,15 @@ test_patients = [
         ]
 
 class EvaluateTikhonov:
-    def __init__(self, algorithm_ID, test_patients, torso_num = 2):
+    def __init__(self, algorithm_ID, test_patients, test_id='', torso_num = 2):
 
         self.algorithm_ID = algorithm_ID
         self.start_time = time.time()
         self.torso_num = torso_num
         self.test_patients=test_patients
         self.name = ""
+        self.test_id=test_id
+
 
     def configure(self):
         self.torso_num = 2
@@ -185,7 +188,6 @@ class EvaluateTikhonov:
         tik_flat = tik_batches.reshape((tik_batches.shape[0] * tik_batches.shape[1], tik_batches.shape[2]))
         tik_rec_norm = normalize_array(tik_flat, high=1, low=-1, axis_n=0)
 
-
         y_label = normalize_by_models(egm_flat, Y_model)
 
         return tik_rec_norm, y_label
@@ -200,7 +202,7 @@ class EvaluateTikhonov:
 
         for cont, patient in enumerate(self.test_patients, start=1):
             bspm_signal_norm, egm_flat, Y_model, transfer_matrix_64= self.load_and_process_patient(patient, cont)
-            prediction, y_label = self.inference_tik(bspm_signal_norm, egm_flat, Y_model, transfer_matrix_64)
+            prediction, y_label = self.inference_tik(bspm_signal_norm, egm_flat, Y_model, transfer_matrix_64)            
             MetricsObj = Metrics(algorithm_ID=self.algorithm_ID, model_name=patient, tik=self.tik)
             df_metrics, metrics_all_nodes = MetricsObj.compute_metrics(prediction, y_label, fs=self.fs)
             df_metrics_all_patients.append(df_metrics)
@@ -210,9 +212,9 @@ class EvaluateTikhonov:
         #df = pd.DataFrame({"name": self.test_patients, "mean correlation": corr_list, "mean RMSE": rmse_list})
         df=pd.DataFrame(df_metrics_all_patients)
         df_all_nodes=pd.DataFrame(all_nodes_list)
-        output_path1 = self.experiment_dir + f"metrics_tik.csv"
+        output_path1 = self.experiment_dir + f"metrics_tik_{self.test_id}.csv"
         df.to_csv(output_path1, index=False)
-        output_path2 = self.experiment_dir + f"metrics_all_nodes_tik.csv"
+        output_path2 = self.experiment_dir + f"metrics_all_nodes_tik_{self.test_id}.csv"
         df_all_nodes.to_csv(output_path2, index=False)
 
         print("Metrics saved in", output_path1)

@@ -294,9 +294,13 @@ class MultiOutput_VAE_skip(Model):
                 loss_autoencoder + loss_regression
             )  # Or weighted: alpha*loss_autoencoder + beta*loss_regression
 
-        # Compute and apply gradients based on the total loss
+            scaled_loss = self.optimizer.get_scaled_loss(total_loss) #mixed precision
 
-        gradients = tape.gradient(total_loss, self.model.trainable_variables)
+        # Compute and apply gradients based on the total loss
+        scaled_gradients = tape.gradient(scaled_loss, self.model.trainable_variables)  #mixed precision
+        gradients = self.optimizer.get_unscaled_gradients(scaled_gradients)  #mixed precision
+
+
         # Clip gradients to avoid exploding gradients (based on their global norm)
         clipped_gradients, global_norm = tf.clip_by_global_norm(
             gradients, clip_norm=1.0
@@ -388,4 +392,11 @@ class SamplingLayer(tf.keras.layers.Layer):
         batch = tf.shape(z_mean)[0]
         dim = tf.shape(z_mean)[1]
         epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
-        return z_mean + tf.exp(0.5 * z_log_var + 1e-8) * epsilon
+        
+        #float16 (mixed precision)
+        z_log_var = tf.cast(z_log_var, tf.float16)  # Convertir log_var a float16
+        z_mean = tf.cast(z_mean, tf.float16)  # Convertir mean a float16
+        epsilon = tf.cast(tf.keras.backend.random_normal(shape=tf.shape(z_mean)), tf.float16)  # Convertir ruido a float16
+        
+        return z_mean + tf.exp(tf.cast(0.5, tf.float16) * z_log_var + tf.cast(1e-8, tf.float16)) * epsilon
+

@@ -23,6 +23,7 @@ from scipy.io import savemat
 from tools_.noise_simulation import *
 from tools_.tools_1 import *
 from tools_.k_fold import KFold_Stratified
+from tools_ import tools
 
 # from noise_simulation import *
 
@@ -92,19 +93,27 @@ class Preprocess_Dataset:
             )
         )
 
+        egm_tensor_original=self.egm_tensor
+
+        #center
+        self.X_1channel=self.X_1channel-np.mean(self.X_1channel)
+        self.egm_tensor=self.egm_tensor-np.mean(self.egm_tensor)
+
         # Normalize BSPS and EGM
         self.X_1channel = normalize_by_models(self.X_1channel, self.Y_model)
 
         if self.norm_egm:
             self.egm_tensor = normalize_by_models(self.egm_tensor, self.Y_model)
-        
+
+
         #Remove Nans
         self.X_1channel = np.nan_to_num(
             self.X_1channel, nan=0.0
         )  # Nans generated during noise addition
 
         #Save
-
+        
+        #inference
         if self.inference:
 
             return self.X_1channel, self.egm_tensor, self.AF_models, self.Y_model
@@ -115,6 +124,7 @@ class Preprocess_Dataset:
         plt.legend()
         os.makedirs("output/figures/input_output/", exist_ok=True)
         plt.savefig("output/figures/input_output/norm.png")
+        print("output/figures/input_output/norm.png")
 
         new_items = {
             "Original_X_1channel": self.X_1channel,
@@ -351,8 +361,7 @@ class Preprocess_Dataset:
         val_models,
         n_batch
     ):
-        
-
+    
         egm_tensor_n = self.egm_tensor
 
         # Split EGM (Label)

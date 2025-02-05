@@ -10,14 +10,14 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 class EvaluateRegions:
-    def __init__(self, experiment_ID_list):
+    def __init__(self, experiment_ID_list, test_id='0'):
         # Ruta del archivo .mat
         self.path_regions = "/home/pdi/miriamgf/tesis/Autoencoders/Regions/extended_regions.mat"
         self.regions = loadmat(self.path_regions)['regions'][0].astype(int)  # Convertir a enteros
         self.experiment_ID_list = experiment_ID_list
         self.path_output= "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/"
         self.path_output_figs = "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/Regions/region_boxplot"
-
+        self.test_id=test_id
 
     def evaluate_metric_per_region(self, algorithm, filename, tik):
         '''
@@ -113,9 +113,6 @@ class EvaluateRegions:
         # Configurar estilo de gráficos
         sns.set(style="whitegrid")
 
-        # Configurar estilo de gráficos
-        sns.set(style="whitegrid")
-
         # Obtener todas las métricas únicas
         metricas = df["Metric"].unique()
 
@@ -132,7 +129,7 @@ class EvaluateRegions:
             if tik:
                 path=f"{self.path_output_figs}/{algorithm}/barplot_regions_{metric}_tik.png"
             else:
-                path=f"{self.path_output_figs}/{algorithm}/tik_barplot_regions_{metric}_dl.png"
+                path=f"{self.path_output_figs}/{algorithm}/barplot_regions_{metric}_dl.png"
 
             os.makedirs(os.path.dirname(path), exist_ok=True)
             plt.savefig(path)
@@ -141,13 +138,19 @@ class EvaluateRegions:
 
     def __call__(self, *args, **kwds):
 
-        list_filenames=[["metrics_all_nodes_dl.csv"], ["metrics_all_nodes_tik.csv"] ]
-        tik=False
+        list_filenames=[[f"metrics_all_nodes_dl_{self.test_id}.csv"],
+                        [f"metrics_all_nodes_tik_{self.test_id}.csv"]]
+        
         for algorithm in self.experiment_ID_list:
+            tik=False
+            print('algorithm ', algorithm)
+
             for filename in list_filenames:
-                print(filename)
+             
                 if filename== ["metrics_all_nodes_tik.csv"]:
                     tik=True
+                
+                print('To save regions of', filename)
 
                 results_df=self.evaluate_metric_per_region(algorithm, filename, tik)
                 self.plot_boxplot_per_algorithm(results_df, algorithm, tik)

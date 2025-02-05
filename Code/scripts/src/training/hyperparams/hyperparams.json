@@ -1,10 +1,12 @@
 {       
     "n_epochs": 50,
     "batch_size": 400,
+    "num_batch_iter":32,
     "fs_sub": 200, 
     "algorithm": "OMAMI_VAE",
     "filter_EGM": true,
-    "set_gpu": false,
+    "load_best_hiperparams": false,
+    "set_gpu": 0,
     "cross_validation": false,
     "fold"  : 0,
     "rnn_layers": 1,
@@ -21,20 +23,19 @@
     "n_classes": 3,
     "inference_pretrained_model": false,
     "optimizer": "adam",
-    "loss_weight_1": 10.0,
-    "loss_weight_2": 6.0,
+    "loss_weight_1": 2.0,
+    "loss_weight_2": 10.0,
     "l2_reg": 0.1, 
-    "LSTM_units":40, 
+    "LSTM_units":10, 
     "3D_depth":10,
     "latent_dim":2,
-    "optuna_optimization": false,
-    "n_trials": 30,
+    "optuna_optimization": true,
+    "n_trials": 50,
     "optuna_parameters": {
         "sampler_algorithm": ["tpe"],
-        "loss_weight_1": ["grid", [0.1, 4, 6, 8, 10, 100]],
-        "loss_weight_2":  ["grid", [0.1, 4, 6, 8, 10, 100]],
-        "3D_depth": ["grid", [3,5,10,15]],
-        "LSTM_units": ["grid", [ 10, 25, 40, 100]]
-  
+        "batch_size": ["grid", [50, 100, 200, 300, 400]],
+        "fs_sub": ["grid", [50, 100, 200, 300, 400]],
+        "num_batch_iter": ["grid", [5, 16, 32, 64]]
+
     }
 }

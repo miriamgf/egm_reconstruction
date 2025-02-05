@@ -8,6 +8,7 @@ from numpy import reshape
 from scipy import signal
 from scipy import signal as sigproc
 from scipy.interpolate import interp1d
+import tools_.tools as tools
 
 from tools_.tools import interpolate_2D_array, truncate_length_bsps
 
@@ -418,6 +419,21 @@ def load_ecgs(model_name, sinusoid=False):
 
     return EG
 
+
+def postprocess_prediction(data,fs, cutoff_DC=1.5,FPA_cutoff=15, axis=0):
+
+    '''
+    Postprocess of predictions, including:
+    - removing DC component + detrending
+    - Low pass filter to remove noise (noise considered f> FPA_cutoff)
+    - normalizing -1 and 1
+    '''
+    
+    data = tools.remove_mean(data,fs, cutoff_DC, axis=axis) #only detrend
+    data = tools.low_pass_filter(data,fs, cutoff=FPA_cutoff, axis=axis)
+    data=normalize_array(data, high=1, low=-1, axis_n=axis)
+
+    return data
 
 def normalize_by_models(data, Y_model):
     """
