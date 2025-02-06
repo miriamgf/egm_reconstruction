@@ -15,7 +15,7 @@ def downsampling(array, fs_sub):
     return array_sub
 
 import numpy as np
-
+'''
 def normalize_array(array, high=1, low=-1, axis_n=0):
     """
     Normaliza un array entre `low` y `high` a lo largo del eje especificado.
@@ -41,7 +41,7 @@ def normalize_array(array, high=1, low=-1, axis_n=0):
     norm_array = low + (array - mins) * (high - low) / rng
 
     return norm_array
-
+'''
     
 
 
@@ -193,19 +193,10 @@ def deflexion_detection(array, fs, amplitude_threshold=0.25, prominence_value=0.
     peaks_list = []
     for lead in range(0,array.shape[1]):
         lead_i= array[:, lead]
-
-        #ecg_cleaned = nk.ecg_clean(lead_i, sampling_rate=fs, method="neurokit")
-        #signals, info = nk.ecg_peaks(ecg_cleaned, sampling_rate=fs, method='elgendi2010', correct_artifacts=True)
-
-        #worst scenario ~
         distance_in_samples = int(0.15 * fs)  #FA worst case scenario (más corto)--> 150 ms 
-        
-
         peaks=scipy.signal.find_peaks(lead_i,distance=distance_in_samples, prominence=prominence_value)
         peaks=peaks[0]
         peaks_list.append(peaks)
-
-    #print('Distance in samples:', distance_in_samples)
 
     return peaks_list
 

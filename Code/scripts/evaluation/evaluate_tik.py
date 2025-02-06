@@ -9,11 +9,11 @@ import time
 
 from tools_.preprocess_data import Preprocess_Dataset
 from tools_.load_dataset import LoadDataset_BSPS
-from scripts.evaluation.tools_evaluate import normalize_array
 from scripts.evaluation.metrics import Metrics
 from scripts.Tikhonov.compute_tik import TikhonovReconstruction
 from tools_.tools_inference import postprocess_prediction
 from tools_.tools_inference import *
+import tools_.tools as tools
 
 test_patients = [
             "LA_PLAW_140711_arm", "LA_RSPV_CAF_150115",
@@ -127,8 +127,8 @@ class EvaluateTikhonov:
         Y_model_single=np.split(np.array(Y_model), 10)[torso_index]
 
         #normalize 
-        bspm_signal_norm = normalize_array(bspm_signal_64.T, high=1, low=-1, axis_n=1) 
-        egm_single_norm = normalize_array(egm_single, high=1, low=-1, axis_n=0) 
+        bspm_signal_norm = tools.normalize_array(bspm_signal_64.T, high=1, low=-1, axis_n=1) 
+        egm_single_norm = tools.normalize_array(egm_single, high=1, low=-1, axis_n=0) 
 
         print(X_1channel.shape, egm_tensor.shape, Y_model.shape)    
 
@@ -186,11 +186,20 @@ class EvaluateTikhonov:
         tik_rec = ObjTik(plot_L_curve=True)
         tik_batches = ObjTik.tik_post_process_to_plot(tik_rec, self.fs, self.divisible_rows, self.n_batch)
         tik_flat = tik_batches.reshape((tik_batches.shape[0] * tik_batches.shape[1], tik_batches.shape[2]))
-        tik_rec_norm = normalize_array(tik_flat, high=1, low=-1, axis_n=0)
+        #y_label = normalize_by_models(egm_flat, Y_model)
 
-        y_label = normalize_by_models(egm_flat, Y_model)
+        return tik_flat, egm_flat
+    
+    def postprocess_tik(self, prediction):
+        '''
+        This
+        '''
+        prediction=prediction-np.mean(prediction)
+        tik_rec_norm = tools.normalize_array(prediction, high=1, low=-1, axis_n=0)
 
-        return tik_rec_norm, y_label
+        return tik_rec_norm
+
+
     
     
     def run(self):
@@ -202,7 +211,8 @@ class EvaluateTikhonov:
 
         for cont, patient in enumerate(self.test_patients, start=1):
             bspm_signal_norm, egm_flat, Y_model, transfer_matrix_64= self.load_and_process_patient(patient, cont)
-            prediction, y_label = self.inference_tik(bspm_signal_norm, egm_flat, Y_model, transfer_matrix_64)            
+            prediction, y_label = self.inference_tik(bspm_signal_norm, egm_flat, Y_model, transfer_matrix_64)   
+            prediction=self.postprocess_tik(prediction)         
             MetricsObj = Metrics(algorithm_ID=self.algorithm_ID, model_name=patient, tik=self.tik)
             df_metrics, metrics_all_nodes = MetricsObj.compute_metrics(prediction, y_label, fs=self.fs)
             df_metrics_all_patients.append(df_metrics)

@@ -1,3 +1,4 @@
+import sys
 from scipy.stats import pearsonr, spearmanr
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,9 +12,8 @@ import tools_.tools as tools
 from tools_.tools_inference import postprocess_prediction
 from sklearn.metrics.pairwise import cosine_similarity
 
-
-
-from scripts.evaluation.tools_evaluate import deflexion_detection,compare_r_peaks, normalize_array, bandpass_filter, compute_HR_from_RR_dist, custom_coherence
+import tools_.tools as tools
+from scripts.evaluation.tools_evaluate import deflexion_detection,compare_r_peaks, bandpass_filter, compute_HR_from_RR_dist, custom_coherence
 
 class Metrics:  
     def __init__(self, algorithm_ID=None, model_name=None, tik=False):
@@ -103,8 +103,6 @@ class Metrics:
         assert (
             y_label.shape == prediction.shape
         ), "Los arrays deben tener las mismas dimensiones."
-
-
 
         peak_list=deflexion_detection(y_label, fs=fs, prominence_value=prominence_val)
         peak_list_pred=deflexion_detection(prediction, fs=fs, prominence_value=0.2)
@@ -359,8 +357,8 @@ class Metrics:
             lag = np.argmax(np.correlate(y_label_filtered, y_pred_filtered, mode="full")) - len(y_label_filtered)
             y_pred_filtered = np.roll(y_pred_filtered, lag)
 
-            y_label_filtered=normalize_array(y_label_filtered, high=1, low=-1, axis_n=0)
-            y_pred_filtered=normalize_array(y_pred_filtered, high=1, low=-1, axis_n=0)
+            y_label_filtered=tools.normalize_array(y_label_filtered, high=1, low=-1, axis_n=0)
+            y_pred_filtered=tools.normalize_array(y_pred_filtered, high=1, low=-1, axis_n=0)
         
             #f_coh, Cxy = custom_coherence(y_pred_filtered, y_label_filtered, fs=fs, nperseg=nperseg_val)
             f_coh, Cxy = coherence(y_pred_filtered, y_label_filtered, fs=fs, nperseg=nperseg_val)
@@ -386,8 +384,8 @@ class Metrics:
                 y_label_filtered = bandpass_filter(y_label[:, channel], fs, ROI_freq[0], ROI_freq[1])
                 y_pred_filtered = bandpass_filter(prediction[:, channel], fs, ROI_freq[0], ROI_freq[1])
 
-                y_label_filtered=normalize_array(y_label_filtered, high=1, low=-1, axis_n=0)
-                y_pred_filtered=normalize_array(y_pred_filtered, high=1, low=-1, axis_n=0)
+                y_label_filtered=tools.normalize_array(y_label_filtered, high=1, low=-1, axis_n=0)
+                y_pred_filtered=tools.normalize_array(y_pred_filtered, high=1, low=-1, axis_n=0)
 
                 # Calcular los periodogramas de Welch para ambas señales
                 f1, Pxx = welch(y_pred_filtered, fs, nperseg=nperseg_val)
@@ -409,9 +407,9 @@ class Metrics:
                 plt.ylim([0, 1])
                 plt.grid()
                 if self.tik:
-                    path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/tik/coh_Coherence.png"
+                    path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/tik/coh_Coherence_{id}.png"
                 elif not self.tik:  
-                    path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/coh_Coherence.png"
+                    path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/coh_Coherence_{id}.png"
                 if custom_path:
                     path_to_save=f"{custom_path}/coh_Coherence_{id}.png"
                 os.makedirs(os.path.dirname(path_to_save), exist_ok=True)
@@ -431,9 +429,9 @@ class Metrics:
                 plt.legend()
                 plt.grid()
                 if self.tik:
-                    path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/tik/coh_psd.png"
+                    path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/tik/coh_psd_{id}.png"
                 elif not self.tik:  
-                    path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/coh_psd.png"
+                    path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/coh_psd_{id}.png"
                 if custom_path:
                     path_to_save=f"{custom_path}/coh_psd_{id}.png"
                 os.makedirs(os.path.dirname(path_to_save), exist_ok=True)
@@ -450,9 +448,9 @@ class Metrics:
                 plt.legend()
                 plt.grid()
                 if self.tik:
-                    path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/tik/coh_time.png"
+                    path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/tik/coh_time_{id}.png"
                 elif not self.tik:  
-                    path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/coh_time.png"
+                    path_to_save=f"{self.output_directory}/{self.algorithm_ID}/{self.model_name}/coh_time_{id}.png"
                 if custom_path:
                     path_to_save=f"{custom_path}/coh_tim_{id}.png"
 
@@ -470,28 +468,26 @@ class Metrics:
         Returns:
             Un diccionario con las métricas de correlación y RMSE.
         """
-        # Calcular correlación y RMSE para cada paciente
 
-        #Ensure basic preprocessing 
-        
+        try:
+            assert prediction[:, 0].max() == 1
+        except AssertionError:
+            print('Prediction not normalized!')
+            sys.exit()
 
-        #y_label_detrend = tools.remove_mean(y_label, fs=fs, cutoff=1.0, axis=1) 
-        y_label_detrend_norm=normalize_array(y_label, high=1, low=-1, axis_n=1)   
+        try:
+            assert y_label[:, 0].max() == 1
+        except AssertionError:
+            print('Label not normalized!')
+            sys.exit()
 
-        plt.figure()
-        plt.plot(y_label_detrend_norm[:,20], label='detrend_norm')
-        plt.plot(y_label[:, 20], label="original")
-        plt.legend()
-        plt.savefig("/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/toy/filtering2.png")
-        print("/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/toy/filtering2.png")
-        plt.close()
- 
         corr = self.correlation_by_node(prediction, y_label)
         rmse = self.rmse_by_node(prediction, y_label)
         recall, precision, error  = self.peak_detector_classif(prediction, y_label, fs, d=0.05, plot = True)
-        dtw=self.dynamic_time_warping(prediction, y_label, plot=True)
+        #dtw=self.dynamic_time_warping(prediction, y_label, plot=True)
+        dtw=[0]
         error_no_nan=[x for x in error if str(x) != 'nan']
-        error_peak_det_norm=normalize_array(error_no_nan, high=1, low=0, axis_n=0)
+        error_peak_det_norm=tools.normalize_array(error_no_nan, high=1, low=0, axis_n=0)
         coh_list=self.compute_spectral_coherence(prediction, y_label, fs, ROI_freq=[1.5, 10], nperseg_val=fs*2, plot=True)
 
         metrics={"name": self.model_name,"Correlation": np.mean(corr),

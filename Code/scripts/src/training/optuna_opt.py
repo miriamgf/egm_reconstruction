@@ -288,28 +288,28 @@ class OptunaOpt:
                 norm_egm = True
             )()
 
-            try:
-                print("Algorithm selected:", self.params["algorithm"])
-                model, history = TrainModel(
-                    self.params,
-                    x_train, 
-                    x_test, 
-                    x_val, 
-                    y_train, 
-                    y_test, 
-                    y_val, 
-                    self.models_dir, 
-                    self.experiment_dir, 
-                    trial #to set pruning_callback
-                )()
+            #try:
+            print("Algorithm selected:", self.params["algorithm"])
+            model, history = TrainModel(
+                self.params,
+                x_train, 
+                x_test, 
+                x_val, 
+                y_train, 
+                y_test, 
+                y_val, 
+                self.models_dir, 
+                self.experiment_dir, 
+                trial #to set pruning_callback
+            )()
 
-            
-                val_loss = history.history["val_reconstruction_loss"]
+        
+            val_loss = history.history["val_reconstruction_loss"]
 
-                return val_loss[-1]
-            except:
-                print('Trial failed. Exceeded GPU/Memory resources')
-                return float("inf")
+            return val_loss[-1]
+            #except:
+                #print('Trial failed. Exceeded GPU/Memory resources')
+                #return float("inf")
 
         # Perform optimization
         study = optuna.create_study(direction="minimize",pruner=optuna.pruners.MedianPruner(n_startup_trials=2))

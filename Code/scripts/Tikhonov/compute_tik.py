@@ -11,7 +11,8 @@ import scripts.Tikhonov.forward_inverse_problem as fip
 import numpy as np
 import scripts.Tikhonov.precompute_matrix as pre_m
 from numpy import reshape
-from scripts.evaluation.tools_evaluate import normalize_array, downsampling
+import tools_.tools as tools
+from scripts.evaluation.tools_evaluate import downsampling
 
 path_output_l_curva= f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/ZOT_L_curva/"
 

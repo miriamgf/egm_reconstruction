@@ -14,16 +14,15 @@ from tools_.preprocess_data import Preprocess_Dataset
 from tools_.load_dataset import LoadDataset_BSPS
 from scripts.Tikhonov.compute_tik import TikhonovReconstruction
 from scripts.evaluation.metrics import Metrics
-from scripts.evaluation.tools_evaluate import normalize_array
 from numpy import reshape
-from models.multioutput_VAE import MultiOutput_VAE, SamplingLayer
+from models.multioutput_VAE import  SamplingLayer
 from scripts.Tikhonov.compute_tik import TikhonovReconstruction
 from scripts.evaluate_function import *
-from tools_.tools import corr_pearson_cols
 from tools_.tools_inference import *
-from tools_ import freq_phase_analysis as freq_pha
 import seaborn as sns
 from scipy.signal import spectrogram
+from tools_.tools_inference import postprocess_prediction
+
 import time
 
 
@@ -146,28 +145,9 @@ class Visualize2D:
         print(params)
         print('fs:', self.fs, ' batch size: ', self.n_batch)
 
-        # Preprocesamiento
-        (
-            X_1channel, egm_tensor, AF_models, Y_model
-        ) = Preprocess_Dataset(
-            params,
-            X_1channel,
-            egm_tensor,
-            list(AF_models),
-            Y_model,
-            {},
-            Y,
-            all_model_names,
-            transfer_matrices,
-            experiment_dir,
-            norm_egm=True,
-            inference=True
-        )()
-
         # PREPROCESS for DL Prediction
 
         dic_vars={}
-
 
         # Preprocess data
         (
@@ -243,13 +223,13 @@ class Visualize2D:
         prediction_centered= prediction_norm-np.mean(prediction_norm)
         egm_centered=egm_flat-np.mean(egm_flat)
         X_1channel_centered=X_1channel_norm-np.mean(X_1channel_norm)
-        bspm_signal_norm = normalize_array(bspm_signal_64, high=1, low=-1, axis_n=1) 
+        bspm_signal_norm = tools.normalize_array(bspm_signal_64, high=1, low=-1, axis_n=1) 
 
         TIK_ON=True
         if TIK_ON==True:
 
             #Preprocess bspm (normalization)
-            bspm_signal_norm = normalize_array(bspm_signal_64, high=1, low=-1, axis_n=1) 
+            bspm_signal_norm = tools.normalize_array(bspm_signal_64, high=1, low=-1, axis_n=0) 
 
             #bspm_signal_norm = normalize_array(bspm_signal, high=1, low=-1, axis_n=0) 
             #Compute Tikhonov
@@ -260,7 +240,7 @@ class Visualize2D:
             tik_flat = tik_batches.reshape(
                 (tik_batches.shape[0] * tik_batches.shape[1], tik_batches.shape[2])
             )
-            tik_rec_norm = normalize_array(tik_flat, high=1, low=-1, axis_n=0) 
+            tik_rec_norm = tools.normalize_array(tik_flat, high=1, low=-1, axis_n=0) 
             tik_rec_centered=tik_rec_norm-np.mean(tik_rec_norm)
 
         return tik_rec_centered, prediction_centered, egm_centered, X_1channel_centered
@@ -330,22 +310,24 @@ class Visualize2D:
             if node_num is None:
                 continue
             time_axis = np.arange(prediction.shape[0]) / self.fs
-
             fig, axs = plt.subplots(3, 1, figsize=(12, 6), tight_layout=True)
             axs[0].plot(time_axis, prediction[:, node_num], label='Predicted', color="blue")
             axs[0].plot(time_axis, egm[:, node_num], label='Real', color="red")
             axs[0].set_title(f"AI Prediction | Node {node_num} | {metric}")
+            axs[0].legend()
 
             if tik_rec is not None:
                 axs[1].plot(time_axis, tik_rec[:, node_num], label='Predicted', color="green")
                 axs[1].plot(time_axis, egm[:, node_num], label='Real', color="red")
                 axs[1].set_title(f"ZOT Prediction | Node {node_num} | {metric}")
+                axs[1].legend()
+
 
             axs[2].plot(time_axis, bspm[:, :3], label='BSPM')
             axs[2].set_title(f"BSPM | Node {node_num}")
 
-            self.save_figure(fig, f"time_series_best_{metric}.png")
-            print(f"Figure saved at time_series_best_{metric}.png")
+            self.save_figure(fig, f"time_series_best_{metric}2.png")
+            #print(f"Figure saved at time_series_best_{metric}.png")
     #Welch 
 
     def compute_welch_periodogram(self,signal, fs, nperseg_value, title):
@@ -464,13 +446,14 @@ class Visualize2D:
 
 if __name__ == "__main__":
 
-    list_metrics= [["Correlation"], ["RMSE"], ["DTW"], ["Coherence"], ["PeakDet"]]
+    #list_metrics= [["Correlation"], ["RMSE"], ["DTW"], ["Coherence"], ["PeakDet"]]
+    list_metrics= [["Correlation"]], ["RMSE"]#, ["DTW"], ["Coherence"], ["PeakDet"]]
 
     test_patients = [["Simulation_01_200212_001_  5"],  
                 ["Simulation_01_210119_001_001"], 
                 ["Simulation_01_200428_001_010"],["Simulation_01_200212_001_ 10"]]
 
-    experiment_ID_list=[["OMAMI_repeated"], ["OMAMI_VAE_Optuna_1"], ['OMAMI_no_filt'], ['OMAMI_VAE_no_filt']]
+    experiment_ID_list=[['OMAMI_no_filt'],["OMAMI_repeated"], ["OMAMI_VAE_Optuna_1"], ['OMAMI_VAE_no_filt']]
 
     vis = Visualize2D(test_patients, experiment_ID_list, list_metrics)
     vis.run_all()

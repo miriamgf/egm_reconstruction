@@ -23,27 +23,25 @@ class EvaluateRegions:
         '''
 
         This function loads metrics from specified algorithm and outputs a dataframe
-        with the mean value of the metrics according to 7 anatomical regions
+        with the mean value and full vector of the metrics according to 7 anatomical regions
 
         '''
         filename=filename[0]
         # Obtener las clases únicas de regiones
         range_region_classes = list(np.unique(self.regions))
 
-        # Diccionario para almacenar resultados globales
         aggregated_results = []
 
-        # Iterar sobre los experimentos
-        for experiment_ID in algorithm:
+        for experiment_ID in algorithm: #For each algorithm, a dataframe with aggregated_results will be saved 
             
             path = f"{self.path_output}{experiment_ID}/{filename}"
             print('Loading CSV of:', path)
             csv_metrics = pd.read_csv(path)
-            column_names = list(csv_metrics.columns)  # Obtener los nombres de las columnas
+            column_names = list(csv_metrics.columns)  
 
             # Iterar por cada métrica
             for metric in column_names:
-                # Saltar la columna 'name'
+
                 if metric == 'name' or metric == "Peak_detector_Error":
                     continue
                 
@@ -52,6 +50,7 @@ class EvaluateRegions:
 
                 # Iterar por cada paciente
                 for patient in range(len(csv_metrics)):
+                    print('Patient:', patient)
                     # Obtener la fila del paciente
                     patient_row = csv_metrics.iloc[patient]
 
@@ -74,7 +73,6 @@ class EvaluateRegions:
                         if region_class == 0:  # Excluir la clase 0 (extendidos)
                             continue
                         
-                        # Obtener los índices de la región
                         indices_class = np.where(self.regions == region_class)[0]
                         
                         # Extraer métricas para la región
@@ -90,17 +88,18 @@ class EvaluateRegions:
                             'Metric': metric,
                             'Region Class': region_class,
                             'Mean': global_mean,
-                            'STD': global_std
+                            'STD': global_std,
+                            'Array': np.array(values)
                         })
 
-        # Crear un DataFrame para guardar los resultados
-        results_df = pd.DataFrame(aggregated_results)
-        if tik:
-            results_df.to_csv(f"{self.path_output}global_metrics_per_region_{algorithm[0]}_tik.csv", index=False)
-            print('Saving in: ', f"{self.path_output}global_metrics_per_region_{algorithm[0]}_tik.csv")
-        else:
-            results_df.to_csv(f"{self.path_output}global_metrics_per_region_{algorithm[0]}_dl.csv", index=False)
-            print('Saving in: ', f"{self.path_output}global_metrics_per_region_{algorithm[0]}_dl.csv")
+            # Crear un DataFrame para guardar los resultados
+            results_df = pd.DataFrame(aggregated_results)
+            if tik:
+                results_df.to_csv(f"{self.path_output}global_metrics_per_region_{algorithm[0]}_tik_testing.csv", index=False)
+                print('Saving in: ', f"{self.path_output}global_metrics_per_region_{algorithm[0]}_tik_testing.csv")
+            else:
+                results_df.to_csv(f"{self.path_output}global_metrics_per_region_{algorithm[0]}_dl_testing.csv", index=False)
+                print('Saving in: ', f"{self.path_output}global_metrics_per_region_{algorithm[0]}_dl_testing.csv")
 
 
         #dic_patient.to_csv(self.path_output+"metrics_per_regions.csv", index=False)
@@ -108,6 +107,11 @@ class EvaluateRegions:
         return results_df
     
     def plot_boxplot_per_algorithm(self, df, algorithm, tik ):
+        '''
+        This function takes as input the computed metrics by region in self.evaluate_metric_per_region
+        and plots barplots and boxplots representing the distribution of the metrics as the average for all patients for 1 algorithm
+        
+        '''
         algorithm=algorithm[0]
 
         # Configurar estilo de gráficos
@@ -118,28 +122,69 @@ class EvaluateRegions:
 
         # Crear un barplot para cada métrica
         for metric in metricas:
+
+            region_colors = {
+                1: "red",
+                2: "green",
+                3: "blue",
+                4: "yellow",
+                5: "cyan",
+                6: "deeppink",
+                7: "gray"
+            }
+
+            # Filtrar por métrica
+            df_subset = df[df["Metric"] == metric]
             plt.figure(figsize=(10, 6))
-            df_subset = df[df["Metric"] == metric]  # Filtrar por métrica
-            
-            sns.barplot(data=df_subset, x="Region Class", y="Mean", palette="Set2")
-            
+            sns.barplot(
+                data=df_subset, 
+                x="Region Class", 
+                y="Mean", 
+                palette=[region_colors[region] for region in sorted(df_subset['Region Class'].unique())]
+            )
+
             plt.title(f"Media de {metric} por Region Class")
             plt.xlabel("Region Class")
             plt.ylabel("Mean")
             if tik:
-                path=f"{self.path_output_figs}/{algorithm}/barplot_regions_{metric}_tik.png"
+                path = f"{self.path_output_figs}/{algorithm}/barplot_regions_{metric}_tik_2.png"
             else:
-                path=f"{self.path_output_figs}/{algorithm}/barplot_regions_{metric}_dl.png"
+                path = f"{self.path_output_figs}/{algorithm}/barplot_regions_{metric}_dl_2.png"
 
             os.makedirs(os.path.dirname(path), exist_ok=True)
             plt.savefig(path)
-            print('Barplot of regions saved at: ', path)
-          
+            print('Barplot of regions saved at:', path)
+            plt.close()
+
+            #############BOXPLOT############
+
+            # Explode para descomponer listas en filas individuales
+            df_exploded = df_subset.explode('Array')
+
+            plt.figure(figsize=(10, 6))
+            sns.boxplot(
+                data=df_exploded, 
+                x='Region Class', 
+                y='Array', 
+                palette=[region_colors[region] for region in sorted(df_exploded['Region Class'].unique())]
+            )
+            plt.xlabel("Región")
+            plt.ylabel("Valores")
+            plt.title("Boxplot representing distribution of metrics in each region for all patients")
+            plt.xticks(rotation=45)  
+            if tik:
+                path = f"{self.path_output_figs}/{algorithm}/boxplot_regions_{metric}_tik_2.png"
+            else:
+                path = f"{self.path_output_figs}/{algorithm}/boxplot_regions_{metric}_dl_2.png"
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            plt.savefig(path)
+            print('Barplot of regions saved at:', path)
+            plt.close()
 
     def __call__(self, *args, **kwds):
 
-        list_filenames=[[f"metrics_all_nodes_dl_{self.test_id}.csv"],
-                        [f"metrics_all_nodes_tik_{self.test_id}.csv"]]
+        list_filenames=[[f"metrics_all_nodes_dl.csv"],
+                        [f"metrics_all_nodes_tik.csv"]]
         
         for algorithm in self.experiment_ID_list:
             tik=False

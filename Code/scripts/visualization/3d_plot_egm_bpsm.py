@@ -7,6 +7,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
+import ast
 
 from tools_.preprocess_data import Preprocess_Dataset
 from scripts.visualization.utils.renderizer import EGMRenderer_BSP
@@ -17,10 +18,13 @@ from scripts.visualization.utils.egm_3d_plotter import EGM_3D_PLOTTER
 from scripts.visualization.utils.corr_3d_plotter import CORRELATION_3D_PLOTTER
 from scripts.visualization.utils.rmse_3d_plotter import RMSE_3D_PLOTTER
 from scripts.visualization.utils.df_map_3d_plotter import DF_MAPS_3D_PLOTTER
+from scripts.visualization.utils.metric_3d_plotter import METRIC_3D_PLOTTER
 from models.multioutput_VAE import MultiOutput_VAE, SamplingLayer
-from scripts.evaluation.tools_evaluate import normalize_array, downsampling
+import tools_.tools as tools
 from scripts.evaluation.metrics import Metrics
 from tools_.tools_inference import postprocess_prediction
+import pandas as pd
+
 
 
 from scripts.Tikhonov.compute_tik import TikhonovReconstruction
@@ -41,13 +45,17 @@ import time
 
 plot_BSP = False
 plot_Tikhonov = False
-plot_DL= True
+plot_DL= False
 plot_correlation_DL = False
 plot_correlation_tik = False
 plot_rmse_DL = False
 plot_rmse_tik = False
+plot_coherence_DL = True
+plot_coherence_tik = True
+plot_DTW_DL = True
+plot_DTW_tik = True
 
-plot_DF_maps_DL = True
+plot_DF_maps_DL = False
 plot_DF_maps_tik = False
 
 torso_num=2
@@ -70,6 +78,9 @@ experiment_ID_list=[["OMAMI_repeated"], ["OMAMI_VAE_Optuna_1"], ['OMAMI_no_filt'
 experiment_ID_list=[["OMAMI_VAE_Optuna_1"]]
 start = time.time()
 cont=0
+
+
+
 for model_name in test_patients:
 
     print(f"Loading patient {cont}/{len(test_patients)}")
@@ -181,10 +192,8 @@ for model_name in test_patients:
         Y_model_single=np.split(np.array(Y_model), 10)[torso_index]
 
         #normalize 
-        bspm_signal_norm = normalize_array(bspm_signal.T, high=1, low=-1, axis_n=1) 
-        egm_single_norm = normalize_array(egm_single, high=1, low=-1, axis_n=0) 
-
-
+        bspm_signal_norm = tools.normalize_array(bspm_signal.T, high=1, low=-1, axis_n=1) 
+        egm_single_norm = tools.normalize_array(egm_single, high=1, low=-1, axis_n=0) 
 
         dic_vars={}
 
@@ -252,10 +261,15 @@ for model_name in test_patients:
             (prediction.shape[0] * prediction.shape[1], prediction.shape[2])
         )
 
+        y_label=egm_flat
+
+        #Postprocessing
+        #prediction=postprocess_prediction(prediction_flat, fs=fs, FPA_cutoff=15,cutoff_DC=1, axis=1)
+
         prediction = normalize_by_models(prediction_flat, Y_model)
         y_label=normalize_by_models(egm_flat, Y_model)
 
-        prediction=postprocess_prediction(prediction_flat, Y_model)
+        #prediction=postprocess_prediction(prediction_flat, Y_model)
         time_duration=y_label.shape[0] # num of samples to represent
 
 
@@ -288,7 +302,7 @@ for model_name in test_patients:
             tik_flat = tik_batches.reshape(
             (tik_batches.shape[0] * tik_batches.shape[1], tik_batches.shape[2])
         )
-            tik_rec_norm = normalize_array(tik_flat, high=1, low=-1, axis_n=0) 
+            tik_rec_norm = tools.normalize_array(tik_flat, high=1, low=-1, axis_n=0) 
 
             EGM_3d_object=EGM_3D_PLOTTER(model_name,
                         model_path_DL,
@@ -553,7 +567,54 @@ for model_name in test_patients:
         print('Chapao')
         end_ = time.time()
         print('Execution time one test example : ', end_-start_, 'min')
-        sys.exit()
+        #sys.exit()
+
+        #Coherence maps DL
+        #---------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------
+
+
+        if plot_coherence_DL:
+
+
+
+            MetricObject = METRIC_3D_PLOTTER(model_name,
+                                            torso_path,
+                                            geom_path_CF,
+                                            output_directory,
+                                            labels_mode=False,
+                                            metric='Coherence',
+                                            experiment_dir=experiment_dir,
+                                            tikhonov=False,
+                                            time=time_duration,
+                                        )
+
+            coherence=MetricObject.extract_metric()
+
+            EGM_3d_object=EGM_3D_PLOTTER(model_name,
+                        model_path_DL,
+                        geom_path_CF,
+                        output_directory,
+                        labels_mode=False,
+                        tikhonov=False,
+                        time=time_duration)
+
+            _, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
+
+
+            # Usar el método del objeto para plotear
+
+            MetricObject.plot_3d_mesh_label(
+                coherence, faces_heart, vertices_heart, min_val_value=0, max_val_value=1
+            )
+
+
+        if plot_rmse_DL:
+            print("Plotting RMSE Maps for DL")
+
+            
+
+
 
 end = time.time()
         

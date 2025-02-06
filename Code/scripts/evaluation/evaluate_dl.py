@@ -8,6 +8,7 @@ import pandas as pd
 sys.stdout.reconfigure(line_buffering=True)
 sys.stderr.reconfigure(line_buffering=True)
 import time
+import tensorflow as tf
 
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
@@ -15,10 +16,14 @@ from tensorflow.keras.models import load_model
 from tools_.preprocess_data import Preprocess_Dataset
 from scripts.config import ParseHiperparams
 from models.multioutput_VAE import MultiOutput_VAE, SamplingLayer
-from scripts.evaluation.tools_evaluate import normalize_array, downsampling
+#from scripts.evaluation.tools_evaluate import normalize_array, downsampling
+import tools_.tools as tools
 from scripts.evaluation.metrics import Metrics
 from tools_.load_dataset import LoadDataset_BSPS
 from tools_.tools_inference import postprocess_prediction
+from tensorflow.keras import mixed_precision
+mixed_precision.set_global_policy('mixed_float16')
+
 
 
 from scripts.Tikhonov.compute_tik import TikhonovReconstruction
@@ -211,13 +216,39 @@ class EvaluateDL:
             model = load_model(self.weights_path, custom_objects={"SamplingLayer": SamplingLayer})
 
         # Inferencia
-        prediction = model.predict(X_1channel, batch_size=1)[1]
+        try:
+            prediction = model.predict(X_1channel, batch_size=1)[1]
+        except:
+
+            def convert_model_to_float32(model):
+                model_config = model.get_config()
+                for layer in model_config["layers"]:
+                    if "dtype" in layer["config"]:
+                        layer["config"]["dtype"] = "float32"
+                new_model = tf.keras.Model.from_config(model_config)
+                new_model.set_weights([tf.cast(w, tf.float32) for w in model.get_weights()])
+                return new_model
+            
+
+            # Convertir el modelo
+            model_32 = convert_model_to_float32(model)
+
+            # Convertir datos de entrada a float32
+            X_1channel_32 = tf.cast(X_1channel, tf.float32)
+
+            # Inferencia con el modelo en float32
+            prediction = model_32.predict(X_1channel_32, batch_size=1)[1]
+
+
+
+
+ 
         prediction_flat = prediction.reshape(prediction.shape[0] * prediction.shape[1], prediction.shape[2])
         egm_flat = egm_tensor.reshape(prediction.shape[0] * prediction.shape[1], prediction.shape[2])
 
         return prediction_flat, egm_flat
     
-    def postprocess_data_DL(self, prediction, y_label):
+    def postprocess_data_DL(self, prediction):
         '''
         This function applies postprocessing to enchance AI predictions including
 
@@ -225,11 +256,17 @@ class EvaluateDL:
             - Low pass filter to remove noise (noise considered f> FPA_cutoff)
             - normalizing -1 and 1
         '''
+        print('Applying postprocessing...')
+        prediction_post=postprocess_prediction(prediction, fs=self.fs, FPA_cutoff=15,cutoff_DC=1, axis=1)
+        
+        try:
+            assert prediction_post[:, 0].max() == 1
+        except AssertionError:
+            print('Prediction not normalized!')
+            sys.exit()
 
-        prediction_post=postprocess_prediction(prediction, fs=self.fs, FPA_cutoff=12,cutoff_DC=1, axis=1)
 
         return prediction_post
-    
     
     def run(self):
 
@@ -257,10 +294,8 @@ class EvaluateDL:
         output_path2 = self.experiment_dir + f"metrics_all_nodes_dl_{self.test_id}.csv"
         df_all_nodes.to_csv(output_path2, index=False)
 
-
         print("Metrics saved in", output_path1)
         print("Metrics lists saved in", output_path2)
-
         print("Execution time of DL evaluation:", time.time() - self.start_time, "sec")
 
 

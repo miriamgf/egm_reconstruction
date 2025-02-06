@@ -34,7 +34,7 @@ try:
     print(algorithm_ID, evaluate_dl, evaluate_tik)
 
 except:
-    algorithm_ID = "OMAMI_VAE_Optuna_1"
+    algorithm_ID = "OMAMI_no_filt_bs_fs_testing"
     evaluate_dl=True
     evaluate_tik=True
 
@@ -48,7 +48,7 @@ test_patients = [
             "Simulation_01_210119_001_001", "Simulation_01_210208_001_002"
         ]
 
-experiment_ID_list=[["OMAMI_repeated"], ["OMAMI_VAE_Optuna_1"], ['OMAMI_no_filt'], ['OMAMI_VAE_no_filt']]
+experiment_ID_list=[["OMAMI_no_filt_bs_fs_testing"],["OMAMI_repeated"], ["OMAMI_VAE_Optuna_1"], ['OMAMI_no_filt'], ['OMAMI_VAE_no_filt']]
 
 
 # DL -->  284 /12 = 23.666 seconds per patient (all the pipeline)
@@ -64,6 +64,6 @@ if evaluate_tik:
 
 
 # Evaluate in regions
-#EvaluateRegionsObj=EvaluateRegions(experiment_ID_list=experiment_ID_list, test_id='0')()
+EvaluateRegionsObj=EvaluateRegions(experiment_ID_list=experiment_ID_list, test_id='0')()
 
 
