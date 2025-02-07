@@ -80,22 +80,24 @@ print(type(patches_oclussion))
 """
 
 params = ParseHiperparams().parse_default_hyperparams()
-if params['load_best_hiperparams']:
-    if params["algorithm"]=='OMAMI':
 
-        print('Load OMAMI Optimal hyperparams')
-        path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_repeated/hyperparams.json'
-        params=ParseHiperparams().load_best_hyperparams(path_best_params)
-        params['optuna_optimization']=False
-        params["n_epochs"]=50
+if params["algorithm"]=='OMAMI':
 
-    elif params["algorithm"]=='OMAMI_VAE':
-        
-        print('Load OMAMI VAE Optimal hyperparams')
-        path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_VAE_Optuna/hyperparams.json'
-        params=ParseHiperparams().load_best_hyperparams(path_best_params)
-        params['optuna_optimization']=False
-        params["n_epochs"]=50
+    print('Load OMAMI Optimal hyperparams')
+    path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_no_filt/hyperparams.json'
+    params=ParseHiperparams().load_best_hyperparams(path_best_params)
+    params['optuna_optimization']=False
+    params["n_epochs"]=50
+    #params["filter_EGM"]=False
+
+elif params["algorithm"]=='OMAMI_VAE':
+    
+    print('Load OMAMI VAE Optimal hyperparams')
+    path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_VAE_Optuna/hyperparams.json'
+    params=ParseHiperparams().load_best_hyperparams(path_best_params)
+    params['optuna_optimization']=False
+    params["n_epochs"]=50
+
 
 
 try:
@@ -140,9 +142,7 @@ except:
 
 print('Params to train: ', params)
 
-#borrar 
-
-#params['optuna_optimization']=True
+#params['cross_validation']=True
 #params["fold"] = fold
 
 SNR_em_noise = None
@@ -160,26 +160,23 @@ if not params["filter_EGM"]:
     experiment_name = f"{experiment_name}_no_filt"
 
 if params["algorithm"] == "OMAMI":
-    params["fs_sub"]=50
+    params["fs_sub"]=200
     params["batch_size"]=400
-
-#borrar
+    #params["loss_weight_1"]=1
+    #params["loss_weight_1"]=15
 
 
 if params["optuna_optimization"]:
-    print('Running optuna...')
     experiment_name = f"{experiment_name}_Optuna"
 
 
-experiment_name = f"{experiment_name}_bs_fs"
+experiment_name = f"{experiment_name}_testing"
 
-if params['optuna_optimization']:
-    print('Optuna activated')
+print(params)
 
-
-# #experiment_name='pruebas interpol'
+#experiment_name='pruebas interpol'
 print('Experiment name: ', experiment_name)
-print('params', params)
+
 
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -190,6 +187,7 @@ models_dir = "output/model/"
 dict_var_dir = "output/variables/"
 dict_results_dir = "output/results/"
 experiment_dir = "output/experiments/experiments_VAE/" + experiment_name + "/"
+
 
 if not os.path.exists(experiment_dir):
     os.makedirs(experiment_dir)    
@@ -328,6 +326,7 @@ plt.savefig('output/figures/input_output/before_norm.png')
     experiment_dir,
     norm_egm=True,
 )()
+
 
 
 print("Algorithm selected:", params["algorithm"])
@@ -620,6 +619,10 @@ new_items = {
     "dtw_std_random": dtw_std_random,
 }
 dic_vars.update(new_items)
+
+# results = pd.DataFrame(
+# columns=["MSE AE", "DTW AE", "MSE Reconstruction", "TWD Reconstruction"]
+# )
 
 # Interpolation for mapping in 3D
 estimate_egms_reshaped = reshape(

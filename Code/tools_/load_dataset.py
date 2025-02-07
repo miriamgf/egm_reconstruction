@@ -21,15 +21,15 @@ from plots import *
 from scipy import signal
 from scipy import signal as sigproc
 from scipy.io import loadmat
-import numba
+#import numba
 
 from tools_.noise_simulation import NoiseSimulation
 from tools_.oclusion import Oclussion
-import tools_.tools as tools
 
 # %% Path Models
 # %% Path Models
 current = os.path.dirname(os.path.realpath(__file__))
+
 torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
 
 
@@ -192,11 +192,8 @@ class LoadDataset:
         )
 
         print('Load - all_model_names', all_model_names)
-
         cont=0
-
         for model_name in all_model_names:
-            
 
             if self.inference:
                 if model_name not in model_name:
@@ -213,22 +210,37 @@ class LoadDataset:
 
             # 1.2)  EGMs filtering.
             if self.params["filter_EGM"]:
-                x = self.ECG_filtering(egms, fs=self.fs, axis=0)
+                x = self.ECG_filtering(egms, fs=self.fs)
             else:
-
-                x = tools.remove_mean(egms, axis=0) #only detrend
+                x = egms
                 print('Not filtering EGM')
-            # 1.3) Normalize EGMS
+
+            # 1.3 Normalize EGMS
             if self.norm:
-                x=normalize_array(high=1, low=-1, axis_n=0)
+
+                high = 1
+                low = -1
+
+                mins = np.min(x, axis=0)
+                maxs = np.max(x, axis=0)
+                rng = maxs - mins
+
+                high - (((high - low) * (maxs - x)) / rng)
+
             matrix_num=0
             # 2) Compute the Forward problem with each of the transfer matrices
             for matrix in transfer_matrices:
+
+        
                 # Forward problem
                 y = self.forward_problem(x, matrix[0])
+    
                 bsps_64 = y[matrix[1].ravel(), :]
+
                 bsps_64_or = bsps_64
                 bsps_64_filt = bsps_64_or
+
+               
 
                 # RESAMPLING signal to fs= fs_sub
                 if self.downsampling:
@@ -296,7 +308,7 @@ class LoadDataset:
                     # 5) Filter AFTER adding noise
 
                     tensor_model_filt = self.ECG_filtering(
-                        tensor_model_noisy, order=3, fs=500, f_low=3, f_high=30, bspm=True
+                        tensor_model_noisy, order=3, fs=500, f_low=3, f_high=30
                     )
                     tensor_model = tensor_model_filt
 
@@ -495,7 +507,7 @@ class LoadDataset:
                 all_tensors = np.concatenate((all_tensors, tensor_model), axis=0)
 
         return all_tensors
-    '''
+
     def get_bsps_64(self, bsps_192, seed="Y"):
         """
         Reduce 192 BSPs to 64, selecting 1 random BSPs of the 3 posibilities for each node
@@ -523,22 +535,7 @@ class LoadDataset:
             pos += 3
 
         return np.array(bsps_64)
-    '''
 
-    @numba.njit(parallel=True)
-    def get_bsps_64(bsps_192):
-        """
-        Reduce 192 BSPs to 64 by randomly selecting 1 of 3 possibilities for each node.
-        """
-        rng = np.random.default_rng(0)
-        bsps_64 = np.zeros((64, bsps_192.shape[1]))
-
-        for i in numba.prange(64):  # Paraleliza el bucle
-            rand = rng.integers(0, 3)  # Escoge un índice aleatorio
-            bsps_64[i] = bsps_192[i * 3 + rand]
-
-        return bsps_64
-    
     def get_labels(self, class_type, model_name):
         """
         Get y labels for each classification type: 2, 3 or 7.
@@ -846,7 +843,7 @@ class LoadDataset:
 
         return patches
 
-    def ECG_filtering(self, signal, fs, order=2, f_low=1, f_high=50, bspm=False, axis=0):
+    def ECG_filtering(self, signal, fs, order=2, f_low=3, f_high=30):
         """
         Frequency filtering of ECG-EGM.
         SR model: low-pass filtering, 4th-order Butterworth filter.
@@ -861,15 +858,9 @@ class LoadDataset:
         Returns:
             proc_ECG_EGM (array): filtered ECG-EGM
         """
-        original_signal=signal.copy()
 
-        if bspm:
-            signal=signal.reshape(signal.shape[0], -1)
-            axis=1
-
-        # Remove mean
-        sig_temp = tools.remove_mean(signal, axis=axis)
-        #sig_temp=signal
+        sig_temp = remove_mean(signal)
+        # sig_temp = signal
 
         # Bandpass filtering
         b, a = sigproc.butter(
@@ -878,22 +869,15 @@ class LoadDataset:
             btype="bandpass",
         )
 
-        proc_ECG_EGM = np.zeros(signal.shape)
-        if signal.ndim == 3:
-            for i in range(signal.shape[1]):
-                for j in range(signal.shape[2]):
+        proc_ECG_EGM = np.zeros(sig_temp.shape)
+        if sig_temp.ndim == 3:
+            for i in range(sig_temp.shape[1]):
+                for j in range(sig_temp.shape[2]):
                     # for index in range(sig_temp.shape[0]):
-                    proc_ECG_EGM[:, i, j] = sigproc.filtfilt(b, a, signal[:, i, j])
+                    proc_ECG_EGM[:, i, j] = sigproc.filtfilt(b, a, sig_temp[:, i, j])
         else:
-            if bspm:
-                for index in range(0, signal.shape[1]):
-                    proc_ECG_EGM[:, index] = sigproc.filtfilt(b, a, signal[:,index])
-            else:
-                for index in range(0, signal.shape[0]):
-                    proc_ECG_EGM[index, :] = sigproc.filtfilt(b, a, signal[index, :])
-        
-        if bspm:
-            proc_ECG_EGM=proc_ECG_EGM.reshape((original_signal.shape[0], original_signal.shape[1],original_signal.shape[2]) )
+            for index in range(0, sig_temp.shape[0]):
+                proc_ECG_EGM[index, :] = sigproc.filtfilt(b, a, sig_temp[index, :])
 
         return proc_ECG_EGM
 
@@ -1039,12 +1023,12 @@ class LoadDataset_BSPS:
         )  # instance of class
 
         test_models_deterministic = [
-            "modelLA_PLAW_140711_arm",
-            "modelLA_RSPV_CAF_150115",
-            "modelSimulation_01_200212_001_  5",
-            "modelSimulation_01_200212_001_ 10",
-            "modelSimulation_01_200316_001_  3",
-            "modelSimulation_01_200316_001_  4",
+            "LA_PLAW_140711_arm",
+            "LA_RSPV_CAF_150115",
+            "Simulation_01_200212_001_  5",
+            "Simulation_01_200212_001_ 10",
+            "Simulation_01_200316_001_  3",
+            "Simulation_01_200316_001_  4",
             "Simulation_01_200316_001_  8",
             "Simulation_01_200428_001_004",
             "Simulation_01_200428_001_008",
@@ -1084,32 +1068,32 @@ class LoadDataset_BSPS:
             # 1.2)  EGMs filtering.
             #x=egms
             # 1.2)  EGMs filtering.
-            egms = np.asarray(egms, dtype=np.float64)  # Convertir egms a array NumPy
-            fs = float(self.fs)  # Asegurar que fs es un número flotante
-            
-            # 1.2)  EGMs filtering.
-            #if self.params["filter_EGM"]:
-                #x = self.ECG_filtering(egms, fs=self.fs, axis=0)
-            #else:
-
-            x = tools.remove_mean(egms, fs= self.fs, axis=0) #only detrend
-            print('Not filtering EGM')
-            
-            plt.plot(figsize=(20, 10))
-            plt.plot(egms[0, 0:1000], label='original')
-            plt.plot(x[0, 0:1000], label='detrended')
-            plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/toy/egm_filt2.png')
-            print("/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/toy/egm_filt2.png")
-            plt.close()
+            try:
+                if self.params["filter_EGM"]:
+                    x = self.ECG_filtering(egms, fs=self.fs)
+                else:
+                    x = egms
+                    print('Not filtering EGM')
+            except:
+                x = self.ECG_filtering(egms, fs=self.fs)
 
             # 1.3 Normalize EGMS
             if self.norm:
-                x=normalize_array(high=1, low=-1, axis_n=0)
+
+                high = 1
+                low = -1
+
+                mins = np.min(x, axis=0)
+                maxs = np.max(x, axis=0)
+                rng = maxs - mins
+
+                high - (((high - low) * (maxs - x)) / rng)
+
             matrix_num=0
             # 2) Compute the Forward problem with each of the transfer matrices
             for matrix in transfer_matrices:
                 # Forward problem
-                y = LoadDataset_BSPS.forward_problem(x, matrix[0])
+                y = self.forward_problem(x, matrix[0])
                 bsps_64 = y[matrix[1].ravel(), :]
                 bsps_64_or = bsps_64
                 bsps_64_filt = bsps_64_or
@@ -1179,20 +1163,8 @@ class LoadDataset_BSPS:
                     # 5) Filter AFTER adding noise
 
                     tensor_model_filt = self.ECG_filtering(
-                        tensor_model_noisy, order=3, fs=500, f_low=3, f_high=30, bspm=True
+                        tensor_model_noisy, order=3, fs=500, f_low=3, f_high=30
                     )
-
-                    a=tensor_model_filt.reshape((tensor_model_filt.shape[0], -1))
-                    b=tensor_model_noisy.reshape((tensor_model_noisy.shape[0], -1))
-                    c=tensor_model.reshape((tensor_model_noisy.shape[0], -1))
-                    plt.figure(figsize=(20,10))
-                    plt.plot(a[:, 0],label='filt')
-                    plt.plot(b[:, 0],label='no filt')
-                    plt.plot(c[:, 0],label='Original')
-                    plt.legend()
-                    plt.savefig("/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/toy/filterbpsm.png")
-                    print("/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/toy/filterbpsm.png")
-                    plt.close()
                     tensor_model = tensor_model_filt
 
 
@@ -1322,15 +1294,7 @@ class LoadDataset_BSPS:
                 )
 
         return EG
-    
-    @staticmethod
-    @numba.njit(parallel=True, fastmath=True)
-    def forward_problem(EGMs, MTransfer):
-        """
-        Compute ECGI forward problem from atrial EGMs using matrix multiplication.
-        """
-        return np.dot(MTransfer, EGMs)
-    '''
+
     def forward_problem(self, EGMs, MTransfer):
         """
         Calculate ECGI forward problem from atrial EGMs
@@ -1343,7 +1307,6 @@ class LoadDataset_BSPS:
         """
         ECG = np.matmul(MTransfer, EGMs)
         return ECG
-    '''
 
     def get_bsps_192(self, model_name, ten_leads=False):
         """
@@ -1729,11 +1692,8 @@ class LoadDataset_BSPS:
             index += 1
 
         return patches
-    
-    
 
-    
-    def ECG_filtering(self, signal, fs, order=2, f_low=1, f_high=50, bspm=False, axis=0):
+    def ECG_filtering(self, signal, fs, order=2, f_low=3, f_high=30):
         """
         Frequency filtering of ECG-EGM.
         SR model: low-pass filtering, 4th-order Butterworth filter.
@@ -1748,15 +1708,10 @@ class LoadDataset_BSPS:
         Returns:
             proc_ECG_EGM (array): filtered ECG-EGM
         """
-        original_signal=signal.copy()
 
-        if bspm:
-            signal=signal.reshape(signal.shape[0], -1)
-            axis=1
-
-        # Remove mean
-        signal = tools.remove_mean(signal, axis=axis)
-        #sig_temp=signal
+        # Remove DC component
+        sig_temp = remove_mean(signal)
+        # sig_temp = signal
 
         # Bandpass filtering
         b, a = sigproc.butter(
@@ -1765,22 +1720,15 @@ class LoadDataset_BSPS:
             btype="bandpass",
         )
 
-        proc_ECG_EGM = np.zeros(signal.shape)
-        if signal.ndim == 3:
-            for i in range(signal.shape[1]):
-                for j in range(signal.shape[2]):
+        proc_ECG_EGM = np.zeros(sig_temp.shape)
+        if sig_temp.ndim == 3:
+            for i in range(sig_temp.shape[1]):
+                for j in range(sig_temp.shape[2]):
                     # for index in range(sig_temp.shape[0]):
-                    proc_ECG_EGM[:, i, j] = sigproc.filtfilt(b, a, signal[:, i, j])
+                    proc_ECG_EGM[:, i, j] = sigproc.filtfilt(b, a, sig_temp[:, i, j])
         else:
-            if bspm:
-                for index in range(0, signal.shape[1]):
-                    proc_ECG_EGM[:, index] = sigproc.filtfilt(b, a, signal[:,index])
-            else:
-                for index in range(0, signal.shape[0]):
-                    proc_ECG_EGM[index, :] = sigproc.filtfilt(b, a, signal[index, :])
-        
-        if bspm:
-            proc_ECG_EGM=proc_ECG_EGM.reshape((original_signal.shape[0], original_signal.shape[1],original_signal.shape[2]) )
+            for index in range(0, sig_temp.shape[0]):
+                proc_ECG_EGM[index, :] = sigproc.filtfilt(b, a, sig_temp[index, :])
 
         return proc_ECG_EGM
     

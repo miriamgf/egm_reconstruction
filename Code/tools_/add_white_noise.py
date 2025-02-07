@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy import signal as sigproc
 from scipy.interpolate import interp1d
-import numba
+#import numba
 
 
 def remove_mean(signal):
@@ -87,8 +87,8 @@ def ECG_filtering_real_data(signal_orig, fs, filt_order=6, f_cut=30):
 
     return proc_ECG_EGM
 
-@staticmethod
-@numba.njit(parallel=True, fastmath=True)
+#@staticmethod
+#@numba.njit(parallel=True, fastmath=True)
 def ECG_filtering(signal, fs, f_low=3, f_high=30, model="SR"):
     """
     Frequency filtering of ECG-EGM.
