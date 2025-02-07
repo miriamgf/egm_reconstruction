@@ -16,12 +16,25 @@
 #nohup python -u  scripts/evaluation/evaluate_tik.py --algorithm_ID 'OMAMI_VAE_Optuna' > output/logs/evaluation/evaluate_tik_OMAMI_VAE.log 2>&1 &
 #wait
 
-echo "output/logs/evaluation/evaluate_tik_OMAMI_VAE_no_filt.log"
-nohup python -u scripts/evaluation/evaluate_dl.py --algorithm_ID 'OMAMI_VAE_no_filt' > output/logs/evaluation/evaluate_tik_OMAMI_VAE_no_filt.log 2>&1 &
-wait
-echo "output/logs/evaluation/evaluate_tik_OMAMI_VAE_no_filt.log"
-nohup python -u scripts/evaluation/evaluate_tik.py --algorithm_ID 'OMAMI_VAE_no_filt' > output/logs/evaluation/evaluate_tik_OMAMI_VAE_no_filt.log 2>&1 &
-echo "All evaluation scripts have completed."
-#nohup python visualization/3d_plot_egm_bpsm.py --algorithm_ID 'OMAMI_VAE_Optuna' > output/logs/evaluation/evaluate_tik.log 2>&1 &
+# Esperar 7 horas (7 * 60 * 60 segundos)
 
-#OMAMI_VAE_Optuna  evaluate_tik
+#
+
+#echo "output/logs/evaluation/OMAMI_VAE_no_filt.log"
+#nohup python -u scripts/evaluation/evaluate_main.py --algorithm_ID 'OMAMI_VAE_no_filt' --ev_DL true --ev_TIK true > output/logs/evaluation/OMAMI_VAE_no_filt.log 2>&1 &
+#wait
+
+echo "output/logs/evaluation/OMAMI_VAE_no_filt.log"
+nohup python -u scripts/evaluation/evaluate_main.py --algorithm_ID 'OMAMI_VAE_no_filt' --ev_DL true --ev_TIK true > output/logs/evaluation/OMAMI_VAE_no_filt.log 2>&1 &
+wait
+
+echo "output/logs/evaluation/OMAMI_no_filt.log"
+nohup python -u scripts/evaluation/evaluate_main.py --algorithm_ID 'OMAMI_no_filt' --ev_DL true --ev_TIK true > output/logs/evaluation/OMAMI_no_filt.log 2>&1 &
+wait
+echo "output/logs/evaluation/OMAMI_VAE_Optuna_1.log"
+nohup python -u scripts/evaluation/evaluate_main.py --algorithm_ID 'OMAMI_VAE_Optuna_1' --ev_DL true --ev_TIK true > output/logs/evaluation/OMAMI_VAE_Optuna_1.log 2>&1 &
+wait
+echo "output/logs/evaluation/OMAMI_repeated.log"
+nohup python -u scripts/evaluation/evaluate_main.py --algorithm_ID 'OMAMI_repeated' --ev_DL true --ev_TIK true > output/logs/evaluation/OMAMI_repeated.log 2>&1 &
+wait
+echo "Finished!!"

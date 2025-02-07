@@ -10,9 +10,18 @@ export CUDA_VISIBLE_DEVICES=0
 #wait
 
 wait
-echo "output/logs/output_OMAMI_VAE_optuna.log"
-nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI_VAE' --optuna true > output/logs/output_OMAMI_VAE_optuna.log 2>&1 
+echo "output/logs/OMAMI_no_filt_bs_fs_testing.log"
+nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --optuna false --filter_EGM false > output/logs/OMAMI_no_filt_bs_fs_testing.log 2>&1 
+wait
+
+
+
+
+#echo "output/logs/output_OMAMI_VAE_no_filt_bs_fs.log"
+#nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI_VAE' --optuna true --filter_EGM false > output/logs/output_OMAMI_VAE_no_filt_bs_fs.log 2>&1 
 #wait
+
+
 
 #echo "output/logs/output_OMAMI_VAE_optuna.log"
 #nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --n_nodes 2048 --filter_EGM false --fold 3 > output/logs/output_OMAMI_optuna_fold_3.log 2>&1 
