@@ -127,8 +127,8 @@ class EvaluateTikhonov:
         Y_model_single=np.split(np.array(Y_model), 10)[torso_index]
 
         #normalize 
-        bspm_signal_norm = tools.normalize_array(bspm_signal_64.T, high=1, low=-1, axis_n=1) 
-        egm_single_norm = tools.normalize_array(egm_single, high=1, low=-1, axis_n=0) 
+        bspm_signal_norm = normalize_array(bspm_signal_64.T, high=1, low=-1, axis_n=1) 
+        egm_single_norm = normalize_array(egm_single, high=1, low=-1, axis_n=0) 
 
         print(X_1channel.shape, egm_tensor.shape, Y_model.shape)    
 
@@ -195,7 +195,7 @@ class EvaluateTikhonov:
         This
         '''
         prediction=prediction-np.mean(prediction)
-        tik_rec_norm = tools.normalize_array(prediction, high=1, low=-1, axis_n=0)
+        tik_rec_norm = normalize_array(prediction, high=1, low=-1, axis_n=0)
 
         return tik_rec_norm
 

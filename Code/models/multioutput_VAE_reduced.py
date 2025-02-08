@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 from keras import layers
 from keras import Model
+import gc
 
 tf.config.experimental_run_functions_eagerly(
     True
@@ -36,7 +37,7 @@ class MultiOutput_VAE(Model):
 
         # Define encoder layers
         self.conv1 = layers.Conv3D(
-            64,
+            32,
             (5, 2, 2),
             strides=1,
             padding="same",
@@ -46,14 +47,14 @@ class MultiOutput_VAE(Model):
             kernel_regularizer=tf.keras.regularizers.l2(params["l2_reg"]),
         )
         self.conv2 = layers.Conv3D(
-            64, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
+            32, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
         )
         self.conv3 = layers.Conv3D(
-            32, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
+            16, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
         )
         self.maxpool1 = layers.MaxPooling3D((1, 2, 2))
         self.conv4 = layers.Conv3D(
-            12,
+            16,
             (5, 2, 2),
             strides=1,
             padding="same",
@@ -62,9 +63,9 @@ class MultiOutput_VAE(Model):
         )
         self.maxpool2 = layers.MaxPooling3D((1, 2, 2))
         self.conv5 = layers.Conv3D(
-            4, (5, 2, 2), strides=1, padding="same", activation="linear"
+            1, (5, 2, 2), strides=1, padding="same", activation="linear"
         )
-        self.maxpool3 = layers.MaxPooling3D((1, 1, 2))
+        self.maxpool3 = layers.MaxPooling3D((2, 1, 2))
         self.flatten = layers.Flatten()
         # Calculate the output shape after the Flatten layer
         dummy_input = tf.ones(
@@ -90,17 +91,17 @@ class MultiOutput_VAE(Model):
         self.z_mean_dense = layers.Dense(latent_dim, name="z_mean")
         self.z_log_var_dense = layers.Dense(latent_dim, name="z_log_var")
         self.sampling_layer = SamplingLayer()
-        self.reshape_latent_space = layers.Reshape((self.params["batch_size"], 3, 4, 4))
+        self.reshape_latent_space = layers.Reshape((int(self.params["batch_size"]/2), 3, 4, 1))
 
         # Define decoder layers
         # self.decoder_conv1 = layers.Conv3D(4, (5, 2, 2), strides=1, padding="same", activation="leaky_relu", kernel_initializer=initializer)
-        self.upsample1 = layers.UpSampling3D((1, 1, 2))
+        self.upsample1 = layers.UpSampling3D((2, 1, 2))
         self.decoder_conv2 = layers.Conv3D(
-            32, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
+            16, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
         )
         self.upsample2 = layers.UpSampling3D((1, 2, 2))
         self.decoder_conv3 = layers.Conv3D(
-            32, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
+            16, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
         )
         self.upsample3 = layers.UpSampling3D((1, 2, 2))
         self.decoder_output = layers.Conv3D(
@@ -114,8 +115,9 @@ class MultiOutput_VAE(Model):
         )
 
         # define reconstruction layers
+        
         self.conv3d_1 = layers.Conv3D(
-            64,
+            32,
             (5, 2, 2),
             strides=(1, 1, 1),
             padding="same",
@@ -142,7 +144,7 @@ class MultiOutput_VAE(Model):
 
         self.time_distributed = layers.TimeDistributed(layers.Flatten())
         self.batch_norm = layers.BatchNormalization(axis=1)
-        self.lstm = layers.LSTM(self.params["LSTM_units"], return_sequences=True)
+        self.lstm = layers.GRU(self.params["LSTM_units"], return_sequences=True)
         self.dropout = layers.Dropout(self.params["dropout"])
         self.dense = layers.Dense(
             n_nodes, activation="leaky_relu", name="Regressor_output"
@@ -209,8 +211,8 @@ class MultiOutput_VAE(Model):
         '''
         # self.input_shape_=input_shape_
 
-
-        x = self.conv3d_1(latent_inputs)
+        x = self.upsample1(latent_inputs) #new
+        x = self.conv3d_1(x)
         x = self.upsampling3d_1(x)
         x = self.conv3d_2(x)
         x = self.upsampling3d_2(x)
@@ -299,15 +301,22 @@ class MultiOutput_VAE(Model):
                 self.params["loss_weight_2"]*loss_autoencoder + self.params["loss_weight_2"]*loss_regression
             )  # Or weighted: alpha*loss_autoencoder + beta*loss_regression
 
-        # Compute and apply gradients based on the total loss
+            # Asegurar que total_loss sea un escalar
+            total_loss = tf.reduce_mean(total_loss)
+            scaled_loss = self.optimizer.get_scaled_loss(total_loss) #mixed precision
 
-        gradients = tape.gradient(total_loss, self.model.trainable_variables)
+        # Compute and apply gradients based on the total loss
+        scaled_gradients = tape.gradient(scaled_loss, self.model.trainable_variables)  #mixed precision
+        gradients = self.optimizer.get_unscaled_gradients(scaled_gradients)  #mixed precision
+
+        del tape  # Eliminar el tape para liberar memoria
+        gc.collect()
         # Clip gradients to avoid exploding gradients (based on their global norm)
         clipped_gradients, global_norm = tf.clip_by_global_norm(
             gradients, clip_norm=1.0
         )
         self.optimizer.apply_gradients(
-            zip(clipped_gradients, self.model.trainable_variables)
+            zip(gradients, self.model.trainable_variables)
         )
         step = int(self.optimizer.iterations)
         with self.file_writer.as_default():
@@ -413,7 +422,7 @@ class MultiOutput_VAE(Model):
             image = tf.expand_dims(image, axis=0)
             tf.summary.image("Latent Space - Signal (channels 0-5)", image, step=step)
 
-
+            
 class SamplingLayer(tf.keras.layers.Layer):
     """Custom sampling layer for VAE"""
 
@@ -426,3 +435,27 @@ class SamplingLayer(tf.keras.layers.Layer):
         dim = tf.shape(z_mean)[1]
         epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
         return z_mean + tf.exp(0.5 * z_log_var + 1e-8) * epsilon
+
+'''
+class SamplingLayer(tf.keras.layers.Layer):
+    """Custom sampling layer for VAE"""
+
+    @tf.function
+    def call(self, inputs):
+        z_mean, z_log_var = inputs
+        
+        z_log_var = tf.clip_by_value(z_log_var, -10.0, 10.0)
+        batch = tf.shape(z_mean)[0]
+        dim = tf.shape(z_mean)[1]
+        epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
+
+        #float16 (mixed precision)
+        z_log_var = tf.cast(z_log_var, tf.float16)  # Convertir log_var a float16
+        z_mean = tf.cast(z_mean, tf.float16)  # Convertir mean a float16
+        epsilon = tf.cast(tf.keras.backend.random_normal(shape=tf.shape(z_mean)), tf.float16)  # Convertir ruido a float16
+        
+        return z_mean + tf.exp(tf.cast(0.5, tf.float16) * z_log_var + tf.cast(1e-8, tf.float16)) * epsilon
+
+
+        #return z_mean + tf.exp(0.5 * z_log_var + 1e-8) * epsilon
+'''

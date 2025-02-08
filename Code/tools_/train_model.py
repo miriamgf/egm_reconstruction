@@ -8,6 +8,7 @@ from tensorflow import keras
 from keras.callbacks import TensorBoard
 from optuna.integration import TFKerasPruningCallback
 from keras.optimizers import Adam
+import numpy as np
 
 from models.multioutput import MultiOutput
 from models.multioutput_skip import MultiOutput_skip
@@ -153,6 +154,8 @@ class TrainModel:
             pass
 
         # Callbacks
+
+        #callbacks_list, optimizer = self.define_callbacks()
         
         cp_callback = tf.keras.callbacks.ModelCheckpoint(
             filepath=self.experiment_dir+ "model_weights.h5",
@@ -268,6 +271,35 @@ class TrainModel:
             print(model.summary())
         
         
+        #converto to tensor
+        x_train = tf.convert_to_tensor(np.array(x_train), dtype=tf.float32)
+        y_train = tf.convert_to_tensor(np.array(y_train), dtype=tf.float32)
+        x_val = tf.convert_to_tensor(np.array(x_val), dtype=tf.float32)
+        y_val = tf.convert_to_tensor(np.array(y_val), dtype=tf.float32)
+        x_test = tf.convert_to_tensor(np.array(x_test), dtype=tf.float32)
+        y_val = tf.convert_to_tensor(np.array(y_val), dtype=tf.float32)
+
+        #Convert to tf.Dataset format
+        train_dataset = tf.data.Dataset.from_tensor_slices((x_train, (x_train, y_train))) \
+                .batch(self.params["num_batch_iter"]) \
+                .prefetch(tf.data.experimental.AUTOTUNE)
+
+        val_dataset = tf.data.Dataset.from_tensor_slices((x_val, (x_val, y_val))) \
+                .batch(self.params["num_batch_iter"]) \
+                .prefetch(tf.data.experimental.AUTOTUNE)
+        test_dataset = tf.data.Dataset.from_tensor_slices((x_test, (x_test, y_test))) \
+                .batch(self.params["num_batch_iter"]) \
+                .prefetch(tf.data.experimental.AUTOTUNE)
+
+        # Entrenar el modelo con el dataset
+        self.history = model.fit(
+            train_dataset,
+            epochs=self.params["n_epochs"],
+            validation_data=val_dataset,
+            callbacks=callbacks_list,
+        )
+        
+        '''
         
         history = model.fit(
             x=x_train,
@@ -277,6 +309,7 @@ class TrainModel:
             validation_data=(x_val, [x_val, y_val]),
             callbacks=callbacks_list,
             )    
+        '''
         # Construir el modelo antes de guardarlo si es un modelo subclasificado
         try:
             model.build(input_shape=(None, *x_train.shape[1:]))  # Define el input shape correcto
@@ -352,8 +385,77 @@ class TrainModel:
 
         '''
         return model, history
+    '''
+    def define_callbacks(self):
+         # Callbacks
+        
+        cp_callback = tf.keras.callbacks.ModelCheckpoint(
+            filepath=self.experiment_dir+ "model_weights.h5",
+            save_weights_only=False,
+            verbose=1,
+            save_best_only=True,
+        )
 
-    
+        initial_learning_rate = self.params["learning_rate"]
+        lr_schedule = keras.optimizers.schedules.ExponentialDecay(
+            initial_learning_rate,
+            decay_steps=1000,
+            decay_rate=0.96,
+            staircase=True)
+        
+        # Optimizer configuration
+        if self.params["algorithm"]=="OMAMI_VAE" or self.params["algorithm"]=="OMAMI_VAE_skip":
+            optimizer = Adam(learning_rate=lr_schedule, clipvalue=1.0) #probar clipnorm
+        else:
+            optimizer = Adam(learning_rate=lr_schedule)
+
+
+
+        early_stopping_callback = tf.keras.callbacks.EarlyStopping(
+            monitor="val_loss", patience=20
+        )
+        
+        tensorboard_callback = TensorBoard(log_dir='output/tensorboard/logs/'+self.params['algorithm'], histogram_freq=1)
+
+        callbacks_list = [early_stopping_callback, tensorboard_callback]
+        print(callbacks_list)
+        #ssh -L 6006:localhost:6006 miriamgf@10.110.100.78 en terminal LOCAL
+        #tensorboard --logdir=output/tensorboard/logs/ en terminal REMOTO
+
+        if self.trial is not None:
+            pruning_callback = TFKerasPruningCallback(self.trial, monitor="val_loss")
+            callbacks_list.append(pruning_callback)
+        
+        return callbacks_list, optimizer
+
+    def plot_train_curves(self):
+        plt.figure()
+        plt.plot(self.history.history["val_loss"], label="Global loss (Validation)")
+        plt.plot(
+            self.history.history["val_autoencoder_loss"],
+            label="Autoencoder loss (Validation)",
+        )
+        plt.plot(
+            self.history.history["val_reconstruction_loss"],
+            label="Regressor loss (Validation)",
+        )
+        plt.plot(self.history.history["loss"], label="Global loss (Train)")
+        plt.plot(
+            self.history.history["autoencoder_loss"],
+            label="Autoencoder loss (Train)",
+        )
+        plt.plot(
+            self.history.history["reconstruction_loss"],
+            label="Regressor loss (Train)",
+        )
+        plt.legend(loc="upper left")
+        plt.title("Model Loss During Training and Validation")
+        plt.ylabel("Mean Squared Error (MSE)")
+        plt.xlabel("Epoch")
+        plt.savefig(self.experiment_dir + "Learning_curves.png")
+        plt.show()
+
+    '''
 
     def __call__(self, verbose=False, all=False):
         """

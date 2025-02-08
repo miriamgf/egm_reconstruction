@@ -214,6 +214,8 @@ class LoadDataset:
             else:
                 x = egms
                 print('Not filtering EGM')
+            
+            
 
             # 1.3 Normalize EGMS
             if self.norm:

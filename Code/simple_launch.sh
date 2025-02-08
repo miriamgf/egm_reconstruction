@@ -9,10 +9,11 @@ export CUDA_VISIBLE_DEVICES=0
 #nohup python -u  scripts/evaluation/evaluate_tik.py --algorithm_ID 'OMAMI_no_filt' > output/logs/evaluation/evaluate_tik_OMAMI_no_filt_tk.log 2>&1 &
 #wait
 
-wait
-echo "output/logs/OMAMI_no_filt_bs_fs_testing.log"
-nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --optuna false --filter_EGM false > output/logs/OMAMI_no_filt_bs_fs_testing.log 2>&1 
-wait
+echo "output/logs/OMAMI_VAE_no_filt_testing2.log"
+nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --optuna false --filter_EGM false > output/logs/OMAMI_VAE_no_filt_testing2.log 2>&1  
+
+#echo "output/logs/OMAMI_no_filt_Optuna_VAE_testing.log"
+#nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI_VAE' --optuna true --filter_EGM false > output/logs/OMAMI_no_filt_optuna_VAE_testing.log 2>&1 &
 
 
 

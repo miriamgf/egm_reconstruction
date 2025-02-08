@@ -44,8 +44,8 @@ import time
 #---------------------------------------------------------------------------------------------------------------------
 
 plot_BSP = False
-plot_Tikhonov = False
-plot_DL= False
+plot_Tikhonov = True
+plot_DL= True
 plot_correlation_DL = False
 plot_correlation_tik = False
 plot_rmse_DL = False
@@ -75,7 +75,8 @@ test_patients = [["Simulation_01_200212_001_  5"],
 test_patients=[["Simulation_01_200212_001_  5"]]
 
 experiment_ID_list=[["OMAMI_repeated"], ["OMAMI_VAE_Optuna_1"], ['OMAMI_no_filt'], ['OMAMI_VAE_no_filt']]
-experiment_ID_list=[["OMAMI_VAE_Optuna_1"]]
+experiment_ID_list=[["OMAMI_no_filt_testing2"]]
+testing_id=0
 start = time.time()
 cont=0
 
@@ -192,7 +193,7 @@ for model_name in test_patients:
         Y_model_single=np.split(np.array(Y_model), 10)[torso_index]
 
         #normalize 
-        bspm_signal_norm = tools.normalize_array(bspm_signal.T, high=1, low=-1, axis_n=1) 
+        bspm_signal_norm = tools.normalize_array(bspm_signal.T, high=1, low=-1, axis_n=0) 
         egm_single_norm = tools.normalize_array(egm_single, high=1, low=-1, axis_n=0) 
 
         dic_vars={}
@@ -585,6 +586,7 @@ for model_name in test_patients:
                                             labels_mode=False,
                                             metric='Coherence',
                                             experiment_dir=experiment_dir,
+                                            testing_id=testing_id,
                                             tikhonov=False,
                                             time=time_duration,
                                         )

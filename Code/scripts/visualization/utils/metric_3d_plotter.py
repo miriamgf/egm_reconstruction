@@ -24,7 +24,7 @@ from scripts.visualization.utils.renderizer import EGMRenderer_EGM
 
 class METRIC_3D_PLOTTER:
 
-    def __init__(self, model_name, model_path, geom_path_CF,output_directory, labels_mode, metric, experiment_dir,tikhonov=False, time=500):
+    def __init__(self, model_name, model_path, geom_path_CF,output_directory, labels_mode, metric, experiment_dir, testing_id, tikhonov=False, time=500):
         
         self.model_name=model_name
         self.model_path=model_path
@@ -35,6 +35,7 @@ class METRIC_3D_PLOTTER:
         self.tikhonov=tikhonov
         self.metric=metric
         self.experiment_dir=experiment_dir
+        self.testing_id=testing_id
 
 
 
@@ -434,10 +435,16 @@ class METRIC_3D_PLOTTER:
         window_to_image_filter = vtk.vtkWindowToImageFilter()
         window_to_image_filter.SetInput(render_window)
         window_to_image_filter.Update()
-        if self.tikhonov:
-            output_file = os.path.join(self.output_directory, f"{self.metric}_tik.png")
+        if self.testing_id:
+            if self.tikhonov:
+                output_file = os.path.join(self.output_directory, f"{self.metric}_tik_{self.testing_id}.png")
+            else:
+                output_file = os.path.join(self.output_directory, f"{self.metric}_dl_{self.testing_id}.png")
         else:
-            output_file = os.path.join(self.output_directory, f"{self.metric}_dl.png")
+            if self.tikhonov:
+                output_file = os.path.join(self.output_directory, f"{self.metric}_tik_{self.testing_id}.png")
+            else:
+                output_file = os.path.join(self.output_directory, f"{self.metric}_dl_{self.testing_id}.png")
 
         writer = vtk.vtkPNGWriter()
         writer.SetFileName(output_file)
@@ -464,7 +471,10 @@ class METRIC_3D_PLOTTER:
 
         """
         #Load from evaluation precomputations
-        path= self.experiment_dir + f"metrics_all_nodes_dl.csv"
+        if self.testing_id:
+            path= self.experiment_dir + f"metrics_all_nodes_dl_{self.testing_id}.csv"
+        else:
+            path= self.experiment_dir + f"metrics_all_nodes_dl.csv"
 
         print('Loading CSV of:', path)
         csv_metrics = pd.read_csv(path)

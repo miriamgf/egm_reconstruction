@@ -481,11 +481,13 @@ class Metrics:
             print('Label not normalized!')
             sys.exit()
 
+        #normalize
+
+
         corr = self.correlation_by_node(prediction, y_label)
         rmse = self.rmse_by_node(prediction, y_label)
         recall, precision, error  = self.peak_detector_classif(prediction, y_label, fs, d=0.05, plot = True)
-        #dtw=self.dynamic_time_warping(prediction, y_label, plot=True)
-        dtw=[0]
+        dtw=self.dynamic_time_warping(prediction, y_label, plot=True)
         error_no_nan=[x for x in error if str(x) != 'nan']
         error_peak_det_norm=tools.normalize_array(error_no_nan, high=1, low=0, axis_n=0)
         coh_list=self.compute_spectral_coherence(prediction, y_label, fs, ROI_freq=[1.5, 10], nperseg_val=fs*2, plot=True)

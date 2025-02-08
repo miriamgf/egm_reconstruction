@@ -16,9 +16,17 @@ import matplotlib.patches as mpatches  # Para arreglar la leyenda
 import seaborn as sns
 
 
-
-
 class ReportMetrics():
+    '''
+    This class provides a global reporting on a set of <algorithm_list>
+
+    It computes global metrics algorithm wise and patient wise
+
+    All algorithms to be analyzed must have been evaluated first (evaluate_main.py)
+    
+    
+    
+    '''
     def __init__(self,  algorithm_list=None, name='default'):
         self.path_experiments= "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/"
 
@@ -31,6 +39,8 @@ class ReportMetrics():
         self.path_to_save="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/Global_results/agg_results_figs"
         self.path_to_save_summary= "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/Global_results/"
         self.name=name
+
+
     def load_evaluation_dataframes(self, algorithm_ID):
 
         '''
@@ -302,8 +312,6 @@ class ReportMetrics():
         '''
 
         if not None:
-            
-
             # Suponiendo que `merged_df` ya está creado
             # Seleccionar las métricas y los algoritmos
             metrics = ['Correlation', 'RMSE', 'PeakdetectorRecall', 'PeakdetectorPrecision', 'DTW', 'Coherence']
@@ -404,4 +412,4 @@ class ReportMetrics():
 
 
 if __name__ == "__main__":
-    ReportMetrics(name= 'CrossVal')()
+    ReportMetrics(name= 'baseline')()

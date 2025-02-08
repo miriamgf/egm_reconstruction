@@ -240,9 +240,6 @@ class EvaluateDL:
             prediction = model_32.predict(X_1channel_32, batch_size=1)[1]
 
 
-
-
- 
         prediction_flat = prediction.reshape(prediction.shape[0] * prediction.shape[1], prediction.shape[2])
         egm_flat = egm_tensor.reshape(prediction.shape[0] * prediction.shape[1], prediction.shape[2])
 
@@ -257,7 +254,7 @@ class EvaluateDL:
             - normalizing -1 and 1
         '''
         print('Applying postprocessing...')
-        prediction_post=postprocess_prediction(prediction, fs=self.fs, FPA_cutoff=15,cutoff_DC=1, axis=1)
+        prediction_post=postprocess_prediction(prediction, fs=self.fs, FPA_cutoff=15,cutoff_DC=1, axis=0)
         
         try:
             assert prediction_post[:, 0].max() == 1

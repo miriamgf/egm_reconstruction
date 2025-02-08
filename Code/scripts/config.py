@@ -13,6 +13,12 @@ class ParseHiperparams(object):
 
     def __init__(self):
         self.path = "scripts/src/training/hyperparams/hyperparams.json"
+    
+    def load_best_hyperparams(self, custom_path):
+        with open(custom_path, "r") as file:
+            data = json.load(file)  # Load the JSON data into a dictionary
+        return data
+    
 
     def get_path(self):
         return self.path

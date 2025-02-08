@@ -146,7 +146,7 @@ class OptunaOpt:
         # Take sampler
         for param_name, param_config in search_space.items():
             if param_name == "tpe":
-                param_config = TPESampler()
+                param_config = TPESampler(multivariate= True)
             elif param_name == "random":
                 param_config = RandomSampler()
             elif param_name == "genetic":
@@ -217,6 +217,23 @@ class OptunaOpt:
             self.params["batch_size"]=self.params["fs_sub"]
             print("Batch size truncated. Batch size:", self.params["batch_size"], " Fs sub:", self.params["fs_sub"])
         '''
+            # **Filtrar valores de batch_size para cumplir fs_sub <= batch_size**
+        try:
+            fs_sub_values = search_space["fs_sub"][1]
+            batch_size_values = search_space["batch_size"][1]
+
+            # Elegir fs_sub primero
+            fs_sub = trial.suggest_categorical("fs_sub", fs_sub_values)
+
+            # Filtrar batch_size para que sea >= fs_sub
+            valid_batch_sizes = [b for b in batch_size_values if b >= fs_sub]
+            batch_size = trial.suggest_categorical("batch_size", valid_batch_sizes)
+
+            optuna_params["fs_sub"] = fs_sub
+            optuna_params["batch_size"] = batch_size
+        except:
+            pass
+
         return self.params
 
     def hyperparameter_optimization_optuna(self) -> dict:

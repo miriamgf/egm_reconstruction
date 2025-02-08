@@ -84,16 +84,16 @@ params = ParseHiperparams().parse_default_hyperparams()
 if params["algorithm"]=='OMAMI':
 
     print('Load OMAMI Optimal hyperparams')
-    path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_no_filt/hyperparams.json'
+    path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_no_filt_testing2/hyperparams.json'
     params=ParseHiperparams().load_best_hyperparams(path_best_params)
     params['optuna_optimization']=False
-    params["n_epochs"]=50
+    params["n_epochs"]=51
     #params["filter_EGM"]=False
 
 elif params["algorithm"]=='OMAMI_VAE':
     
     print('Load OMAMI VAE Optimal hyperparams')
-    path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_VAE_Optuna/hyperparams.json'
+    path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_VAE_no_filt_testing/hyperparams.json'
     params=ParseHiperparams().load_best_hyperparams(path_best_params)
     params['optuna_optimization']=False
     params["n_epochs"]=50
@@ -140,6 +140,8 @@ except:
     algorithm = params["algorithm"]
     print('Failed in parsing bash params :( ')
 
+params["filter_EGM"]=False
+
 print('Params to train: ', params)
 
 #params['cross_validation']=True
@@ -162,6 +164,9 @@ if not params["filter_EGM"]:
 if params["algorithm"] == "OMAMI":
     params["fs_sub"]=200
     params["batch_size"]=400
+else:
+    params["fs_sub"]=100
+    params["batch_size"]=200
     #params["loss_weight_1"]=1
     #params["loss_weight_1"]=15
 
@@ -170,8 +175,8 @@ if params["optuna_optimization"]:
     experiment_name = f"{experiment_name}_Optuna"
 
 
-experiment_name = f"{experiment_name}_testing"
-
+experiment_name = f"{experiment_name}_testing_opt_training"
+params['n_batch']=1
 print(params)
 
 #experiment_name='pruebas interpol'
@@ -263,6 +268,31 @@ sinusoids = False
     inference=False,
 )()
 
+
+print('################ CHECKING DISTRIBUTION BEFORE PREPROCESSING ################')
+
+plt.figure(figsize=(20, 10))
+plt.subplot(2, 1, 1)
+plt.plot(egm_tensor[0:500, 0], label='egm')
+plt.legend()
+plt.subplot(2, 1, 2)
+plt.plot(X_1channel[0:500, 0, 0], label='bspm')
+plt.legend()
+plt.savefig(experiment_dir+'loaded_signals_feat_opt.png')
+print('saved image at ', experiment_dir+'loaded_signals_feat_opt.png')
+plt.close()
+
+try:
+    assert egm_tensor[:, 0].max() == 1, "No cumple egm_tensor[:, 0].max()==1"
+
+except:
+    print("No cumple egm_tensor[:, 0].max()==1")
+
+try:
+    assert X_1channel[:, 0, 0].max() == 1, "No cumple X_1channel[:, 0, 0].max()==1"
+
+except:
+    print("No cumple X_1channel[:, 0, 0].max()==1")
 #mdic = {"egm": egm_tensor, "AF_models": AF_models, "all_model_names": all_model_names}
 #with h5py.File(experiment_dir + "/egm_names_all.mat", 'w') as f:
     #for key, value in mdic.items():
@@ -327,49 +357,49 @@ plt.savefig('output/figures/input_output/before_norm.png')
     norm_egm=True,
 )()
 
+print('################ CHECKING DISTRIBUTION AFTER PREPROCESSING ################')
 
+try:
+    assert x_train[0, :, 0, 0, 0].max() == 1, "No cumple egm_tensor[:, 0].max()==1"
+
+except:
+    print("No cumple x_train[0, :, 0, 0, 0].max()==1")
+
+try:
+    assert y_train[0, :, 0].max() == 1, "No cumple y_train[0, :, 0].max()==1"
+
+except:
+    print("No cumple X_1channel[:, 0, 0].max()==1")
+
+plt.figure(figsize=(20, 10))
+plt.subplot(2, 1, 1)
+plt.plot(x_train[0, :, 0, 0, 0], label='x_train')
+plt.legend()
+plt.subplot(2, 1, 2)
+plt.plot(y_train[0, :, 0], label='y_train')
+plt.legend()
+plt.savefig(experiment_dir+'preprocessed_signals_feat_opt.png')
+print('saved image at ', experiment_dir+'preprocessed_signals_feat_opt.png')
+plt.close()
 
 print("Algorithm selected:", params["algorithm"])
 model, history = TrainModel(
     params, x_train, x_test, x_val, y_train, y_test, y_val, models_dir, experiment_dir
 )()
 
+print('Test prediction...')
 # Evaluate
 pred_test = model.predict(
     x_test, batch_size=1
 ) 
 
-if params["use_generator"]:
-    pred_train = model.predict(
-        data_generator(x_train), steps=x_train.shape[0], batch_size=1
-    )
-    # TODO: NOT WORKING
-    print("Generator")
+print('Train prediction')
+x_train = x_train[0:50, :, :, :, :]
+y_train = y_train[0:50, :, :]
+pred_train = model.predict(x_train, batch_size=1)
+
     
-else:
-    try:
-        if params["parallelism"]:
-            with strategy.scope():
-                pred_train = model.predict(x_train, batch_size=1)  # (44, 50, 12, 32, 1)
-        else:
-            pred_train = model.predict(x_train, batch_size=1)  # (44, 50, 12, 32, 1)
-    except:
-        if params["parallelism"]:
-            with strategy.scope():
-
-                x_train = x_train[0:50, :, :, :, :]
-                y_train = y_train[0:50, :, :]
-                pred_train = model.predict(x_train, batch_size=1)  # (44, 50, 12, 32, 1)
-        else:
-            try:
-                x_train = x_train[0:50, :, :, :, :]
-                y_train = y_train[0:50, :, :]
-                pred_train = model.predict(x_train, batch_size=1)  # (44, 50, 12, 32, 1)
-            except:
-                x_train = x_train[0:20, :, :, :, :]
-                y_train = y_train[0:20, :, :]
-                pred_train = model.predict(x_train, batch_size=1)  # (44, 50, 12, 32, 1)
-
+print('Evaluating...)')
 results_autoencoder, results_regressor = evaluate_function_multioutput(
     x_train, y_train, x_test, y_test, pred_train, pred_test, model, batch_size=1
 )
@@ -722,8 +752,8 @@ global_results.round(3)
     #pickle.dump(results_autoencoder, fp)
 
 # savemat(dict_var_dir + "dic_vars.mat", dic_vars) #TODO: cannot be saved to .mat because now is saving a keras model
-savemat(dict_results_dir + "dict_results_autoencoder.mat", results_autoencoder)
-savemat(dict_results_dir + "dict_results_reconstruction.mat", results_regressor)
+#savemat(dict_results_dir + "dict_results_autoencoder.mat", results_autoencoder)
+#savemat(dict_results_dir + "dict_results_reconstruction.mat", results_regressor)
 
 
 # %%
