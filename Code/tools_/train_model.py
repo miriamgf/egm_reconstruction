@@ -9,6 +9,7 @@ from keras.callbacks import TensorBoard
 from optuna.integration import TFKerasPruningCallback
 from keras.optimizers import Adam
 import numpy as np
+import random
 
 from models.multioutput import MultiOutput
 from models.multioutput_skip import MultiOutput_skip
@@ -18,7 +19,12 @@ from models.gen_vae import Gen_VAE
 
 
 
-tf.random.set_seed(42)
+# Fijar semillas
+SEED = 42
+np.random.seed(SEED)
+random.seed(SEED)
+tf.random.set_seed(SEED)
+
 import datetime
 
 import tensorflow as tf
@@ -145,13 +151,19 @@ class TrainModel:
 
         print("Training model...")
 
-        if self.params["set_gpu"] is not False:
-            print("Using GPU:", self.params["set_gpu"])
+
+        print("Using GPU:", self.params["set_gpu"])
+        physical_devices = tf.config.experimental.list_physical_devices('GPU')
+
+        try:
             with tf.device(f"/GPU:{self.params['set_gpu']}"):
-                # Train on specified GPU
+                tf.config.experimental.set_memory_growth(physical_devices[self.params['set_gpu']], True)
                 pass
-        else:
-            pass
+        except:
+            with tf.device(f"/GPU:{0}"):
+                tf.config.experimental.set_memory_growth(physical_devices[0], True)
+                pass
+
 
         # Callbacks
 
@@ -187,6 +199,8 @@ class TrainModel:
         if self.trial is not None:
             pruning_callback = TFKerasPruningCallback(self.trial, monitor="val_loss")
             callbacks_list.append(pruning_callback)
+        
+        #callbacks_list.append(InspectBatchCallback())
 
         
         # Choose algorithm {OMAMI, OMAMI_VAE, OMAMI_ski, OMAMI_VAE_ski} 
@@ -272,25 +286,79 @@ class TrainModel:
         
         
         #converto to tensor
-        x_train = tf.convert_to_tensor(np.array(x_train), dtype=tf.float32)
-        y_train = tf.convert_to_tensor(np.array(y_train), dtype=tf.float32)
-        x_val = tf.convert_to_tensor(np.array(x_val), dtype=tf.float32)
-        y_val = tf.convert_to_tensor(np.array(y_val), dtype=tf.float32)
-        x_test = tf.convert_to_tensor(np.array(x_test), dtype=tf.float32)
-        y_val = tf.convert_to_tensor(np.array(y_val), dtype=tf.float32)
+        x_train = tf.convert_to_tensor(np.array(x_train))#, dtype=tf.float32)
+        y_train = tf.convert_to_tensor(np.array(y_train))#, dtype=tf.float32)
+        x_val = tf.convert_to_tensor(np.array(x_val))#, dtype=tf.float32)
+        y_val = tf.convert_to_tensor(np.array(y_val))#, dtype=tf.float32)
+        x_test = tf.convert_to_tensor(np.array(x_test))#, dtype=tf.float32)
+        y_val = tf.convert_to_tensor(np.array(y_val))#, dtype=tf.float32)
+
+        #borrar
 
         #Convert to tf.Dataset format
         train_dataset = tf.data.Dataset.from_tensor_slices((x_train, (x_train, y_train))) \
-                .batch(self.params["num_batch_iter"]) \
-                .prefetch(tf.data.experimental.AUTOTUNE)
-
+            .batch(self.params["num_batch_iter"], drop_remainder=False) \
+            .prefetch(tf.data.AUTOTUNE)  # Precarga automáticamente
         val_dataset = tf.data.Dataset.from_tensor_slices((x_val, (x_val, y_val))) \
-                .batch(self.params["num_batch_iter"]) \
-                .prefetch(tf.data.experimental.AUTOTUNE)
+            .batch(self.params["num_batch_iter"], drop_remainder=False)  \
+            .prefetch(tf.data.AUTOTUNE)  # Precarga automáticamente
         test_dataset = tf.data.Dataset.from_tensor_slices((x_test, (x_test, y_test))) \
-                .batch(self.params["num_batch_iter"]) \
-                .prefetch(tf.data.experimental.AUTOTUNE)
+            .batch(self.params["num_batch_iter"], drop_remainder=False)  \
+            .prefetch(tf.data.AUTOTUNE)  # Precarga automáticamente
+        
 
+        print("num_batch_iter", self.params["num_batch_iter"] )
+        '''
+        element=0
+        # Visualización y comprobación de batches
+        for batch_idx, batch in enumerate(train_dataset.take(1)):  # Tomamos solo el primer batch
+            x_batch, y_batch = batch  # Desempaquetamos
+            print(f"Batch {batch_idx}:")
+            print("Forma de x_batch:", x_batch.shape)
+            print("Forma de y_batch:", y_batch[0].shape, y_batch[1].shape)  # Si y tiene múltiples salidas
+
+            # Comparar dos muestras sucesivas del mismo batch
+            print("Comparando dos muestras sucesivas dentro del batch:")
+            #print("Muestra 1 de x_batch:", x_batch[0, :, 0, 0, 0])  # Primera muestra del batch
+            #print("Muestra 2 de x_batch:", x_batch[1, :, 0, 0, 0])  # Segunda muestra del batch
+
+            #print("Muestra 1 de y_batch (autoencoder):", y_batch[0][0, :, 0, 0, 0])
+            #print("Muestra 2 de y_batch (autoencoder):", y_batch[0][1, :, 0, 0, 0])
+
+            # Generar gráficos para inspeccionar
+            
+            plt.figure(tight_layout=True)
+            plt.subplot(2, 1, 1)
+            plt.plot(x_batch[0, :, 0, 0, 0], label='tf.dataset')
+            plt.plot(x_batch[0, :, 0, 0, 0],label="simple")
+            plt.legend()
+            plt.title(f"Element no {element}")
+            plt.subplot(2, 1, 2)
+            plt.plot(y_batch[1][0, :, 0])
+            plt.plot(y_train[element, :, 0])
+            plt.legend()
+            plt.title(f"Element no {element}")
+            plt.savefig(f"{self.experiment_dir}Samples_input_batch_{batch_idx}_{element}.png")
+            print(f"Guardado en: {self.experiment_dir}Samples_input_batch_{batch_idx}_{element}.png")
+            plt.close()
+
+            #element+1
+            plt.figure(tight_layout=True)
+            plt.subplot(2, 1, 1)
+            plt.plot(x_batch[1, :, 0, 0, 0], label='tf.dataset')
+            plt.plot(x_train[element+1, :, 0, 0, 0],label="simple")
+            plt.legend()
+            plt.title(f"Element no {element+1}")
+            plt.subplot(2, 1, 2)
+            plt.plot(y_batch[1][1, :, 0])
+            plt.plot(y_train[element+1, :, 0])
+            plt.legend()
+            plt.title(f"Element no {element+1}")
+            plt.savefig(f"{self.experiment_dir}Samples_input_batch_{batch_idx}_{element+1}.png")
+            print(f"Guardado en: {self.experiment_dir}Samples_input_batch_{batch_idx}_{element+1}.png")
+            plt.close()
+            '''
+        
         # Entrenar el modelo con el dataset
         self.history = model.fit(
             train_dataset,
@@ -300,11 +368,10 @@ class TrainModel:
         )
         
         '''
-        
-        history = model.fit(
+        self.history = model.fit(
             x=x_train,
             y=[x_train, y_train],
-            batch_size=1,
+            batch_size=20,
             epochs=self.params["n_epochs"],
             validation_data=(x_val, [x_val, y_val]),
             callbacks=callbacks_list,
@@ -327,26 +394,26 @@ class TrainModel:
             model.model.save(self.experiment_dir+"/model_weights.h5")
             model_loaded = load_model(self.experiment_dir + "/model_weights.h5", custom_objects={'SamplingLayer': SamplingLayer})
         with open(self.experiment_dir+'historial.json', 'w') as json_file:
-                        json.dump(history.history, json_file)
+                        json.dump(self.history.history, json_file)
         # Plot and save training and validation curves
         
         plt.figure()
-        plt.plot(history.history["val_loss"], label="Global loss (Validation)")
+        plt.plot(self.history.history["val_loss"], label="Global loss (Validation)")
         plt.plot(
-            history.history["val_autoencoder_loss"],
+            self.history.history["val_autoencoder_loss"],
             label="Autoencoder loss (Validation)",
         )
         plt.plot(
-            history.history["val_reconstruction_loss"],
+            self.history.history["val_reconstruction_loss"],
             label="Regressor loss (Validation)",
         )
-        plt.plot(history.history["loss"], label="Global loss (Train)")
+        plt.plot(self.history.history["loss"], label="Global loss (Train)")
         plt.plot(
-            history.history["autoencoder_loss"],
+            self.history.history["autoencoder_loss"],
             label="Autoencoder loss (Train)",
         )
         plt.plot(
-            history.history["reconstruction_loss"],
+            self.history.history["reconstruction_loss"],
             label="Regressor loss (Train)",
         )
         plt.legend(loc="upper left")
@@ -384,7 +451,9 @@ class TrainModel:
             plt.show()
 
         '''
-        return model, history
+        return model, self.history
+
+
     '''
     def define_callbacks(self):
          # Callbacks
@@ -483,3 +552,11 @@ class TrainModel:
             y_test=self.y_test,
             y_val=self.y_val,
         )
+
+class InspectBatchCallback(tf.keras.callbacks.Callback):
+    def on_train_batch_begin(self, batch, logs=None):
+        print(f"Batch {batch} iniciado")
+        if batch == 0:  # Solo inspeccionamos el primer batch
+            inputs, targets = self.model.input, self.model.targets
+            print("Forma de inputs:", [inp.shape for inp in inputs])
+            print("Forma de targets:", [tar.shape for tar in targets])

@@ -1,6 +1,7 @@
 import json
 import os
 import argparse
+import subprocess
 
 
 
@@ -85,3 +86,16 @@ class DataConfig(object):
     ]  # this is specific for classification. # 1: Rotor/no rotor ; 2: RA/LA/No rotor (2 classes) ; 3: 7 regions (3 classes) + no rotor (8 classes)
     DF_Mapping = False
     n_nodes_regression = hyperparams["n_nodes_regression"]  # 512, 682, 1024, 2048
+
+
+class GetMetadata():
+
+    def get_git_commit(self):
+        try:
+            commit_hash = subprocess.check_output(["git", "rev-parse", "HEAD"]).strip().decode()
+            return commit_hash
+        except Exception as e:
+            print(f"Error obteniendo el commit hash: {e}")
+            return "unknown"
+
+    

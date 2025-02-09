@@ -1,6 +1,6 @@
 import tensorflow as tf
 from keras import layers
-from keras.layers import BatchNormalization
+from keras.layers import BatchNormalization, LayerNormalization
 from tensorflow.keras import layers, Model
 from tensorflow.keras.layers import MultiHeadAttention
 
@@ -113,11 +113,13 @@ class MultiOutput:
         x = layers.Conv3D(3, (5, 3, 3), strides=(1, 1, 1),
                         padding="same", activation="leaky_relu")(x)
         x = layers.TimeDistributed(layers.Flatten())(x)
-        x = BatchNormalization(axis=1)(x)
+        #x = BatchNormalization(axis=1, momentum=0.7,trainable=True)(x)
+        x = LayerNormalization(epsilon=1e-5, axis=1)(x)
+
         x = layers.LSTM(self.params["LSTM_units"], return_sequences=True)(x)
         #x = MultiHeadAttention(num_heads=4, key_dim=self.params["LSTM_units"])(x, x)
 
-        x = layers.Dropout(0.3)(x)
+        x = layers.Dropout(self.params["dropout"])(x)
         x = layers.Dense(n_nodes, activation="leaky_relu", name="reconstruction")(x)
 
         return x

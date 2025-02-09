@@ -10,7 +10,7 @@
     "cross_validation": false,
     "fold"  : 0,
     "rnn_layers": 1,
-    "dropout": 0.5,
+    "dropout": 0.3,
     "learning_rate": 0.001,
     "early_stopping_patience": 20,
     "beta1": 0.11,

@@ -36,7 +36,7 @@ import datetime
 import time
 
 import tensorflow as tf
-from config import ParseHiperparams
+from config import ParseHiperparams, GetMetadata
 from src.training.optuna_opt import OptunaOpt
 from keras import backend as K
 from tensorflow.keras.models import load_model
@@ -52,6 +52,7 @@ from tools_.train_model import TrainModel
 K.clear_session()
 tf.keras.backend.clear_session()
 tf.compat.v1.reset_default_graph()
+
 
 
 """
@@ -80,6 +81,7 @@ print(type(patches_oclussion))
 """
 
 params = ParseHiperparams().parse_default_hyperparams()
+params["algorithm"]="OMAMI"
 
 if params["algorithm"]=='OMAMI':
 
@@ -87,7 +89,7 @@ if params["algorithm"]=='OMAMI':
     path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_no_filt_testing2/hyperparams.json'
     params=ParseHiperparams().load_best_hyperparams(path_best_params)
     params['optuna_optimization']=False
-    params["n_epochs"]=51
+    params["n_epochs"]=30
     #params["filter_EGM"]=False
 
 elif params["algorithm"]=='OMAMI_VAE':
@@ -96,9 +98,11 @@ elif params["algorithm"]=='OMAMI_VAE':
     path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_VAE_no_filt_testing/hyperparams.json'
     params=ParseHiperparams().load_best_hyperparams(path_best_params)
     params['optuna_optimization']=False
-    params["n_epochs"]=50
+    params["n_batch"]=400
+    params["fs_sub"]=200
 
-
+params["num_batch_iter"]=1
+params["learning_rate"]=0.00001
 
 try:
     print("Parsing bash params")
@@ -175,8 +179,9 @@ if params["optuna_optimization"]:
     experiment_name = f"{experiment_name}_Optuna"
 
 
-experiment_name = f"{experiment_name}_testing_opt_training"
-params['n_batch']=1
+experiment_name = f"{experiment_name}_testing_opt_training_1"
+params["num_batch_iter"]=10
+#params["n_epochs"]=1
 print(params)
 
 #experiment_name='pruebas interpol'
@@ -387,18 +392,26 @@ model, history = TrainModel(
     params, x_train, x_test, x_val, y_train, y_test, y_val, models_dir, experiment_dir
 )()
 
+############## INFERENCE ###############
+
+test_dataset = tf.data.Dataset.from_tensor_slices((x_test, (x_test, y_test))) \
+    .batch(params["num_batch_iter"], drop_remainder=False)  \
+    .repeat(1).cache()
+
+        #.prefetch(tf.data.experimental.AUTOTUNE)
 print('Test prediction...')
-# Evaluate
-pred_test = model.predict(
-    x_test, batch_size=1
-) 
+
+pred_test = model.predict(x_test,batch_size=20)#, batch_size=5)#, batch_size=5)
+
+#pred_test=model.predict(test_dataset) 
 
 print('Train prediction')
 x_train = x_train[0:50, :, :, :, :]
 y_train = y_train[0:50, :, :]
-pred_train = model.predict(x_train, batch_size=1)
+pred_train = model.predict(x_train, batch_size=20)
 
-    
+
+
 print('Evaluating...)')
 results_autoencoder, results_regressor = evaluate_function_multioutput(
     x_train, y_train, x_test, y_test, pred_train, pred_test, model, batch_size=1
@@ -453,7 +466,7 @@ x_fl = reshape(
 
 # Reconstruction predictions
 for i in range(0, 30):
-    interv = random.randrange(1, len(pred_test_egm_fl) - 1, 50)
+    interv =  random.randrange(1, len(pred_test_egm_fl) - 1, 50)
     node = random.randrange(1, estimate_egms_n.shape[-1], 1)
     normalize_ = True
     rango = 500
@@ -486,6 +499,7 @@ for i in range(0, 30):
 
     plt.show()
     plt.close()
+    
 
 time_instant = random.randint(0, params["batch_size"])
 batch = random.randrange(2, x_test.shape[0]-2, 1)
@@ -766,6 +780,9 @@ file_path = experiment_dir + "hyperparams.json"
 # Escribe el diccionario como JSON en el archivo
 with open(file_path, "w") as f:
     json.dump(params, f, indent=2)
+
+#track git commit hash 
+params["commit_hash"]=GetMetadata().get_git_commit()
 
 print((end - start) / 60, "Mins of execution")
 print("-------------EXPERIMENT RED MULTIOUPUT'--------------", experiment_name)
