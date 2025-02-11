@@ -3,6 +3,12 @@ from pathlib import Path
 import sys
 sys.path.append("../Code")
 import optuna
+import tensorflow as tf
+import gc
+import ast
+import time
+import os
+
 from scripts.config import ParseHiperparams
 from optuna.samplers import NSGAIISampler, RandomSampler, TPESampler
 from optuna.visualization import (
@@ -155,6 +161,11 @@ class OptunaOpt:
 
         # Sample
         for param_name, param_config in search_space.items():
+            #batch size and fs_sub whould be handled customizedly
+            if param_name == "fs_sub" or param_name== "batch_size":
+                fs_sub_exists=True
+                continue
+
             if param_config[0] == "range":
                 if param_name == "lr" or param_name == "learning_rate":
                     optuna_params[param_name] = trial.suggest_float(
@@ -217,22 +228,42 @@ class OptunaOpt:
             self.params["batch_size"]=self.params["fs_sub"]
             print("Batch size truncated. Batch size:", self.params["batch_size"], " Fs sub:", self.params["fs_sub"])
         '''
-            # **Filtrar valores de batch_size para cumplir fs_sub <= batch_size**
-        try:
+        if fs_sub_exists:
             fs_sub_values = search_space["fs_sub"][1]
             batch_size_values = search_space["batch_size"][1]
+            self.params["fs_sub"] = trial.suggest_categorical("fs_sub", fs_sub_values)  # Frecuencia de muestreo
+        
+            # La clave es definir bs en función de fs de forma válida
+            bs_candidates = list(range(self.params["fs_sub"], 401, 50))  # Lista de valores posibles de bs
+            self.params["batch_size"] = trial.suggest_int("batch_size", self.params["fs_sub"], 400, step=50)
+    
+            print("batch_size -->", self.params["batch_size"])
+            print("fs_sub -->", self.params["fs_sub"])
 
-            # Elegir fs_sub primero
-            fs_sub = trial.suggest_categorical("fs_sub", fs_sub_values)
+        '''
 
-            # Filtrar batch_size para que sea >= fs_sub
-            valid_batch_sizes = [b for b in batch_size_values if b >= fs_sub]
-            batch_size = trial.suggest_categorical("batch_size", valid_batch_sizes)
 
-            optuna_params["fs_sub"] = fs_sub
-            optuna_params["batch_size"] = batch_size
-        except:
-            pass
+        # Generar todas las combinaciones posibles respetando batch_size >= fs_sub
+        valid_combinations = [(fs, b) for fs in fs_sub_values for b in batch_size_values if b >= fs]
+
+        # Convertir las tuplas a strings para que Optuna las acepte
+        valid_combinations_str = [str(comb) for comb in valid_combinations]
+
+        # Optuna selecciona una combinación en formato string
+        selected_combination_str = trial.suggest_categorical("fs_batch_combination", valid_combinations_str)
+
+        # Convertir el string de vuelta a una tupla
+        fs_sub, batch_size = ast.literal_eval(selected_combination_str)
+
+        print(selected_combination_str)
+
+        # Asignar valores finales
+        self.params["fs_sub"] = fs_sub
+        self.params["batch_size"] = batch_size
+
+        print('fs_sub -->', fs_sub)
+        print('batch_size -->', batch_size)
+        '''
 
         return self.params
 
@@ -265,13 +296,17 @@ class OptunaOpt:
             """
 
 
-            # Forzar la restricción fs_sub >= batch_size
-            #if self.params["fs_sub"]< self.params["batch_size"]:
-                #raise optuna.TrialPruned()  # Marca el trial como inválido y pasa al siguiente
-            
-
             self.params = self.parse_search_space(trial)
             print("Trial number", trial.number)
+
+            #Alternancia GPUs
+            gpus = tf.config.list_physical_devices('GPU')
+            print('Available: ', len(gpus), ' GPUS for Optuna:', gpus)
+            gpu_id = trial.number % len(gpus) # Selecciona la GPU para este trial de forma cíclica
+            os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id) # Asigna esa GPU al trial
+            tf.config.experimental.set_memory_growth(gpus[gpu_id], True)
+            print('Using GPU ', gpu_id, ' for trial ',  trial.number)
+
 
             # Preprocess data
             (
@@ -281,16 +316,8 @@ class OptunaOpt:
                 y_train,
                 y_test,
                 y_val,
-                dic_vars,
-                BSPM_train,
-                BSPM_test,
-                BSPM_val,
-                AF_models_train,
-                AF_models_test,
-                AF_models_val,
-                train_models,
-                test_models,
-                val_models,
+                *_,
+          
             ) = Preprocess_Dataset(
                 self.params,
                 self.X_1channel,
@@ -305,28 +332,67 @@ class OptunaOpt:
                 norm_egm = True
             )()
 
-            #try:
-            print("Algorithm selected:", self.params["algorithm"])
-            model, history = TrainModel(
-                self.params,
-                x_train, 
-                x_test, 
-                x_val, 
-                y_train, 
-                y_test, 
-                y_val, 
-                self.models_dir, 
-                self.experiment_dir, 
-                trial #to set pruning_callback
-            )()
+            max_retries = 3  # Número máximo de intentos antes de abandonar
 
-        
-            val_loss = history.history["val_reconstruction_loss"]
+            for attempt in range(max_retries):
+                try:
+                    print(f"Attempt {attempt + 1}/{max_retries}")
+                    print("Algorithm selected:", self.params["algorithm"])
 
-            return val_loss[-1]
-            #except:
-                #print('Trial failed. Exceeded GPU/Memory resources')
-                #return float("inf")
+                    trainer=TrainModel(
+                        self.params,
+                        x_train, 
+                        x_test, 
+                        x_val, 
+                        y_train, 
+                        y_test, 
+                        y_val, 
+                        self.models_dir, 
+                        self.experiment_dir, 
+                        trial # to set pruning_callback
+                    )
+
+                    trainer.monitor_gpu_log()
+                    
+                    _, history = trainer()
+
+                    val_loss = history.history["val_reconstruction_loss"]
+                    
+                    trainer.stop_gpu_monitor()
+
+
+                    # Libera memoria antes del siguiente trial
+                    tf.keras.backend.clear_session()
+                    gc.collect()  # Collect python trash
+
+                    return val_loss[-1]
+
+                except tf.errors.ResourceExhaustedError:
+                    print(f'Trial failed due to GPU out of memory (OOM). Retrying in 2 minutes... ({attempt + 1}/{max_retries})')
+                except RuntimeError as e:
+                    if "out of memory" in str(e).lower():
+                        print(f'Trial failed due to GPU out of memory (OOM). Retrying in 2 minutes... ({attempt + 1}/{max_retries})')
+                    else:
+                        raise  # Si no es un error de OOM, relanza la excepción
+                except Exception as e:
+                    print(f'Trial failed due to unexpected error: {e}')
+                    trainer.stop_gpu_monitor()
+
+                    return float("inf")
+
+                # Esperar 2 minutos antes de reintentar
+                print('reintenta en 2 minutos')
+                time.sleep(120)
+                # Libera memoria antes del siguiente trial
+                tf.keras.backend.clear_session()
+                gc.collect()
+
+            # Si después de 3 intentos sigue fallando, pasar al siguiente trial
+            print("Max retries reached. Skipping this trial.")
+            trainer.stop_gpu_monitor()
+            return float("inf")
+
+
 
         # Perform optimization
         study = optuna.create_study(direction="minimize",pruner=optuna.pruners.MedianPruner(n_startup_trials=2))
@@ -350,6 +416,8 @@ class OptunaOpt:
             plot_intermediate_values(study).write_image(f"{self.experiment_dir}/intermediate_values.png")
         except:
             print('Could not save Optuna figures')
+        
+
 
         
         return params
@@ -371,7 +439,16 @@ class OptunaOpt:
             The updated parameters dictionary including the best hyperparameters.
         """
         for param_name, param_config in best_params.items():
+            
             self.params[param_name] = best_params[param_name]
+
+        
+
+        try:
+            self.params['fs_sub'] = fs_batch_combination[0]
+            self.params['batch_size'] = fs_batch_combination[1]
+        except:
+            pass
 
         # Save to JSON
         with open(Path(self.experiment_dir, "best_params.json"), "w") as outfile:

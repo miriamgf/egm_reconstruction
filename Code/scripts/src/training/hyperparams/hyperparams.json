@@ -12,7 +12,7 @@
     "rnn_layers": 1,
     "dropout": 0.3,
     "learning_rate": 0.001,
-    "early_stopping_patience": 20,
+    "early_stopping_patience": 10,
     "beta1": 0.11,
     "beta2": 0.99,
     "mlflow_tracking": true,
@@ -30,10 +30,12 @@
     "3D_depth":10,
     "latent_dim":2,
     "optuna_optimization": false,
-    "n_trials": 30,
+    "n_trials": 70,
     "optuna_parameters": {
         "sampler_algorithm": ["tpe"],
-        "loss_weight_1": ["grid", [0.1, 0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 50]],
-        "loss_weight_2": ["grid", [0.1, 0.5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 50]]
+        "batch_size": ["grid", [50, 100, 150, 200, 250, 300, 350, 400]],
+        "fs_sub": ["grid", [50, 100, 150, 200, 250, 300, 350, 400]],
+        "num_batch_iter": ["grid", [1, 2, 5]]
+
     }
 }

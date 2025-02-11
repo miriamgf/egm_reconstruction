@@ -13,7 +13,7 @@ tf.config.experimental_run_functions_eagerly(
 tf.executing_eagerly()
 
 
-class MultiOutput_VAE(Model):
+class MultiOutput_VAE_Reduced(Model):
     """
     Used to generate our multi-output model. This CNN contains 2 branches, one for autoencoder, other for
     regression from Bsps to EGMs.
@@ -22,7 +22,7 @@ class MultiOutput_VAE(Model):
     def __init__(
         self, params, input_shape_, n_nodes, latent_dim=2, tensorboard_logs=None
     ):
-        super(MultiOutput_VAE, self).__init__()
+        super(MultiOutput_VAE_Reduced, self).__init__()
 
         if not os.path.exists(tensorboard_logs):
             os.makedirs(tensorboard_logs)
@@ -37,7 +37,7 @@ class MultiOutput_VAE(Model):
 
         # Define encoder layers
         self.conv1 = layers.Conv3D(
-            32,
+            16,
             (5, 2, 2),
             strides=1,
             padding="same",
@@ -54,7 +54,7 @@ class MultiOutput_VAE(Model):
         )
         self.maxpool1 = layers.MaxPooling3D((1, 2, 2))
         self.conv4 = layers.Conv3D(
-            16,
+            8,
             (5, 2, 2),
             strides=1,
             padding="same",
@@ -63,7 +63,7 @@ class MultiOutput_VAE(Model):
         )
         self.maxpool2 = layers.MaxPooling3D((1, 2, 2))
         self.conv5 = layers.Conv3D(
-            1, (5, 2, 2), strides=1, padding="same", activation="linear"
+            4, (5, 2, 2), strides=1, padding="same", activation="linear"
         )
         self.maxpool3 = layers.MaxPooling3D((2, 1, 2))
         self.flatten = layers.Flatten()
@@ -91,13 +91,13 @@ class MultiOutput_VAE(Model):
         self.z_mean_dense = layers.Dense(latent_dim, name="z_mean")
         self.z_log_var_dense = layers.Dense(latent_dim, name="z_log_var")
         self.sampling_layer = SamplingLayer()
-        self.reshape_latent_space = layers.Reshape((int(self.params["batch_size"]/2), 3, 4, 1))
+        self.reshape_latent_space = layers.Reshape((int(self.params["batch_size"]/2), 3, 4, 4))
 
         # Define decoder layers
         # self.decoder_conv1 = layers.Conv3D(4, (5, 2, 2), strides=1, padding="same", activation="leaky_relu", kernel_initializer=initializer)
         self.upsample1 = layers.UpSampling3D((2, 1, 2))
         self.decoder_conv2 = layers.Conv3D(
-            16, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
+            8, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
         )
         self.upsample2 = layers.UpSampling3D((1, 2, 2))
         self.decoder_conv3 = layers.Conv3D(
@@ -129,7 +129,7 @@ class MultiOutput_VAE(Model):
         self.upsampling3d_1 = layers.UpSampling3D((1, 2, 2))
 
         self.conv3d_2 = layers.Conv3D(
-            32,
+            8,
             (5, 3, 3),
             strides=(1, 1, 1),
             padding="same",
@@ -143,8 +143,8 @@ class MultiOutput_VAE(Model):
         )
 
         self.time_distributed = layers.TimeDistributed(layers.Flatten())
-        self.batch_norm = layers.BatchNormalization(axis=1)
-        self.lstm = layers.GRU(self.params["LSTM_units"], return_sequences=True)
+        self.batch_norm = layers.LayerNormalization(axis=1)
+        self.lstm = layers.LSTM(self.params["LSTM_units"], return_sequences=True)
         self.dropout = layers.Dropout(self.params["dropout"])
         self.dense = layers.Dense(
             n_nodes, activation="leaky_relu", name="Regressor_output"
@@ -303,11 +303,10 @@ class MultiOutput_VAE(Model):
 
             # Asegurar que total_loss sea un escalar
             total_loss = tf.reduce_mean(total_loss)
-            scaled_loss = self.optimizer.get_scaled_loss(total_loss) #mixed precision
 
         # Compute and apply gradients based on the total loss
-        scaled_gradients = tape.gradient(scaled_loss, self.model.trainable_variables)  #mixed precision
-        gradients = self.optimizer.get_unscaled_gradients(scaled_gradients)  #mixed precision
+        gradients = tape.gradient(total_loss, self.model.trainable_variables)  #mixed precision
+        #gradients = self.optimizer.get_unscaled_gradients(scaled_gradients)  #mixed precision
 
         del tape  # Eliminar el tape para liberar memoria
         gc.collect()
@@ -316,7 +315,7 @@ class MultiOutput_VAE(Model):
             gradients, clip_norm=1.0
         )
         self.optimizer.apply_gradients(
-            zip(gradients, self.model.trainable_variables)
+            zip(clipped_gradients, self.model.trainable_variables)
         )
         step = int(self.optimizer.iterations)
         with self.file_writer.as_default():

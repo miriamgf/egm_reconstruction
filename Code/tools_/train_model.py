@@ -5,16 +5,22 @@ import json
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from tensorflow import keras
-from keras.callbacks import TensorBoard
+from keras.callbacks import TensorBoard, EarlyStopping, ReduceLROnPlateau
 from optuna.integration import TFKerasPruningCallback
 from keras.optimizers import Adam
 import numpy as np
 import random
+import subprocess
+import psutil
+import os
+import gc
+
 
 from models.multioutput import MultiOutput
 from models.multioutput_skip import MultiOutput_skip
 from models.multioutput_VAE import MultiOutput_VAE, SamplingLayer
 from models.multioutput_VAE_skip import MultiOutput_VAE_skip
+from models.multioutput_VAE_reduced import MultiOutput_VAE_Reduced
 from models.gen_vae import Gen_VAE
 
 
@@ -117,6 +123,7 @@ class TrainModel:
         self.models_dir = models_dir
         self.experiment_dir = experiment_dir
         self.trial= trial
+        self.gpu_monitor_process=None
 
     @tf.function(jit_compile=False)
     def train_main(self, x_train, x_test, x_val, y_train, y_test, y_val):
@@ -152,59 +159,31 @@ class TrainModel:
         print("Training model...")
 
 
-        print("Using GPU:", self.params["set_gpu"])
+        #print("Using GPU:", self.params["set_gpu"])
         physical_devices = tf.config.experimental.list_physical_devices('GPU')
 
-        try:
-            with tf.device(f"/GPU:{self.params['set_gpu']}"):
-                tf.config.experimental.set_memory_growth(physical_devices[self.params['set_gpu']], True)
-                pass
-        except:
-            with tf.device(f"/GPU:{0}"):
-                tf.config.experimental.set_memory_growth(physical_devices[0], True)
-                pass
+        #Log to monitor nvidia-smi 
+        #log_gpu=self.monitor_gpu_log()
 
+        #set dynamic usage of gpu
+        #try:
+            #with tf.device(f"/GPU:{self.params['set_gpu']}"):
+                #tf.config.experimental.set_memory_growth(physical_devices[self.params['set_gpu']], True)
+                #pass
+        #except:
+            #with tf.device(f"/GPU:{0}"):
+                #tf.config.experimental.set_memory_growth(physical_devices[0], True)
+                #pass
+        
+        # Obtener el uso de memoria antes de cargar los datos
+        process = psutil.Process(os.getpid())
+        mem_before = process.memory_info().rss / (1024 * 1024)  # en MB
+        print(f"Uso de memoria antes de cargar los datos: {mem_before:.2f} MB")
 
         # Callbacks
-
-        #callbacks_list, optimizer = self.define_callbacks()
-        
-        cp_callback = tf.keras.callbacks.ModelCheckpoint(
-            filepath=self.experiment_dir+ "model_weights.h5",
-            save_weights_only=False,
-            verbose=1,
-            save_best_only=True,
-        )
-
-        initial_learning_rate = self.params["learning_rate"]
-        lr_schedule = keras.optimizers.schedules.ExponentialDecay(
-            initial_learning_rate,
-            decay_steps=1000,
-            decay_rate=0.96,
-            staircase=True)
-        
-        # Optimizer configuration
-        optimizer = Adam(learning_rate=lr_schedule)
-        early_stopping_callback = tf.keras.callbacks.EarlyStopping(
-            monitor="val_loss", patience=20
-        )
-        
-        tensorboard_callback = TensorBoard(log_dir='output/tensorboard/logs/'+self.params['algorithm'], histogram_freq=1)
-
-        callbacks_list = [early_stopping_callback, tensorboard_callback]
-        print(callbacks_list)
-        #ssh -L 6006:localhost:6006 miriamgf@10.110.100.78 en terminal LOCAL
-        #tensorboard --logdir=output/tensorboard/logs/ en terminal REMOTO
-
-        if self.trial is not None:
-            pruning_callback = TFKerasPruningCallback(self.trial, monitor="val_loss")
-            callbacks_list.append(pruning_callback)
-        
-        #callbacks_list.append(InspectBatchCallback())
-
+        callbacks_list, optimizer = self.define_callbacks(x_train)
         
         # Choose algorithm {OMAMI, OMAMI_VAE, OMAMI_ski, OMAMI_VAE_ski} 
-
         if self.params["algorithm"] == "OMAMI":
 
             model = MultiOutput(params=self.params).assemble_full_model(
@@ -234,6 +213,29 @@ class TrainModel:
 
             # Create an instance of your model
             model = MultiOutput_VAE(
+                self.params,
+                input_shape_=x_train.shape[1:],
+                n_nodes=y_train.shape[-1],
+                tensorboard_logs=self.experiment_dir + "tb_logs/",
+            )
+            try:
+                if self.params["parallel_scope"]:
+                    strategy = tf.distribute.MirroredStrategy(devices=["/gpu:0", "/gpu:1"])
+                    model.build(input_shape=(None, *x_train.shape[1:]))  
+                    model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
+
+            except:
+                print('Could not use mirror strategy')
+                pass
+            print(model.model.summary())
+
+            # Compile the model
+            model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
+        
+        elif self.params["algorithm"] == "OMAMI_VAE_Reduced":
+
+            # Create an instance of your model
+            model = MultiOutput_VAE_Reduced(
                 self.params,
                 input_shape_=x_train.shape[1:],
                 n_nodes=y_train.shape[-1],
@@ -278,11 +280,14 @@ class TrainModel:
             print('Error: Model name not identified. Terminating training...')
             sys.exit()
 
-
         try:
             print(model.model.summary())
         except:
             print(model.summary())
+                # Obtener el uso de memoria antes de cargar los datos
+        process = psutil.Process(os.getpid())
+        mem_after_compiling = process.memory_info().rss / (1024 * 1024)  # en MB
+        print(f"Uso de memoria tras compilar modelos: {mem_after_compiling:.2f} MB")
         
         
         #converto to tensor
@@ -290,10 +295,6 @@ class TrainModel:
         y_train = tf.convert_to_tensor(np.array(y_train))#, dtype=tf.float32)
         x_val = tf.convert_to_tensor(np.array(x_val))#, dtype=tf.float32)
         y_val = tf.convert_to_tensor(np.array(y_val))#, dtype=tf.float32)
-        x_test = tf.convert_to_tensor(np.array(x_test))#, dtype=tf.float32)
-        y_val = tf.convert_to_tensor(np.array(y_val))#, dtype=tf.float32)
-
-        #borrar
 
         #Convert to tf.Dataset format
         train_dataset = tf.data.Dataset.from_tensor_slices((x_train, (x_train, y_train))) \
@@ -302,62 +303,17 @@ class TrainModel:
         val_dataset = tf.data.Dataset.from_tensor_slices((x_val, (x_val, y_val))) \
             .batch(self.params["num_batch_iter"], drop_remainder=False)  \
             .prefetch(tf.data.AUTOTUNE)  # Precarga automáticamente
-        test_dataset = tf.data.Dataset.from_tensor_slices((x_test, (x_test, y_test))) \
-            .batch(self.params["num_batch_iter"], drop_remainder=False)  \
-            .prefetch(tf.data.AUTOTUNE)  # Precarga automáticamente
+
+        try:
+            model.build(input_shape=(None, *x_train.shape[1:]))  
+            print('Modelo construido con éxito.')
+        except Exception as e:
+            print(f'Error al construir el modelo: {e}')
         
+        del x_train, y_train, x_val, y_val
 
-        print("num_batch_iter", self.params["num_batch_iter"] )
-        '''
-        element=0
-        # Visualización y comprobación de batches
-        for batch_idx, batch in enumerate(train_dataset.take(1)):  # Tomamos solo el primer batch
-            x_batch, y_batch = batch  # Desempaquetamos
-            print(f"Batch {batch_idx}:")
-            print("Forma de x_batch:", x_batch.shape)
-            print("Forma de y_batch:", y_batch[0].shape, y_batch[1].shape)  # Si y tiene múltiples salidas
-
-            # Comparar dos muestras sucesivas del mismo batch
-            print("Comparando dos muestras sucesivas dentro del batch:")
-            #print("Muestra 1 de x_batch:", x_batch[0, :, 0, 0, 0])  # Primera muestra del batch
-            #print("Muestra 2 de x_batch:", x_batch[1, :, 0, 0, 0])  # Segunda muestra del batch
-
-            #print("Muestra 1 de y_batch (autoencoder):", y_batch[0][0, :, 0, 0, 0])
-            #print("Muestra 2 de y_batch (autoencoder):", y_batch[0][1, :, 0, 0, 0])
-
-            # Generar gráficos para inspeccionar
-            
-            plt.figure(tight_layout=True)
-            plt.subplot(2, 1, 1)
-            plt.plot(x_batch[0, :, 0, 0, 0], label='tf.dataset')
-            plt.plot(x_batch[0, :, 0, 0, 0],label="simple")
-            plt.legend()
-            plt.title(f"Element no {element}")
-            plt.subplot(2, 1, 2)
-            plt.plot(y_batch[1][0, :, 0])
-            plt.plot(y_train[element, :, 0])
-            plt.legend()
-            plt.title(f"Element no {element}")
-            plt.savefig(f"{self.experiment_dir}Samples_input_batch_{batch_idx}_{element}.png")
-            print(f"Guardado en: {self.experiment_dir}Samples_input_batch_{batch_idx}_{element}.png")
-            plt.close()
-
-            #element+1
-            plt.figure(tight_layout=True)
-            plt.subplot(2, 1, 1)
-            plt.plot(x_batch[1, :, 0, 0, 0], label='tf.dataset')
-            plt.plot(x_train[element+1, :, 0, 0, 0],label="simple")
-            plt.legend()
-            plt.title(f"Element no {element+1}")
-            plt.subplot(2, 1, 2)
-            plt.plot(y_batch[1][1, :, 0])
-            plt.plot(y_train[element+1, :, 0])
-            plt.legend()
-            plt.title(f"Element no {element+1}")
-            plt.savefig(f"{self.experiment_dir}Samples_input_batch_{batch_idx}_{element+1}.png")
-            print(f"Guardado en: {self.experiment_dir}Samples_input_batch_{batch_idx}_{element+1}.png")
-            plt.close()
-            '''
+        mem_after = process.memory_info().rss / (1024 * 1024)  # en MB
+        print(f"Uso de memoria después de cargar los datos: {mem_after:.2f} MB")        
         
         # Entrenar el modelo con el dataset
         self.history = model.fit(
@@ -377,12 +333,7 @@ class TrainModel:
             callbacks=callbacks_list,
             )    
         '''
-        # Construir el modelo antes de guardarlo si es un modelo subclasificado
-        try:
-            model.build(input_shape=(None, *x_train.shape[1:]))  # Define el input shape correcto
-            print('Modelo construido con éxito.')
-        except Exception as e:
-            print(f'Error al construir el modelo: {e}')
+
 
 
         try:
@@ -393,69 +344,25 @@ class TrainModel:
 
             model.model.save(self.experiment_dir+"/model_weights.h5")
             model_loaded = load_model(self.experiment_dir + "/model_weights.h5", custom_objects={'SamplingLayer': SamplingLayer})
-        with open(self.experiment_dir+'historial.json', 'w') as json_file:
-                        json.dump(self.history.history, json_file)
-        # Plot and save training and validation curves
         
-        plt.figure()
-        plt.plot(self.history.history["val_loss"], label="Global loss (Validation)")
-        plt.plot(
-            self.history.history["val_autoencoder_loss"],
-            label="Autoencoder loss (Validation)",
-        )
-        plt.plot(
-            self.history.history["val_reconstruction_loss"],
-            label="Regressor loss (Validation)",
-        )
-        plt.plot(self.history.history["loss"], label="Global loss (Train)")
-        plt.plot(
-            self.history.history["autoencoder_loss"],
-            label="Autoencoder loss (Train)",
-        )
-        plt.plot(
-            self.history.history["reconstruction_loss"],
-            label="Regressor loss (Train)",
-        )
-        plt.legend(loc="upper left")
-        plt.title("Model Loss During Training and Validation")
-        plt.ylabel("Mean Squared Error (MSE)")
-        plt.xlabel("Epoch")
-        plt.savefig(self.experiment_dir + "Learning_curves.png")
-        plt.show()
-        '''
-        except: #VAE
-            plt.figure()
-            plt.plot(history.history["val_loss"], label="Global loss (Validation)")
-            plt.plot(
-                history.history["val_autoencoder_loss"],
-                label="Autoencoder loss (Validation)",
-            )
-            plt.plot(
-                history.history["val_reconstruction_loss"],
-                label="Regressor loss (Validation)",
-            )
-            plt.plot(history.history["loss"], label="Global loss (Train)")
-            plt.plot(
-                history.history["autoencoder_loss"],
-                label="Autoencoder loss (Train)",
-            )
-            plt.plot(
-                history.history["reconstruction_mse"],
-                label="Regressor loss (Train)",
-            )
-            plt.legend(loc="upper left")
-            plt.title("Model Loss During Training and Validation")
-            plt.ylabel("Mean Squared Error (MSE)")
-            plt.xlabel("Epoch")
-            plt.savefig(self.experiment_dir + "Learning_curves.png")
-            plt.show()
+  
+        
+        history_serializable = {key: np.array(value).astype(float).tolist() for key, value in self.history.history.items()}
 
-        '''
+        with open('history.json', 'w') as json_file:
+            json.dump(history_serializable, json_file)
+
+        #Learning curves
+        self.plot_train_curves()
+
+        #Close gpu log
+        #log_gpu.terminate()
+        tf.keras.backend.clear_session()
+        gc.collect()
+
         return model, self.history
-
-
-    '''
-    def define_callbacks(self):
+    
+    def define_callbacks(self, x_train):
          # Callbacks
         
         cp_callback = tf.keras.callbacks.ModelCheckpoint(
@@ -465,28 +372,32 @@ class TrainModel:
             save_best_only=True,
         )
 
+        number_of_steps = len(x_train) // self.params["num_batch_iter"]  # Steps por época
+        decay_steps = number_of_steps * 5  # Reducimos el LR cada 5 épocas (ajustable)
         initial_learning_rate = self.params["learning_rate"]
-        lr_schedule = keras.optimizers.schedules.ExponentialDecay(
-            initial_learning_rate,
-            decay_steps=1000,
-            decay_rate=0.96,
-            staircase=True)
-        
-        # Optimizer configuration
-        if self.params["algorithm"]=="OMAMI_VAE" or self.params["algorithm"]=="OMAMI_VAE_skip":
-            optimizer = Adam(learning_rate=lr_schedule, clipvalue=1.0) #probar clipnorm
-        else:
-            optimizer = Adam(learning_rate=lr_schedule)
 
+        #lr_schedule = keras.optimizers.schedules.ExponentialDecay(
+            #initial_learning_rate,
+            #decay_steps=decay_steps,  
+            #decay_rate=0.96,  
+            #staircase=True  
+        #)
+        #print('Applying lr decay every ', decay_steps, ' steps. Start at', initial_learning_rate)
 
+        lr_scheduler = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=4, min_lr=1e-6)
 
         early_stopping_callback = tf.keras.callbacks.EarlyStopping(
-            monitor="val_loss", patience=20
+            monitor="val_loss", patience=self.params["early_stopping_patience"]
         )
-        
+        # Optimizer configuration
+        if self.params["algorithm"]=="OMAMI_VAE" or self.params["algorithm"]=="OMAMI_VAE_skip" or self.params["algorithm"]=="OMAMI_VAE_Reduced":
+            optimizer = Adam(learning_rate=initial_learning_rate, clipvalue=1.0) #probar clipnorm
+        else:
+            optimizer = Adam(learning_rate=initial_learning_rate)
+
         tensorboard_callback = TensorBoard(log_dir='output/tensorboard/logs/'+self.params['algorithm'], histogram_freq=1)
 
-        callbacks_list = [early_stopping_callback, tensorboard_callback]
+        callbacks_list = [early_stopping_callback, tensorboard_callback, lr_scheduler ]
         print(callbacks_list)
         #ssh -L 6006:localhost:6006 miriamgf@10.110.100.78 en terminal LOCAL
         #tensorboard --logdir=output/tensorboard/logs/ en terminal REMOTO
@@ -523,8 +434,29 @@ class TrainModel:
         plt.xlabel("Epoch")
         plt.savefig(self.experiment_dir + "Learning_curves.png")
         plt.show()
+    
+    def monitor_gpu_log(self):
 
-    '''
+        try:
+            log_file = f"{self.experiment_dir}gpu_usage_{self.trial.number}.log"
+            with open(log_file, "w") as f:
+                self.gpu_monitor_process = subprocess.Popen(["nvidia-smi", "-l", "1"], stdout=f, stderr=f)
+        except:
+                        
+            log_file = f"{self.experiment_dir}gpu_usage.log"
+            with open(log_file, "w") as f:
+                self.gpu_monitor_process = subprocess.Popen(["nvidia-smi", "-l", "1"], stdout=f, stderr=f)
+        
+        return self.gpu_monitor_process
+    
+    def stop_gpu_monitor(self):
+        if self.gpu_monitor_process:
+            self.gpu_monitor_process.terminate()
+            self.gpu_monitor_process = None
+            print("GPU monitoring stopped.")
+
+
+    
 
     def __call__(self, verbose=False, all=False):
         """

@@ -53,6 +53,20 @@ K.clear_session()
 tf.keras.backend.clear_session()
 tf.compat.v1.reset_default_graph()
 
+#Proteger GPUs
+gpus = tf.config.experimental.list_physical_devices('GPU')
+print('Available GPUS:', gpus)
+'''
+if gpus:
+    try:
+        tf.config.experimental.set_virtual_device_configuration(
+            gpus[0],
+            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=22240)]  # 22GB de 24GB
+        )
+    except RuntimeError as e:
+        print(e)
+'''
+
 
 
 """
@@ -81,28 +95,30 @@ print(type(patches_oclussion))
 """
 
 params = ParseHiperparams().parse_default_hyperparams()
-params["algorithm"]="OMAMI"
+
+params["algorithm"]='OMAMI_VAE_Reduced'
 
 if params["algorithm"]=='OMAMI':
 
     print('Load OMAMI Optimal hyperparams')
     path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_no_filt_testing2/hyperparams.json'
-    params=ParseHiperparams().load_best_hyperparams(path_best_params)
-    params['optuna_optimization']=False
+    #params=ParseHiperparams().load_best_hyperparams(path_best_params)
+    #params['optuna_optimization']=False
     params["n_epochs"]=30
+    params["n_batch"]=400
+    params["fs_sub"]=200
+    params['optuna_optimization']=True
+
     #params["filter_EGM"]=False
 
 elif params["algorithm"]=='OMAMI_VAE':
     
     print('Load OMAMI VAE Optimal hyperparams')
     path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_VAE_no_filt_testing/hyperparams.json'
-    params=ParseHiperparams().load_best_hyperparams(path_best_params)
-    params['optuna_optimization']=False
-    params["n_batch"]=400
-    params["fs_sub"]=200
-
-params["num_batch_iter"]=1
-params["learning_rate"]=0.00001
+    #params=ParseHiperparams().load_best_hyperparams(path_best_params)
+    #params['optuna_optimization']=False
+    #params["n_batch"]=400
+    #params["fs_sub"]=200
 
 try:
     print("Parsing bash params")
@@ -143,6 +159,7 @@ try:
 except:
     algorithm = params["algorithm"]
     print('Failed in parsing bash params :( ')
+    pass
 
 params["filter_EGM"]=False
 
@@ -177,12 +194,31 @@ else:
 
 if params["optuna_optimization"]:
     experiment_name = f"{experiment_name}_Optuna"
+'''
+params["3D_depth"]=5
+params["parallel_scope"]=True
+params["early_stopping_patience"]=10
+params["algorithm"] = "OMAMI_VAE"
+params["num_batch_iter"]=2
+params["learning_rate"]=0.001
+params["batch_size"]=400
+params["fs_sub"]=200
+params["n_epochs"]=2
+'''
+params["num_batch_iter"]=1
+#params["batch_size"]=400
+#params["fs_sub"]=200
+#params["optuna_optimization"]=True
+#params["n_trials"]=3
+#params["n_epochs"]=1
+#params["parallel_scope"]=True
+#params["optuna_optimization"]=True
+experiment_name = f"{experiment_name}_bs_fs_Optuna"
 
 
-experiment_name = f"{experiment_name}_testing_opt_training_1"
-params["num_batch_iter"]=10
 #params["n_epochs"]=1
 print(params)
+
 
 #experiment_name='pruebas interpol'
 print('Experiment name: ', experiment_name)
@@ -392,6 +428,9 @@ model, history = TrainModel(
     params, x_train, x_test, x_val, y_train, y_test, y_val, models_dir, experiment_dir
 )()
 
+
+
+
 ############## INFERENCE ###############
 
 test_dataset = tf.data.Dataset.from_tensor_slices((x_test, (x_test, y_test))) \
@@ -401,7 +440,7 @@ test_dataset = tf.data.Dataset.from_tensor_slices((x_test, (x_test, y_test))) \
         #.prefetch(tf.data.experimental.AUTOTUNE)
 print('Test prediction...')
 
-pred_test = model.predict(x_test,batch_size=20)#, batch_size=5)#, batch_size=5)
+pred_test = model.predict(x_test,batch_size=params["num_batch_iter"])#, batch_size=5)#, batch_size=5)
 
 #pred_test=model.predict(test_dataset) 
 
@@ -466,7 +505,7 @@ x_fl = reshape(
 
 # Reconstruction predictions
 for i in range(0, 30):
-    interv =  random.randrange(1, len(pred_test_egm_fl) - 1, 50)
+    interv = random.randrange(1, len(pred_test_egm_fl) - 1, 50)
     node = random.randrange(1, estimate_egms_n.shape[-1], 1)
     normalize_ = True
     rango = 500
@@ -497,7 +536,6 @@ for i in range(0, 30):
     plt.title("BSPM")
     plt.savefig(experiment_dir + "EGM_Reconstructions_" + str(i) + ".png")
 
-    plt.show()
     plt.close()
     
 
@@ -772,6 +810,7 @@ global_results.round(3)
 
 # %%
 end = time.time()
+params["commit_hash"]=GetMetadata().get_git_commit()
 
 params["execution_time"] = (end - start) / 60
 # Specify the file path
@@ -782,7 +821,6 @@ with open(file_path, "w") as f:
     json.dump(params, f, indent=2)
 
 #track git commit hash 
-params["commit_hash"]=GetMetadata().get_git_commit()
 
 print((end - start) / 60, "Mins of execution")
 print("-------------EXPERIMENT RED MULTIOUPUT'--------------", experiment_name)
