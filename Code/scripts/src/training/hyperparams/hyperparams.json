@@ -10,7 +10,7 @@
     "cross_validation": false,
     "fold"  : 0,
     "rnn_layers": 1,
-    "dropout": 0.3,
+    "dropout": 0.5,
     "learning_rate": 0.001,
     "early_stopping_patience": 10,
     "beta1": 0.11,
@@ -34,8 +34,7 @@
     "optuna_parameters": {
         "sampler_algorithm": ["tpe"],
         "batch_size": ["grid", [50, 100, 150, 200, 250, 300, 350, 400]],
-        "fs_sub": ["grid", [50, 100, 150, 200, 250, 300, 350, 400]],
-        "num_batch_iter": ["grid", [1, 2, 5]]
+        "fs_sub": ["grid", [50, 100, 150, 200, 250, 300, 350, 400]]
 
     }
 }

@@ -24,15 +24,6 @@ from models.multioutput_VAE_reduced import MultiOutput_VAE_Reduced
 from models.gen_vae import Gen_VAE
 
 
-
-# Fijar semillas
-SEED = 42
-np.random.seed(SEED)
-random.seed(SEED)
-tf.random.set_seed(SEED)
-
-import datetime
-
 import tensorflow as tf
 from keras.models import load_model
 
@@ -125,6 +116,11 @@ class TrainModel:
         self.trial= trial
         self.gpu_monitor_process=None
 
+        self.SEED=self.params["seed"]
+        random.seed(self.SEED)        
+        np.random.seed(self.SEED)   
+        tf.random.set_seed(self.SEED)
+  
     @tf.function(jit_compile=False)
     def train_main(self, x_train, x_test, x_val, y_train, y_test, y_val):
         """

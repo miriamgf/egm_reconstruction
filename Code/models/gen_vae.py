@@ -27,6 +27,8 @@ class Gen_VAE(Model):
 
         self.input_shape_ = input_shape_
         self.params = params
+        self.SEED=self.params["seed"]
+        tf.random.set_seed(self.SEED)
         self.tensorboard_logs = tensorboard_logs
         self.file_writer = tf.summary.create_file_writer(self.tensorboard_logs)
 

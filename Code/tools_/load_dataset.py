@@ -78,6 +78,10 @@ class LoadDataset:
         self.unfold_code = unfold_code
         self.inference = inference
 
+        self.SEED=self.params["seed"]
+        random.seed(self.SEED)        
+        np.random.seed(self.SEED)    
+
     def load_data(
         self,
         data_type,

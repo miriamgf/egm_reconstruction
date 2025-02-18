@@ -30,7 +30,6 @@ import tools_.tools
 from tools_.df_mapping import *
 from tools_.tools import *
 
-tf.random.set_seed(42)
 import argparse
 import datetime
 import time
@@ -53,15 +52,18 @@ K.clear_session()
 tf.keras.backend.clear_session()
 tf.compat.v1.reset_default_graph()
 
-#Proteger GPUs
+SEED = 42
+
 gpus = tf.config.experimental.list_physical_devices('GPU')
 print('Available GPUS:', gpus)
+
+
 '''
 if gpus:
     try:
         tf.config.experimental.set_virtual_device_configuration(
             gpus[0],
-            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=22240)]  # 22GB de 24GB
+            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=22240)]  # 22GB de 24GB, LIMITAR USO PARA PROTEGER
         )
     except RuntimeError as e:
         print(e)
@@ -209,7 +211,7 @@ params["num_batch_iter"]=1
 #params["batch_size"]=400
 #params["fs_sub"]=200
 #params["optuna_optimization"]=True
-#params["n_trials"]=3
+params["n_trials"]=40
 #params["n_epochs"]=1
 #params["parallel_scope"]=True
 #params["optuna_optimization"]=True
@@ -234,6 +236,9 @@ dict_var_dir = "output/variables/"
 dict_results_dir = "output/results/"
 experiment_dir = "output/experiments/experiments_VAE/" + experiment_name + "/"
 
+#definir semilla
+
+params["seed"] = SEED  # Agregar la semilla a los parámetros
 
 if not os.path.exists(experiment_dir):
     os.makedirs(experiment_dir)    
@@ -440,14 +445,21 @@ test_dataset = tf.data.Dataset.from_tensor_slices((x_test, (x_test, y_test))) \
         #.prefetch(tf.data.experimental.AUTOTUNE)
 print('Test prediction...')
 
-pred_test = model.predict(x_test,batch_size=params["num_batch_iter"])#, batch_size=5)#, batch_size=5)
+try:
+    with tf.device('/GPU:0'):  
+        pred_test = model.predict(x_test,batch_size=params["num_batch_iter"])#, batch_size=5)#, batch_size=5)
+        print('Train prediction')
+        x_train = x_train[0:50, :, :, :, :]
+        y_train = y_train[0:50, :, :]
+        pred_train = model.predict(x_train, batch_size=params["num_batch_iter"])
 
-#pred_test=model.predict(test_dataset) 
-
-print('Train prediction')
-x_train = x_train[0:50, :, :, :, :]
-y_train = y_train[0:50, :, :]
-pred_train = model.predict(x_train, batch_size=20)
+except: 
+    with tf.device('/GPU:1'):  
+        pred_test = model.predict(x_test,batch_size=params["num_batch_iter"])#, batch_size=5)#, batch_size=5)
+        print('Train prediction')
+        x_train = x_train[0:50, :, :, :, :]
+        y_train = y_train[0:50, :, :]
+        pred_train = model.predict(x_train, batch_size=params["num_batch_iter"])
 
 
 

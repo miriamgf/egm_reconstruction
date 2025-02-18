@@ -71,6 +71,10 @@ class Preprocess_Dataset:
         self.norm_egm=norm_egm
         self.inference =inference
 
+        self.SEED=self.params["seed"]
+        random.seed(self.SEED)        
+        np.random.seed(self.SEED)     
+
     def preprocess_main(self):
         """
         This function defines the main steps to perform preprocessing over target signals

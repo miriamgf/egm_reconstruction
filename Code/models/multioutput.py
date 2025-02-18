@@ -14,6 +14,9 @@ class MultiOutput:
     """
     def __init__(self, params):
         self.params=params
+        self.SEED=self.params["seed"]
+        tf.random.set_seed(self.SEED)
+        
 
     def build_encoder_module(self, inputs, input_shape):
         """
