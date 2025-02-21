@@ -160,11 +160,11 @@ class OptunaOpt:
         # Take sampler
         for param_name, param_config in search_space.items():
             if param_name == "tpe":
-                param_config = TPESampler(multivariate= True, seed=self.SEED)
+                param_config = TPESampler(multivariate= True, seed=self.SEED, group=True ) #group=True hace que no se repitan combinaciones
             elif param_name == "random":
-                param_config = RandomSampler()
+                param_config = RandomSampler(seed=self.SEED)
             elif param_name == "genetic":
-                param_config = NSGAIISampler()
+                param_config = NSGAIISampler(seed=self.SEED)
             optuna_params[param_name] = param_config
 
         # Sample
@@ -238,11 +238,9 @@ class OptunaOpt:
         '''
         if fs_sub_exists:
             fs_sub_values = search_space["fs_sub"][1]
-            batch_size_values = search_space["batch_size"][1]
             self.params["fs_sub"] = trial.suggest_categorical("fs_sub", fs_sub_values)  # Frecuencia de muestreo
         
-            # La clave es definir bs en función de fs de forma válida
-            bs_candidates = list(range(self.params["fs_sub"], 401, 50))  # Lista de valores posibles de bs
+            # batch_size siempre mayor que fs_sub
             self.params["batch_size"] = trial.suggest_int("batch_size", self.params["fs_sub"], 400, step=50)
     
             print("batch_size -->", self.params["batch_size"])

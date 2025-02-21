@@ -12,9 +12,9 @@
 #echo "output/logs/OMAMI_no_filt_optuna_long.log"
 #nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --optuna true --filter_EGM false > output/logs/OMAMI_no_filt_optuna_long.log 2>&1  &
 #wait
-echo "output/logs/OMAMI_no_filt_optuna_long.log"
-nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --optuna true --filter_EGM false > output/logs/OMAMI_no_filt_optuna_long.log 2>&1  &
-wait
+#echo "output/logs/OMAMI_no_filt_optuna_long.log"
+#nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --optuna true --filter_EGM false > output/logs/OMAMI_no_filt_optuna_long.log 2>&1  &
+#wait
 echo "output/logs/OMAMI_VAE_Reduced_no_filt_Optuna_long.log"
 nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI_VAE_Reduced' --optuna true --filter_EGM false > output/logs/OMAMI_VAE_Reduced_no_filt_Optuna_long.log 2>&1  &
 
