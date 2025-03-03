@@ -70,8 +70,10 @@ class Preprocess_Dataset:
         self.experiment_dir=experiment_dir 
         self.norm_egm=norm_egm
         self.inference =inference
-
-        self.SEED=self.params["seed"]
+        try:
+            self.SEED = self.params["seed"]
+        except:
+            self.SEED = 1234
         random.seed(self.SEED)        
         np.random.seed(self.SEED)     
 

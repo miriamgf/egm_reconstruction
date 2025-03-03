@@ -10,6 +10,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import welch, spectrogram
 from tensorflow.keras.models import load_model
+import time
+import argparse
+
 from tools_.preprocess_data import Preprocess_Dataset
 from tools_.load_dataset import LoadDataset_BSPS
 from scripts.Tikhonov.compute_tik import TikhonovReconstruction
@@ -21,9 +24,8 @@ from scripts.evaluate_function import *
 from tools_.tools_inference import *
 import seaborn as sns
 from scipy.signal import spectrogram
-from tools_.tools_inference import postprocess_prediction
-
-import time
+import tools_.tools as tools
+from tools_.tools_inference import normalize_array
 
 
 class Visualize2D:
@@ -72,8 +74,9 @@ class Visualize2D:
         with open(params_path) as file:
             params = json.load(file)
 
-        self.fs = 100 if params["algorithm"] == "OMAMI_VAE" else 200
-        self.n_batch = 200 if params["algorithm"] == "OMAMI_VAE" else 400
+        self.n_batch=params["batch_size"]
+        self.fs_original=params["fs"]
+        self.fs=params["fs_sub"]
         params["filter_EGM"] = True
 
         #Load geometry
@@ -223,13 +226,13 @@ class Visualize2D:
         prediction_centered= prediction_norm-np.mean(prediction_norm)
         egm_centered=egm_flat-np.mean(egm_flat)
         X_1channel_centered=X_1channel_norm-np.mean(X_1channel_norm)
-        bspm_signal_norm = tools.normalize_array(bspm_signal_64, high=1, low=-1, axis_n=1) 
+        bspm_signal_norm = normalize_array(bspm_signal_64.T, high=1, low=-1, axis_n=1) 
 
         TIK_ON=True
         if TIK_ON==True:
 
             #Preprocess bspm (normalization)
-            bspm_signal_norm = tools.normalize_array(bspm_signal_64, high=1, low=-1, axis_n=0) 
+            bspm_signal_norm = normalize_array(bspm_signal_64, high=1, low=-1, axis_n=0) 
 
             #bspm_signal_norm = normalize_array(bspm_signal, high=1, low=-1, axis_n=0) 
             #Compute Tikhonov
@@ -240,7 +243,7 @@ class Visualize2D:
             tik_flat = tik_batches.reshape(
                 (tik_batches.shape[0] * tik_batches.shape[1], tik_batches.shape[2])
             )
-            tik_rec_norm = tools.normalize_array(tik_flat, high=1, low=-1, axis_n=0) 
+            tik_rec_norm = normalize_array(tik_flat, high=1, low=-1, axis_n=0) 
             tik_rec_centered=tik_rec_norm-np.mean(tik_rec_norm)
 
         return tik_rec_centered, prediction_centered, egm_centered, X_1channel_centered
@@ -440,20 +443,42 @@ class Visualize2D:
         
                 end=time.time()
 
-                print('Execution time 1 patient', end/60 , 'minutes')
+                print('Execution time 1 patient', (end-start)/60 , 'minutes')
 
 
 
 if __name__ == "__main__":
 
-    #list_metrics= [["Correlation"], ["RMSE"], ["DTW"], ["Coherence"], ["PeakDet"]]
-    list_metrics= [["Correlation"]], ["RMSE"]#, ["DTW"], ["Coherence"], ["PeakDet"]]
+    list_metrics= [["Correlation"], ["RMSE"], ["DTW"], ["Coherence"], ["PeakDet"]]
+    #list_metrics= [["Correlation"]], ["RMSE"]#, ["DTW"], ["Coherence"], ["PeakDet"]]
 
     test_patients = [["Simulation_01_200212_001_  5"],  
                 ["Simulation_01_210119_001_001"], 
                 ["Simulation_01_200428_001_010"],["Simulation_01_200212_001_ 10"]]
+    
+    test_patients = [
+            ["LA_PLAW_140711_arm"], ["LA_RSPV_CAF_150115"],
+           ["Simulation_01_200212_001_  5"], ["Simulation_01_200212_001_ 10"],
+            ["Simulation_01_200316_001_  3"], ["Simulation_01_200316_001_  4"],
+            ["Simulation_01_200316_001_  8"], ["Simulation_01_200428_001_004"],
+            ["Simulation_01_200428_001_008"], ["Simulation_01_200428_001_010"],
+            ["Simulation_01_210119_001_001"], ["Simulation_01_210208_001_002"]
+        ]
 
-    experiment_ID_list=[['OMAMI_no_filt'],["OMAMI_repeated"], ["OMAMI_VAE_Optuna_1"], ['OMAMI_VAE_no_filt']]
+    try:
+        print("Parsing bash params")
+        parser = argparse.ArgumentParser(description="params")
+        parser.add_argument("--algorithm_ID", type=str, help="experiment name", required=True)
+        
+
+        args = parser.parse_args()
+        algorithm_ID = args.algorithm_ID
+        experiment_ID_list=[[algorithm_ID]]
+
+        print(algorithm_ID)
+    
+    except:
+        experiment_ID_list=[['OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna']]
 
     vis = Visualize2D(test_patients, experiment_ID_list, list_metrics)
     vis.run_all()

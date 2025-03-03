@@ -34,7 +34,7 @@ try:
     print(algorithm_ID, evaluate_dl, evaluate_tik)
 
 except:
-    algorithm_ID = "OMAMI_no_filt_testing2"
+    algorithm_ID = "OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna"
     evaluate_dl=False
     evaluate_tik=True
 
@@ -47,6 +47,8 @@ test_patients = [
             "Simulation_01_200428_001_008", "Simulation_01_200428_001_010",
             "Simulation_01_210119_001_001", "Simulation_01_210208_001_002"
         ]
+
+
 
 experiment_ID_list=[["OMAMI_no_filt_testing2"]]#,["OMAMI_repeated"], ["OMAMI_VAE_Optuna_1"], ['OMAMI_no_filt'], ['OMAMI_VAE_no_filt']]
 

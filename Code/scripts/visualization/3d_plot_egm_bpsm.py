@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
 import ast
-
+import argparse
 from tools_.preprocess_data import Preprocess_Dataset
 from scripts.visualization.utils.renderizer import EGMRenderer_BSP
 from scripts.config import ParseHiperparams
@@ -43,13 +43,13 @@ import time
 # CONFIGURE
 #---------------------------------------------------------------------------------------------------------------------
 
-plot_BSP = False
+plot_BSP = True
 plot_Tikhonov = True
 plot_DL= True
-plot_correlation_DL = False
-plot_correlation_tik = False
-plot_rmse_DL = False
-plot_rmse_tik = False
+plot_correlation_DL = True
+plot_correlation_tik = True
+plot_rmse_DL = True
+plot_rmse_tik = True
 plot_coherence_DL = True
 plot_coherence_tik = True
 plot_DTW_DL = True
@@ -68,18 +68,32 @@ test_patients = [
             ["Simulation_01_200428_001_008"], ["Simulation_01_200428_001_010"],
             ["Simulation_01_210119_001_001"], ["Simulation_01_210208_001_002"]
         ]
+'''
 test_patients = [["Simulation_01_200212_001_  5"],  
                 ["Simulation_01_210119_001_001"], 
                 ["Simulation_01_200428_001_010"],["Simulation_01_200212_001_ 10"]]
 
 test_patients=[["Simulation_01_200212_001_  5"]]
+'''
+try:
+        print("Parsing bash params")
+        parser = argparse.ArgumentParser(description="params")
+        parser.add_argument("--algorithm_ID", type=str, help="experiment name", required=True)
+        
 
-experiment_ID_list=[["OMAMI_repeated"], ["OMAMI_VAE_Optuna_1"], ['OMAMI_no_filt'], ['OMAMI_VAE_no_filt']]
-experiment_ID_list=[["OMAMI_no_filt_testing2"]]
+        args = parser.parse_args()
+        algorithm_ID = args.algorithm_ID
+        experiment_ID_list=[[algorithm_ID]]
+
+        print(algorithm_ID)
+    
+except:
+        experiment_ID_list=[["OMAMI_no_filt_testing2"]]
+
+
 testing_id=0
 start = time.time()
 cont=0
-
 
 
 for model_name in test_patients:
@@ -111,12 +125,8 @@ for model_name in test_patients:
         with open(experiment_dir+"hyperparams.json") as file:
             params = json.load(file)  # Load the JSON data into a dictionary
 
-        if params["algorithm"]=="OMAMI_VAE":
-            fs=100
-            n_batch=200
-        elif params["algorithm"]=="OMAMI":
-            fs=200
-            n_batch=400
+        fs=params["fs_sub"]
+        n_batch=params["batch_size"]
 
         params["filter_EGM"]=True
         print(params)
@@ -294,7 +304,7 @@ for model_name in test_patients:
         #Tikhonov
         #---------------------------------------------------------------------------------------------------------------------------------------
         #---------------------------------------------------------------------------------------------------------------------------------------
-        if plot_Tikhonov or plot_correlation_tik or plot_rmse_tik or plot_correlation_tik or plot_DF_maps_tik:
+        if plot_Tikhonov or plot_correlation_tik or plot_rmse_tik or plot_correlation_tik or plot_DF_maps_tik or plot_coherence_tik or plot_DTW_tik: 
 
             ObjTik=TikhonovReconstruction(bspm_signal_norm.T, transfer_matrix, order=0)
             tik_rec=ObjTik() 
@@ -565,10 +575,7 @@ for model_name in test_patients:
 
             _, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
 
-        print('Chapao')
-        end_ = time.time()
-        print('Execution time one test example : ', end_-start_, 'min')
-        #sys.exit()
+
 
         #Coherence maps DL
         #---------------------------------------------------------------------------------------------------------------------------------------
@@ -576,8 +583,6 @@ for model_name in test_patients:
 
 
         if plot_coherence_DL:
-
-
 
             MetricObject = METRIC_3D_PLOTTER(model_name,
                                             torso_path,
@@ -611,13 +616,125 @@ for model_name in test_patients:
             )
 
 
-        if plot_rmse_DL:
-            print("Plotting RMSE Maps for DL")
+
+    
+        if plot_coherence_tik:
+
+                MetricObject = METRIC_3D_PLOTTER(model_name,
+                                                torso_path,
+                                                geom_path_CF,
+                                                output_directory,
+                                                labels_mode=False,
+                                                metric='Coherence',
+                                                experiment_dir=experiment_dir,
+                                                testing_id=testing_id,
+                                                tikhonov=True,
+                                                time=time_duration,
+                                            )
+
+                coherence=MetricObject.extract_metric()
+
+                EGM_3d_object=EGM_3D_PLOTTER(model_name,
+                            model_path_DL,
+                            geom_path_CF,
+                            output_directory,
+                            labels_mode=False,
+                            tikhonov=True,
+                            time=time_duration)
+
+                _, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
+
+
+                # Usar el método del objeto para plotear
+
+                MetricObject.plot_3d_mesh_label(
+                    coherence, faces_heart, vertices_heart, min_val_value=0, max_val_value=1
+                )
+
+        #DTW maps 
+        #---------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+        if plot_DTW_DL:
+
+                MetricObject = METRIC_3D_PLOTTER(model_name,
+                                                torso_path,
+                                                geom_path_CF,
+                                                output_directory,
+                                                labels_mode=False,
+                                                metric='DTW',
+                                                experiment_dir=experiment_dir,
+                                                testing_id=testing_id,
+                                                tikhonov=False,
+                                                time=time_duration,
+                                            )
+
+                DTW=MetricObject.extract_metric()
+
+                DTW_norm = tools.normalize_array(DTW, high=1, low=0, axis_n=0) 
+
+
+                EGM_3d_object=EGM_3D_PLOTTER(model_name,
+                            model_path_DL,
+                            geom_path_CF,
+                            output_directory,
+                            labels_mode=False,
+                            tikhonov=False,
+                            time=time_duration)
+
+                _, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
+
+
+                # Usar el método del objeto para plotear
+
+                MetricObject.plot_3d_mesh_label(
+                    DTW_norm, faces_heart, vertices_heart, min_val_value=0, max_val_value=1, color='blue'
+                )
+
+
+        if plot_DTW_tik:
+
+                MetricObject = METRIC_3D_PLOTTER(model_name,
+                                                torso_path,
+                                                geom_path_CF,
+                                                output_directory,
+                                                labels_mode=False,
+                                                metric='DTW',
+                                                experiment_dir=experiment_dir,
+                                                testing_id=testing_id,
+                                                tikhonov=True,
+                                                time=time_duration,
+                                            )
+
+                DTW=MetricObject.extract_metric()
+                DTW_norm = tools.normalize_array(DTW, high=1, low=0, axis_n=0) 
+
+
+                EGM_3d_object=EGM_3D_PLOTTER(model_name,
+                            model_path_DL,
+                            geom_path_CF,
+                            output_directory,
+                            labels_mode=False,
+                            tikhonov=True,
+                            time=time_duration)
+
+                _, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
+
+
+                # Usar el método del objeto para plotear
+
+                MetricObject.plot_3d_mesh_label(
+                    DTW_norm, faces_heart, vertices_heart, min_val_value=0, max_val_value=1, color='blue'
+                )
+
+        print('Chapao')
+        end_ = time.time()
+        print('Execution time one test example : ', end_-start_, 'min')
+        #sys.exit()
 
             
-
-
-
 end = time.time()
         
 print('Execution time TOTAL: ', end-start, 'min')

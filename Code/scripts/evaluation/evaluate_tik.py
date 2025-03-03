@@ -50,14 +50,21 @@ class EvaluateTikhonov:
 
         with open(self.params_path) as file:
             self.params = json.load(file)
+        
+        
+        self.n_batch=self.params["batch_size"]
+        self.fs=self.params["fs"]
+        self.fs_sub=self.params["fs_sub"]
 
+        '''
         if self.params["algorithm"] == "OMAMI_VAE":
             self.fs = 100
             self.n_batch = 200
         elif self.params["algorithm"] == "OMAMI":
             self.fs = 200
             self.n_batch = 400
-        
+        '''
+
         # Cargar nombres de torsos
         self.all_torsos_names = [
             file for _, _, files in os.walk(self.torsos_dir) for file in files if file.endswith(".mat")
@@ -149,33 +156,10 @@ class EvaluateTikhonov:
             norm_egm=True,
             inference=True
         )()
+        self.divisible_rows = (X_1channel.shape[0] // self.n_batch) * self.n_batch
 
-        rows = X_1channel.shape[0]
-        n_batch=self.params["batch_size"]
-        self.divisible_rows = (rows // n_batch) * n_batch
-        #batch gen
-        bsps_batches = reshape(
-                        X_1channel,
-                        (
-                            int(len(X_1channel) / n_batch),
-                            n_batch,
-                            X_1channel.shape[1],
-                            X_1channel.shape[2],
-                            1,
-                        ),
-                    )
-        egm_batches = reshape(
-                        egm_tensor,
-                        (
-                            int(len(egm_tensor) / n_batch),
-                            n_batch,
-                            egm_tensor.shape[1],
-                            1,
-                        ),
-                    )
-        
-        egm_flat = egm_batches.reshape((egm_batches.shape[0] * egm_batches.shape[1], egm_batches.shape[2]))
-        return bspm_signal_norm, egm_flat, Y_model, transfer_matrix_64
+
+        return bspm_signal_norm, egm_tensor, Y_model, transfer_matrix_64
 
 
     def inference_tik(self, bspm_signal_norm, egm_flat, Y_model, transfer_matrix_64):
@@ -184,7 +168,7 @@ class EvaluateTikhonov:
         ObjTik = TikhonovReconstruction(bspm_signal_norm.T, transfer_matrix_64,
                                         order=0, path_figs=self.path_output_l_curva)
         tik_rec = ObjTik(plot_L_curve=True)
-        tik_batches = ObjTik.tik_post_process_to_plot(tik_rec, self.fs, self.divisible_rows, self.n_batch)
+        tik_batches = ObjTik.tik_post_process_to_plot(tik_rec, self.fs_sub, self.divisible_rows, self.n_batch)
         tik_flat = tik_batches.reshape((tik_batches.shape[0] * tik_batches.shape[1], tik_batches.shape[2]))
         #y_label = normalize_by_models(egm_flat, Y_model)
 
@@ -214,7 +198,7 @@ class EvaluateTikhonov:
             prediction, y_label = self.inference_tik(bspm_signal_norm, egm_flat, Y_model, transfer_matrix_64)   
             prediction=self.postprocess_tik(prediction)         
             MetricsObj = Metrics(algorithm_ID=self.algorithm_ID, model_name=patient, tik=self.tik)
-            df_metrics, metrics_all_nodes = MetricsObj.compute_metrics(prediction, y_label, fs=self.fs)
+            df_metrics, metrics_all_nodes = MetricsObj.compute_metrics(prediction, y_label, fs=self.fs_sub)
             df_metrics_all_patients.append(df_metrics)
             all_nodes_list.append(metrics_all_nodes)
 

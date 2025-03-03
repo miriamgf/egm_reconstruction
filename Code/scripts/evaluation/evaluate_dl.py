@@ -71,14 +71,21 @@ class EvaluateDL:
         # Cargar parámetros del modelo
         with open(self.params_path) as file:
             self.params = json.load(file)
+        
+        self.n_batch=self.params["batch_size"]
+        self.fs=self.params["fs_sub"]
 
+        '''
         if self.params["algorithm"] == "OMAMI_VAE":
             self.fs = 100
             self.n_batch = 200
         elif self.params["algorithm"] == "OMAMI":
             self.fs = 200
             self.n_batch = 400
-        
+        '''
+
+
+
         # Cargar nombres de torsos
         self.all_torsos_names = [
             file for _, _, files in os.walk(self.torsos_dir) for file in files if file.endswith(".mat")

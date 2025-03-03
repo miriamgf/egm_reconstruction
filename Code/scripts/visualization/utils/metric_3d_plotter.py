@@ -24,7 +24,7 @@ from scripts.visualization.utils.renderizer import EGMRenderer_EGM
 
 class METRIC_3D_PLOTTER:
 
-    def __init__(self, model_name, model_path, geom_path_CF,output_directory, labels_mode, metric, experiment_dir, testing_id, tikhonov=False, time=500):
+    def __init__(self, model_name, model_path, geom_path_CF,output_directory, labels_mode, metric, experiment_dir, testing_id=None, tikhonov=False, time=500):
         
         self.model_name=model_name
         self.model_path=model_path
@@ -36,6 +36,7 @@ class METRIC_3D_PLOTTER:
         self.metric=metric
         self.experiment_dir=experiment_dir
         self.testing_id=testing_id
+        self.n_nodes=2048
 
 
 
@@ -471,7 +472,7 @@ class METRIC_3D_PLOTTER:
 
         """
         #Load from evaluation precomputations
-        if self.testing_id:
+        if self.testing_id is not None:
             path= self.experiment_dir + f"metrics_all_nodes_dl_{self.testing_id}.csv"
         else:
             path= self.experiment_dir + f"metrics_all_nodes_dl.csv"
@@ -482,6 +483,10 @@ class METRIC_3D_PLOTTER:
         column_metric = patient_row[self.metric].values[0]
         metric = np.array(ast.literal_eval(column_metric))
 
+        if len(metric) != self.n_nodes:
+            print(f"Error: {self.metric} has {len(metric)} nodes instead of {self.n_nodes}. Cutting signal.")
+            metric = metric[:self.n_nodes]
+            
         return metric
 
     

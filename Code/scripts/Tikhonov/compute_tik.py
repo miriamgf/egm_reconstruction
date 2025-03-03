@@ -46,7 +46,7 @@ class TikhonovReconstruction:
 
         
         '''
-        tik_rec_mod = tik_rec[:, :-1]
+        tik_rec_mod = tik_rec[:, :]
         tik_rec_mod_T = tik_rec_mod.T
         tik_rec_down =downsampling(tik_rec_mod_T, fs)
         tik_trunc=tik_rec_down[:divisible_rows]

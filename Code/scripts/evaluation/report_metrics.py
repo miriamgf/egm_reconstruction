@@ -27,18 +27,23 @@ class ReportMetrics():
     
     
     '''
-    def __init__(self,  algorithm_list=None, name='default'):
+    def __init__(self,  algorithm_list=None, test_id=0, name='default'):
         self.path_experiments= "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/"
 
         if algorithm_list is None:
             self.algorithm_list= ['OMAMI_repeated', 'OMAMI_VAE_Optuna_1', 'OMAMI_no_filt', 'OMAMI_VAE_no_filt' ]
         else:
             self.algorithm_list= algorithm_list
-        self.algorithm_ID_tik_filt="OMAMI_VAE_Optuna_1"
-        self.algorithm_ID_tik_no_filt="OMAMI_no_filt"
-        self.path_to_save="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/Global_results/agg_results_figs"
-        self.path_to_save_summary= "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/Global_results/"
+        #self.algorithm_ID_tik_filt="OMAMI_VAE_Optuna_1"
+        self.algorithm_ID_tik_no_filt="OMAMI_no_filt_Optuna_bs_fs_Optuna"
+        self.name_results = "".join(self.algorithm_list)
+        self.path_to_save=f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/Global_results/agg_results_figs/{self.name_results}/"
+        self.path_to_save_summary= f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/Global_results/agg_results_figs/{self.name_results}/"
+        os.makedirs(self.path_to_save, exist_ok=True)
+        os.makedirs(self.path_to_save_summary, exist_ok=True)
         self.name=name
+        self.test_id=test_id
+
 
 
     def load_evaluation_dataframes(self, algorithm_ID):
@@ -51,26 +56,42 @@ class ReportMetrics():
         
         '''
 
+        try:
+            csv_dl=f"{self.path_experiments}{algorithm_ID}/metrics_dl_{self.test_id}.csv"
+            df_dl = pd.read_csv(csv_dl)
 
-        csv_dl=f"{self.path_experiments}{algorithm_ID}/metrics_dl.csv"
-        df_dl = pd.read_csv(csv_dl)
+        except:
+            csv_dl=f"{self.path_experiments}{algorithm_ID}/metrics_dl.csv"
+            df_dl = pd.read_csv(csv_dl)
+
         df_dl = df_dl.sort_values(by='Correlation', ascending=False)
         df_dl.columns = df_dl.columns.str.replace('_', '', regex=True)  # Elimina los guiones bajos
         df_dl_or = df_dl.copy()
 
-
-        csv_tik_filt=f"{self.path_experiments}{self.algorithm_ID_tik_filt}/metrics_tik.csv"
+        '''
+        csv_tik_filt=f"{self.path_experiments}{self.algorithm_ID_tik_filt}/metrics_tik_{self.test_id}.csv"
         df_tik_filt = pd.read_csv(csv_tik_filt)
         df_tik_filt.columns = df_tik_filt.columns.str.replace('_', '', regex=True)  # Elimina los guiones bajos
+        '''
+        try:
+            csv_tik_no_filt=f"{self.path_experiments}{self.algorithm_ID_tik_no_filt}/metrics_tik_{self.test_id}.csv"
+            df_tik_no_filt = pd.read_csv(csv_tik_no_filt)
 
+        except:
+            csv_tik_no_filt=f"{self.path_experiments}{self.algorithm_ID_tik_no_filt}/metrics_tik.csv"
+            df_tik_no_filt = pd.read_csv(csv_tik_no_filt)
 
-        csv_tik_no_filt=f"{self.path_experiments}{self.algorithm_ID_tik_no_filt}/metrics_tik.csv"
         df_tik_no_filt = pd.read_csv(csv_tik_no_filt)
         df_tik_no_filt.columns = df_tik_no_filt.columns.str.replace('_', '', regex=True)  # Elimina los guiones bajos
 
-        return df_dl, df_tik_filt, df_tik_no_filt, df_dl_or
+        return df_dl, df_tik_no_filt, df_dl_or
     
     def summary_per_algorithm_tocsv(self,merged_df,df_dl,algorithm_mod_name):
+        '''
+        This function computes the mean and std of all metrics for each algorithm and saves it to a csv file
+        
+        
+        '''
 
 
         # Extraer nombres únicos de métricas eliminando los nombres de algoritmos
@@ -121,13 +142,17 @@ class ReportMetrics():
         common_columns = [col for col in df_dl.columns if col in df_result.columns]
         df_result = df_result[common_columns]
 
-        path_to_save=f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/Global_results/global_results_{self.name}.csv"
-        df_result.to_csv(path_to_save, index=True)
-        print('csv saved at: ', path_to_save)
+        path=f"{self.path_to_save_summary}/global_results_{self.name}.csv"
+        df_result.to_csv(path, index=True)
+        print('csv saved at: ', path)
 
         df_result.head(20)
     
     def summary_per_patient_tocsv(self, merged_df):
+        '''
+        This function computes the mean of all metrics for each patient and saves it to a csv file
+        
+        '''
         # Paso 1: Extraer los nombres de las métricas sin el sufijo del algoritmo
         metric_columns = [col for col in merged_df.columns if col != "name"]
         metric_dict = {col: col.split("_")[0] for col in metric_columns}  # Extraer solo la métrica
@@ -146,13 +171,18 @@ class ReportMetrics():
 
         df_mean_metrics.head(20)
 
-        path_to_save=f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/Global_results/results_per_patient_{self.name}.csv"
-        df_mean_metrics.to_csv(path_to_save, index=True)
-        print('csv saved at: ', path_to_save)
+        path=f"{self.path_to_save_summary}/results_per_patient_{self.name}.csv"
+        df_mean_metrics.to_csv(path, index=True)
+        print('csv saved at: ', path)
 
         return df_mean_metrics
 
     def classification_rotor_complexity_tocsv(self, df):
+        '''
+        This function classifies each patient as Sinusal, Simple Rotor or Complex Rotor
+        provide the mean metrics for each class (of all DL algorithms) and saves it to a csv file
+        
+        '''
         sinusal = {
             "Simulation_01_200316_001_  7", "Simulation_01_210209_001_002",
             "Simulation_01_210205_001_002", "Simulation_01_200428_001_001",
@@ -208,11 +238,78 @@ class ReportMetrics():
                 return 'Desconocido'
         
         df['classification'] = df['name'].apply(classify_row)
-        path_to_save=f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/Global_results/classification_all_metrics_{self.name}.csv"
-        df.to_csv(path_to_save, index=True)
-        print('csv saved at: ', path_to_save)
+        path=f"{self.path_to_save_summary}/classification_all_metrics_{self.name}.csv"
+
+        df.to_csv(path, index=True)
+        print('csv saved at: ', path)
 
         return df
+    
+    def boxplot_per_algorithm(self, merged_df, algorithm_mod_name):
+        '''
+        This function plots boxplots that shows the mean distribution of DL algorithms and
+        ZOT algorithms across algorithms.
+        
+        '''
+        # Obtener todas las métricas únicas
+        #metrics = ['Correlation', 'RMSE', 'PeakdetectorRecall', 'PeakdetectorPrecision', 'DTW', 'Coherence']
+        #algorithms = algorithm_mod_name
+
+        metrics = ['Correlation', 'RMSE', 'PeakdetectorRecall', 'PeakdetectorPrecision', 'DTW', 'Coherence']
+        algorithms = algorithm_mod_name
+
+        # Reorganizar el DataFrame al formato largo
+        long_df = merged_df.melt(
+            id_vars=['name'],  # Mantener la columna 'name'
+            value_vars=[f"{metric}_{algo}" for algo in algorithms for metric in metrics],
+            var_name='metric_algorithm',  # Nueva columna que combina métricas y algoritmos
+            value_name='value'  # Columna para los valores de las métricas
+        )
+
+        # Dividir 'metric_algorithm' en 'metric' y 'algorithm'
+        long_df[['metric', 'algorithm']] = long_df['metric_algorithm'].str.rsplit('_', n=1, expand=True)
+
+        # Generar un gráfico por cada métrica usando todos los valores de los pacientes
+        for metric in metrics:
+            plt.figure(figsize=(8, 5))  # Crear una nueva figura para cada métrica
+            
+            # Filtrar datos para la métrica actual (TODOS los valores de los pacientes)
+            metric_data = long_df[long_df['metric'] == metric]
+
+            
+            # Crear el boxplot con la distribución real de los valores
+            sns.boxplot(
+                data=metric_data,
+                x='algorithm',
+                y='value',
+                palette="tab10"  # Diferenciar algoritmos con colores
+            )
+            
+            # Agregar puntos individuales (jitter) para ver la dispersión de los pacientes
+            sns.stripplot(
+                data=metric_data,
+                x='algorithm',
+                y='value',
+                color="black",
+                alpha=0.5,  # Transparencia para mejor visualización
+                jitter=True  # Separar puntos para que no se sobrepongan
+            )
+            
+            # Configurar el título y etiquetas
+            plt.title(f'{metric} Comparison Across Algorithms (All Patients)')
+            plt.ylabel('Metric Value')
+            plt.xlabel('Algorithm')
+            plt.xticks(rotation=45)  # Rotar etiquetas del eje X para mejor lectura
+
+            # Ajustar el diseño
+            plt.tight_layout()
+            
+            # Guardar el gráfico como imagen
+            plt.savefig(f"{self.path_to_save}/boxplot_across_algorithms_{metric}.png")
+
+            # Mostrar el gráfico
+            plt.show()
+
 
 
 
@@ -371,7 +468,7 @@ class ReportMetrics():
             algorithm_ID_mod=algorithm_mod_name[cont]
             cont+=1
             # Cargar el archivo CSV
-            df_dl, df_tik_filt, df_tik_no_filt, df_dl_or = self.load_evaluation_dataframes(algorithm_ID)
+            df_dl, df_tik_no_filt, df_dl_or = self.load_evaluation_dataframes(algorithm_ID)
             
             # Agregar sufijo al DataFrame actual
             df_dl = df_dl.add_suffix(f"_{algorithm_ID_mod}")
@@ -387,29 +484,32 @@ class ReportMetrics():
         merged_df_dl=merged_df.copy() #ONLY DL ALGORITHMS
 
         # Add here Tikhonov variations names
-        algorithm_mod_name+=['ZotFilt']
+        #algorithm_mod_name+=['ZotFilt']
         algorithm_mod_name+=['ZotNoFilt']
-
+        '''
         #Add ZOT results
         df = df_tik_filt.add_suffix(f"_ZotFilt")
         df_filt = df
         df.rename(columns={f'name_ZotFilt': 'name'}, inplace=True)
         merged_df = pd.merge(merged_df, df, on='name', how='outer')
-
+        '''
         #Save merged
         merged_df.to_csv(f"{self.path_to_save_summary}merged_df_{self.name}.csv")
 
         df = df_tik_no_filt.add_suffix(f"_ZotNoFilt")
         df.rename(columns={f'name_ZotNoFilt': 'name'}, inplace=True)
         merged_df = pd.merge(merged_df, df, on='name', how='outer') # DL AND TIKHONOV
-        df_tik_merged = pd.merge(df_filt, df, on='name', how='outer') #ONLY TIKHONOV
+        #df_tik_merged = pd.merge(df_filt, df, on='name', how='outer') #ONLY TIKHONOV
 
-        self.boxplot_per_patient(merged_df_dl, df_tik_merged)
+        self.boxplot_per_patient(merged_df_dl, df_tik_no_filt)
         self.summary_per_algorithm_tocsv(merged_df,df_dl_or,algorithm_mod_name)
         df_summary_per_patient=self.summary_per_patient_tocsv(merged_df)
         self.barplot_algorithm(merged_df,algorithm_mod_name, patient_name='LA_RSPV_CAF_150115' )
+        self.boxplot_per_algorithm(merged_df, algorithm_mod_name)
         self.classification_rotor_complexity_tocsv(df_summary_per_patient)
 
 
 if __name__ == "__main__":
-    ReportMetrics(name= 'baseline')()
+
+    algorithm_list= ['OMAMI_no_filt_testing2', 'OMAMI_VAE_no_filt_testing']
+    ReportMetrics(name= 'bs_fs_Optuna', algorithm_list=algorithm_list, test_id=0)()
