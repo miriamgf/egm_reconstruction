@@ -1,15 +1,9 @@
 import numpy as np
-import scipy.io as sio
-import vtk
-from scipy.interpolate import interp1d
-from vtk.util.numpy_support import numpy_to_vtk
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import cv2
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), "../../..", "Code")))
-from scipy.stats import pearsonr, spearmanr
 import matplotlib.pyplot as plt
 import pandas as pd
 import matplotlib.patches as mpatches  # Para arreglar la leyenda
@@ -160,7 +154,7 @@ class ReportMetrics():
         # Paso 2: Renombrar las columnas para agrupar métricas con el mismo nombre
         df_metrics = merged_df.rename(columns=metric_dict)
 
-        # ⚠️ EXCLUIR la columna "name" antes de calcular la media
+        # EXCLUIR la columna "name" antes de calcular la media
         df_numeric = df_metrics.drop(columns=["name"])
 
         # Paso 3: Agrupar columnas con el mismo nombre y calcular la media en cada fila
@@ -171,7 +165,7 @@ class ReportMetrics():
 
         df_mean_metrics.head(20)
 
-        path=f"{self.path_to_save_summary}/results_per_patient_{self.name}.csv"
+        path=f"{self.path_to_save_summary}results_per_patient_{self.name}.csv"
         df_mean_metrics.to_csv(path, index=True)
         print('csv saved at: ', path)
 
@@ -511,5 +505,8 @@ class ReportMetrics():
 
 if __name__ == "__main__":
 
-    algorithm_list= ['OMAMI_no_filt_testing2', 'OMAMI_VAE_no_filt_testing']
+    algorithm_list= ['OMAMI_no_filt_testing2_repeated',
+                    'OMAMI_VAE_no_filt_testing_repeated',
+                    'OMAMI_no_filt_Optuna_bs_fs_Optuna_repeated', 
+                    'OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna_repeated']
     ReportMetrics(name= 'bs_fs_Optuna', algorithm_list=algorithm_list, test_id=0)()

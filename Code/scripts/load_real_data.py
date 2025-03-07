@@ -1,5 +1,5 @@
 import h5py  
-
+import matplotlib.pyplot as plt
 
 class LoadExploreData:
     def __init__(self):
@@ -14,10 +14,17 @@ class LoadExploreData:
             tank_el_position=dataset_ecgi['geometries']['tank_el_position']
 
             #Raw Signals
-            signal_MEA1_RA=f["data"]["raw"]["electric"]["MEA1"]
-            signal_MEA3_LA=f["data"]["raw"]["electric"]["MEA3"]
-            signal_tank=f["data"]["raw"]["electric"]["TANK"]
+            signal_MEA1_RA=f["data"]["filtered"]["electric"]["MEA1"]
+            signal_MEA3_LA=f["data"]["filtered"]["electric"]["MEA3"]
+            signal_tank=f["data"]["filtered"]["electric"]["TANK"]
 
+
+            plt.figure()
+            plt.plot(signal_MEA1_RA[0:4000, 0])
+            plt.savefig("/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/inference_heartlab/example.png")
+            print("/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/inference_heartlab/example.png")
+            plt.close()
+        
             print("MEA1 (RA) signal shape:", signal_MEA1_RA.shape)
             print("MEA3 (LA) signal shape:", signal_MEA3_LA.shape)
             print("Tank signal shape:", signal_tank.shape)

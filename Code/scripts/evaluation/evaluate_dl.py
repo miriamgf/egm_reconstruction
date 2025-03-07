@@ -331,15 +331,9 @@ class EvaluateDL:
         all_nodes_list = []
 
         for cont, patient in enumerate(self.test_patients, start=1):
-            if patient == "Simulation_01_200212_001_  5":
-                pass
-            else:
-                continue
+            
             X_1channel, egm_tensor, Y_model, _, _, _ = self.load_and_process_patient(patient, cont)
             prediction, y_label = self.run_inference(X_1channel, egm_tensor, Y_model)
-
-            np.save("output/figures/evaluation_trash/X_1channel_inference.npy", X_1channel)
-
             prediction=self.postprocess_data_DL(prediction)
             MetricsObj = Metrics(algorithm_ID=self.algorithm_ID, model_name=patient, tik=False)
             df_metrics, metrics_all_nodes = MetricsObj.compute_metrics(prediction, y_label, fs=self.fs)
