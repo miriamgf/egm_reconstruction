@@ -265,7 +265,7 @@ def load_data(
         # if len(egms[1])<1500:
         # continue
 
-        # 1.2)  EGMs filtering.
+        # 1.2)  EGMs filtering.ººº
         x = ECG_filtering(egms, 500)
 
         # 1.3 Normalize models
@@ -1437,6 +1437,18 @@ def correlation_by_AFModels(AF_models_test, estimate_egms_n, y_test_subsample, n
         y_array = y_test_subsample[
             np.where((AF_models_test == model))
         ]  # select window of signal belonging to model i
+
+        plt.figure(figsize=(20, 10))
+        plt.subplot(2, 1, 1)
+        plt.plot(estimation_array[0:500, 0], label='egm')
+        plt.legend()
+        plt.subplot(2, 1, 2)
+        plt.plot(y_array[0:500, 0], label='egm gt')
+        plt.legend()
+        plt.savefig("/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/evaluation_trash/"+'preprocessed_signals_feat_opt_original.png')
+        print('saved image at ', "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/evaluation_trash/"+'preprocessed_signals_feat_opt_original.png')
+        plt.close()
+        
         correlation_pearson_nodes = corr_spearman_cols(estimation_array, y_array)
         correlation_list.extend([correlation_pearson_nodes])
         test_models_corr.extend([AF_models_test[model]])

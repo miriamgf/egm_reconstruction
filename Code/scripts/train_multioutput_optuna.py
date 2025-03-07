@@ -98,27 +98,28 @@ print(type(patches_oclussion))
 
 params = ParseHiperparams().parse_default_hyperparams()
 
-params["algorithm"]='OMAMI_VAE_Reduced'
+#params["algorithm"]='OMAMI_VAE_Reduced'
 
 if params["algorithm"]=='OMAMI':
 
     print('Load OMAMI Optimal hyperparams')
-    path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_no_filt_testing2/hyperparams.json'
-    #params=ParseHiperparams().load_best_hyperparams(path_best_params)
-    #params['optuna_optimization']=False
-    params["n_epochs"]=30
-    params["n_batch"]=400
-    params["fs_sub"]=200
-    params['optuna_optimization']=True
+    path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_no_filt_Optuna_bs_fs_Optuna/hyperparams.json'
+    params=ParseHiperparams().load_best_hyperparams(path_best_params)
+    params['optuna_optimization']=False
+    #params["n_epochs"]=30
+    #params["n_batch"]=400
+    #params["fs_sub"]=200
+    #params['optuna_optimization']=True
 
     #params["filter_EGM"]=False
 
 elif params["algorithm"]=='OMAMI_VAE':
     
     print('Load OMAMI VAE Optimal hyperparams')
-    path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_VAE_no_filt_testing/hyperparams.json'
-    #params=ParseHiperparams().load_best_hyperparams(path_best_params)
-    #params['optuna_optimization']=False
+    path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna/hyperparams.json'
+    params=ParseHiperparams().load_best_hyperparams(path_best_params)
+    params['optuna_optimization']=False
+
     #params["n_batch"]=400
     #params["fs_sub"]=200
 
@@ -164,7 +165,7 @@ except:
     pass
 
 params["filter_EGM"]=False
-
+params['optuna_optimization']=False
 print('Params to train: ', params)
 
 #params['cross_validation']=True
@@ -183,6 +184,7 @@ if params["cross_validation"]:
 
 if not params["filter_EGM"]:  
     experiment_name = f"{experiment_name}_no_filt"
+
 
 if params["algorithm"] == "OMAMI":
     params["fs_sub"]=200
@@ -223,8 +225,14 @@ print(params)
 
 
 #experiment_name='pruebas interpol'
-print('Experiment name: ', experiment_name)
 
+
+if algorithm == "OMAMI":
+    experiment_name="OMAMI_no_filt_Optuna_bs_fs_Optuna_repeated"
+elif algorithm == "OMAMI_VAE":
+    experiment_name="OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna_repeated"
+
+print('Experiment name: ', experiment_name)
 
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -402,6 +410,8 @@ plt.savefig('output/figures/input_output/before_norm.png')
     experiment_dir,
     norm_egm=True,
 )()
+
+
 
 print('################ CHECKING DISTRIBUTION AFTER PREPROCESSING ################')
 

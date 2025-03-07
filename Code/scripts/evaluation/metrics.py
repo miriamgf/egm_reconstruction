@@ -15,6 +15,15 @@ from sklearn.metrics.pairwise import cosine_similarity
 import tools_.tools as tools
 from scripts.evaluation.tools_evaluate import deflexion_detection,compare_r_peaks, bandpass_filter, compute_HR_from_RR_dist, custom_coherence
 
+import os
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
+import numpy as np
+
 class Metrics:  
     def __init__(self, algorithm_ID=None, model_name=None, tik=False):
         self.algorithm_ID = algorithm_ID
@@ -481,8 +490,16 @@ class Metrics:
             print('Label not normalized!')
             sys.exit()
 
-        #normalize
-
+        plt.figure(figsize=(20, 10))
+        plt.subplot(2, 1, 1)
+        plt.plot(prediction[0:500, 0], label='egm')
+        plt.legend()
+        plt.subplot(2, 1, 2)
+        plt.plot(y_label[0:500, 0], label='egm gt')
+        plt.legend()
+        plt.savefig("/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/evaluation_trash/"+'preprocessed_signals_feat_opt_evaluate.png')
+        print('saved image at ', "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/evaluation_trash/"+'preprocessed_signals_feat_opt_evaluate.png')
+        plt.close()
 
         corr = self.correlation_by_node(prediction, y_label)
         rmse = self.rmse_by_node(prediction, y_label)

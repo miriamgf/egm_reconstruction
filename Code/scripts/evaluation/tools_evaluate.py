@@ -1,7 +1,6 @@
 import sys
 sys.path.append("../Code")
 import numpy as np
-import neurokit2 as nk
 import matplotlib.pyplot as plt
 import scipy
 from scipy.stats import pearsonr, spearmanr

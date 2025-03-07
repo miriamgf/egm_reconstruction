@@ -12,7 +12,7 @@ import tensorflow as tf
 
 import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
-
+from scipy.stats import pearsonr, spearmanr
 from tools_.preprocess_data import Preprocess_Dataset
 from scripts.config import ParseHiperparams
 from models.multioutput_VAE import MultiOutput_VAE, SamplingLayer
@@ -54,10 +54,9 @@ class EvaluateDL:
 
     def configure(self):
         # Configuración inicial
-        self.torso_num = 2
+        self.torso_num = 1
         self.time_duration = 500
 
-        self.torso_path = f"/home/pdi/miriamgf/tesis/Autoencoders/Labeled_torsos/Torso{self.torso_num}_mod.mat"
         self.geom_path_CF = "/home/pdi/miriamgf/tesis/Autoencoders/geometries/Atria_geom/Modelos_computacionales_Carlos_Fambuena/Atria.mat"
         self.geom_path_edgar = "/home/pdi/miriamgf/tesis/Autoencoders/geometries/Atria_geom/Modelos_Edgar/Atria.mat"
         self.data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
@@ -141,13 +140,6 @@ class EvaluateDL:
             select_model=model_name,
         )()
 
-        plt.plot(figsize=(20, 10))
-        plt.plot(egm_tensor[0:500, 0])
-        plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/toy/egm_filt.png')
-        print("/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/evaluation/toy/egm_filt.png")
-        plt.close()
-
-
         # Preparar datos para inferencia
         torso_index = self.all_torsos_names.index(f"Torso{self.torso_num}_mod.mat")
         bspm_signal = y_list[torso_index]["y"]
@@ -160,6 +152,17 @@ class EvaluateDL:
         X_1channel_single=np.split(X_1channel, 10)[torso_index]
         AF_models_single=np.split(np.array(AF_models), 10)[torso_index]
         Y_model_single=np.split(np.array(Y_model), 10)[torso_index]
+
+        plt.figure(figsize=(20, 10))
+        plt.subplot(2, 1, 1)
+        plt.plot(egm_single[0:1000, 0], label='egm')
+        plt.legend()
+        plt.subplot(2, 1, 2)
+        plt.plot(X_1channel_single[0:1000, 0, 0], label='bspm')
+        plt.legend()
+        plt.savefig("output/figures/evaluation_trash/X_1channel_loaded_ev.png")
+        print("output/figures/evaluation_trash/X_1channel_loaded_ev.png")
+        plt.close()
 
         #normalize 
         #bspm_signal_norm = normalize_array(bspm_signal.T, high=1, low=-1, axis_n=1) 
@@ -221,13 +224,17 @@ class EvaluateDL:
             model = load_model(self.weights_path)
         except:
             model = load_model(self.weights_path, custom_objects={"SamplingLayer": SamplingLayer})
+            print('loading sampling layer')
 
         # Inferencia
         try:
-            prediction = model.predict(X_1channel, batch_size=1)[1]
+            prediction_array = model.predict(X_1channel, batch_size=1)
+            _, prediction = prediction_array[0], prediction_array[1]
+
         except:
 
             def convert_model_to_float32(model):
+
                 model_config = model.get_config()
                 for layer in model_config["layers"]:
                     if "dtype" in layer["config"]:
@@ -236,6 +243,7 @@ class EvaluateDL:
                 new_model.set_weights([tf.cast(w, tf.float32) for w in model.get_weights()])
                 return new_model
             
+            print('float32 conversion')
 
             # Convertir el modelo
             model_32 = convert_model_to_float32(model)
@@ -245,10 +253,53 @@ class EvaluateDL:
 
             # Inferencia con el modelo en float32
             prediction = model_32.predict(X_1channel_32, batch_size=1)[1]
+        
+        np.save("output/figures/evaluation_trash/X_1channel_inference.npy", X_1channel)
+        X_1channel=np.squeeze(X_1channel, axis=-1)
+        y_test_flat = reshape_tensor(X_1channel, n_dim_input=X_1channel.ndim, n_dim_output=2)
 
+        reconstruction_flat_test = reshape_tensor(
+            prediction, n_dim_input=prediction.ndim, n_dim_output=2
+        )
+
+        estimate_egms_n = reconstruction_flat_test
+
+        #AF_models_test = AF_models_test[0:len(reconstruction_flat_test)]
+        #estimate_egms_n = normalize_by_models(reconstruction_flat_test, AF_models_test)
+
+        estimate_egms_n=tools.normalize_array(reconstruction_flat_test, high=1, low=-1, axis_n=0)
+
+        def correlation_by_node(array1, array2):
+            """
+            Calcula la correlación de Spearman entre las columnas de dos arrays.
+
+            Args:
+                array1: un array de numpy de dimensión (n,m)
+                array2: otro array de numpy de dimensión (n,m)
+
+            Returns:
+                Un array de numpy de dimensión (m,) que contiene la correlación de Spearman
+                de las columnas de array1 y array2.
+            """
+
+            # Verificar si ambos arrays tienen las mismas dimensiones
+            assert (
+                array1.shape == array2.shape
+            ), "Los arrays deben tener las mismas dimensiones."
+
+            # Calcular la correlación de Spearman de las columnas de ambos arrays
+            n_cols = array1.shape[1]
+            print('Computing correlation in :', n_cols, 'nodes')
+            corr = np.zeros(n_cols)
+            for i in range(n_cols):
+                corr[i], _ = spearmanr(array1[:, i], array2[:, i]) # or pearsonr
+
+            return corr
 
         prediction_flat = prediction.reshape(prediction.shape[0] * prediction.shape[1], prediction.shape[2])
         egm_flat = egm_tensor.reshape(prediction.shape[0] * prediction.shape[1], prediction.shape[2])
+
+
 
         return prediction_flat, egm_flat
     
@@ -280,8 +331,15 @@ class EvaluateDL:
         all_nodes_list = []
 
         for cont, patient in enumerate(self.test_patients, start=1):
+            if patient == "Simulation_01_200212_001_  5":
+                pass
+            else:
+                continue
             X_1channel, egm_tensor, Y_model, _, _, _ = self.load_and_process_patient(patient, cont)
             prediction, y_label = self.run_inference(X_1channel, egm_tensor, Y_model)
+
+            np.save("output/figures/evaluation_trash/X_1channel_inference.npy", X_1channel)
+
             prediction=self.postprocess_data_DL(prediction)
             MetricsObj = Metrics(algorithm_ID=self.algorithm_ID, model_name=patient, tik=False)
             df_metrics, metrics_all_nodes = MetricsObj.compute_metrics(prediction, y_label, fs=self.fs)

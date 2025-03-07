@@ -38,6 +38,8 @@ class ParseHiperparams(object):
     def load_best_hyperparams(self, custom_path):
         with open(custom_path, "r") as file:
             data = json.load(file)  # Load the JSON data into a dictionary
+        
+        print('Loading best hyperparameters from:', custom_path)
         return data
     
 def str_to_bool(value):

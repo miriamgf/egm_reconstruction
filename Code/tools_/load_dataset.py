@@ -21,6 +21,8 @@ from plots import *
 from scipy import signal
 from scipy import signal as sigproc
 from scipy.io import loadmat
+import json
+
 #import numba
 
 from tools_.noise_simulation import NoiseSimulation
@@ -81,6 +83,8 @@ class LoadDataset:
         self.SEED=self.params["seed"]
         random.seed(self.SEED)        
         np.random.seed(self.SEED)    
+        np.random.seed(42)
+        random.seed(42)
 
     def load_data(
         self,
@@ -185,7 +189,7 @@ class LoadDataset:
             "Simulation_01_210208_001_002",
         ]
         if self.inference:
-            all_model_names = test_models_deterministic
+            all_model_names =  ["Simulation_01_200212_001_  5"]
 
         noise_database = Noise_Simulation.configure_noise_database(
             len_target_signal,
@@ -199,6 +203,8 @@ class LoadDataset:
         cont=0
         for model_name in all_model_names:
 
+
+
             if self.inference:
                 if model_name not in model_name:
                     break
@@ -208,45 +214,23 @@ class LoadDataset:
             # %% 1)  Compute EGM of the model
             egms = self.load_egms(model_name, self.sinusoid)
 
-            # 1.1) Discard models <1500
-            # if len(egms[1])<1500:
-            # continue
-
             # 1.2)  EGMs filtering.
             if self.params["filter_EGM"]:
                 x = self.ECG_filtering(egms, fs=self.fs)
             else:
                 x = egms
                 print('Not filtering EGM')
-            
-            
-
-            # 1.3 Normalize EGMS
-            if self.norm:
-
-                high = 1
-                low = -1
-
-                mins = np.min(x, axis=0)
-                maxs = np.max(x, axis=0)
-                rng = maxs - mins
-
-                high - (((high - low) * (maxs - x)) / rng)
+                
 
             matrix_num=0
             # 2) Compute the Forward problem with each of the transfer matrices
             for matrix in transfer_matrices:
 
-        
                 # Forward problem
                 y = self.forward_problem(x, matrix[0])
-    
                 bsps_64 = y[matrix[1].ravel(), :]
-
                 bsps_64_or = bsps_64
                 bsps_64_filt = bsps_64_or
-
-               
 
                 # RESAMPLING signal to fs= fs_sub
                 if self.downsampling:
@@ -848,6 +832,22 @@ class LoadDataset:
             index += 1
 
         return patches
+    
+    def remove_mean(signal):
+        """
+        Remove mean from signal
+
+        Parameters:
+            signal (array): signal to process
+
+        Returns:
+            signotmean: signal with its mean removed
+        """
+        signotmean = np.zeros(signal.shape)
+        for index in range(0, signal.shape[0]):
+            signotmean[index, :] = sigproc.detrend(signal[index, :], type="constant")
+        return signotmean
+    
 
     def ECG_filtering(self, signal, fs, order=2, f_low=3, f_high=30):
         """
@@ -1043,7 +1043,7 @@ class LoadDataset_BSPS:
             "Simulation_01_210208_001_002",
         ]
         if self.inference:
-            all_model_names = test_models_deterministic
+            all_model_names = "Simulation_01_200212_001_  5"
 
         noise_database = Noise_Simulation.configure_noise_database(
             len_target_signal,
@@ -1066,43 +1066,40 @@ class LoadDataset_BSPS:
 
             # %% 1)  Compute EGM of the model
             egms = self.load_egms(model_name, self.sinusoid)
-
-            # 1.1) Discard models <1500
-            # if len(egms[1])<1500:
-            # continue
-
             # 1.2)  EGMs filtering.
-            #x=egms
-            # 1.2)  EGMs filtering.
-            try:
-                if self.params["filter_EGM"]:
-                    x = self.ECG_filtering(egms, fs=self.fs)
-                else:
-                    x = egms
-                    print('Not filtering EGM')
-            except:
+            if self.params["filter_EGM"]:
                 x = self.ECG_filtering(egms, fs=self.fs)
-
-            # 1.3 Normalize EGMS
-            if self.norm:
-
-                high = 1
-                low = -1
-
-                mins = np.min(x, axis=0)
-                maxs = np.max(x, axis=0)
-                rng = maxs - mins
-
-                high - (((high - low) * (maxs - x)) / rng)
-
+            else:
+                x = egms
+                print('Not filtering EGM')
+        
+            
             matrix_num=0
             # 2) Compute the Forward problem with each of the transfer matrices
             for matrix in transfer_matrices:
                 # Forward problem
+
                 y = self.forward_problem(x, matrix[0])
                 bsps_64 = y[matrix[1].ravel(), :]
                 bsps_64_or = bsps_64
                 bsps_64_filt = bsps_64_or
+
+                #with open("output/figures/input_output/original_vars_dic.json", "r") as f:
+                    #loaded_data = json.load(f)
+                '''
+                y_original=np.array(loaded_data['y'])# {'
+                x_original=np.array(loaded_data['x'])
+                model_name_or=loaded_data['model_name']
+                matrix_original=np.array(loaded_data['matrix[0]'])
+                '''                  
+
+                plt.figure()
+                plt.plot(y[0, 0:1000])
+                plt.title('Noisy signal 1')
+                plt.savefig('output/figures/input_output/y_ev.png')
+                print('output/figures/input_output/y_ev.png')
+                plt.close()
+            
 
                 # RESAMPLING signal to fs= fs_sub
                 if self.downsampling:
@@ -1115,6 +1112,7 @@ class LoadDataset_BSPS:
 
                     bsps_64 = bsps_64_filt
                     x_sub = x
+ 
 
                 if self.classification:
 
@@ -1165,6 +1163,13 @@ class LoadDataset_BSPS:
                                 n_noise_chunks_per_signal=3,
                             )
                         )
+                    
+                    plt.figure()
+                    plt.plot(tensor_model_noisy[0:1000, 0, 0])
+                    plt.title('Noisy signal 1')
+                    plt.savefig('output/figures/input_output/noisy_signal_2.png')
+                    print('output/figures/input_output/noisy_signal_2.png')
+                    plt.close()
 
                     # 5) Filter AFTER adding noise
 
@@ -1172,6 +1177,13 @@ class LoadDataset_BSPS:
                         tensor_model_noisy, order=3, fs=500, f_low=3, f_high=30
                     )
                     tensor_model = tensor_model_filt
+
+                    plt.figure()
+                    plt.plot(tensor_model_filt[0:1000, 0, 0])
+                    plt.title('Noisy signal 1')
+                    plt.savefig('output/figures/input_output/filtered_signal_2.png')
+                    print('output/figures/input_output/filtered_signal_2.png')
+                    plt.close()
 
 
                     # Turn off electrodes
@@ -1311,7 +1323,28 @@ class LoadDataset_BSPS:
         Returns:
             ECG (array): ECG reconstruction (torso).
         """
-        ECG = np.matmul(MTransfer, EGMs)
+        
+        '''
+        #with open("output/figures/input_output/original_vars_dic_direct_problem.json", "r") as f:
+            loaded_data = json.load(f)
+
+        MTransfer_original=np.array(loaded_data['MTransfer'])
+        EGMs_original=np.array(loaded_data['EGMs'])
+        ECG_original=np.array(loaded_data['ECG'])
+        '''
+        #MTransfer_copy = np.copy(MTransfer)
+        
+        ECG = np.dot(MTransfer, EGMs)
+
+        
+        #dic= {'MTransfer': MTransfer.tolist(),  'EGMs': EGMs.tolist(), 'ECG': ECG.tolist()}
+        #with open("output/figures/input_output/original_vars_dic_direct_problem.json", "w") as f:
+            #json.dump(dic, f)
+        
+        #dic= {'MTransfer': MTransfer.tolist(),  'EGMs': EGMs.tolist(), 'ECG': ECG.tolist()} 
+        #with open("output/figures/input_output/original_vars_dic_direct_problem.json", "w") as f:
+            #json.dump(dic, f)
+        
         return ECG
 
     def get_bsps_192(self, model_name, ten_leads=False):
@@ -1744,3 +1777,5 @@ class LoadDataset_BSPS:
         """Calls the Load class."""
 
         return self.load_data()
+
+# %%

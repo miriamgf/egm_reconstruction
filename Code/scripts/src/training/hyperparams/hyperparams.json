@@ -3,7 +3,7 @@
     "batch_size": 400,
     "fs_sub": 200, 
     "num_batch_iter":1,
-    "algorithm": "OMAMI",
+    "algorithm": "OMAMI_VAE",
     "filter_EGM": true,
     "load_best_hiperparams": true,
     "set_gpu": 0,
