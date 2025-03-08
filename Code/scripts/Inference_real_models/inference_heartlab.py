@@ -51,11 +51,11 @@ class Inference_Heartlab:
             self.params=params
 
         self.SEED = 42
-        self.fs= 400
+        self.fs= 4000
     
     def load_data(self):
         mat = loadmat(self.data_dir)
-        return mat["signal_tank"], mat["signal_MEA1_RA"], mat["signal_MEA3_LA"], mat["tank_el_position"]
+        return mat["signal_tank_filt"], mat["signal_MEA1_RA_filt"], mat["signal_MEA3_LA_filt"], mat["tank_el_position"], mat["matrix_signal_MEA1_RA"], mat["matrix_signal_MEA3_LA"], mat["matrix_signal_tank"]
     
     def preprocess_data(self, data, params, type_data):
         '''
@@ -79,29 +79,51 @@ class Inference_Heartlab:
         
         #filter
 
-        filtered_signal=ECG_filtering(data_truncated, fs=params["fs_sub"], order=1, f_low=1, f_high=30)
+        filtered_signal=ECG_filtering(data_truncated, fs=params["fs_sub"], order=1, f_low=3, f_high=30)
 
         # Normalize -1, 1
         data_normalized = normalize_array(filtered_signal, high=1, low=-1, axis_n=0)
 
-        plt.figure(figsize=(20, 10), tight_layout=True)
-        plt.subplot(3, 1, 1)
-        plt.plot(data[0:400, 0])
-        plt.title('Original signal')
-        plt.xlabel('Samples')
-        plt.subplot(3, 1, 2)
-        plt.plot(data_downsampled[0:400, 0])
-        plt.xlabel('Samples')
-        plt.title('Downsampled signal')
-        plt.subplot(3, 1, 3)
-        plt.plot(filtered_signal[0:400, 0])
-        plt.title('Filtered signal')
-        plt.xlabel('Samples')
-        plt.suptitle(f"{type_data}")
-        plt.savefig(f"{self.output_path_figs}{type_data}.png")
-        print('saved image at ', f"{self.output_path_figs}{type_data}.png")
-    
-        plt.close()
+        if type_data=="bspms_32_32":
+            plt.figure(figsize=(20, 10), tight_layout=True)
+            plt.subplot(3, 1, 1)
+            plt.plot(data[0:self.fs, 0, 0])
+            plt.title('Original signal')
+            plt.xlabel('Samples')
+            plt.subplot(3, 1, 2)
+            plt.plot(data_downsampled[0:params["fs_sub"], 0, 0])
+            plt.xlabel('Samples')
+            plt.title('Downsampled signal')
+            plt.subplot(3, 1, 3)
+            plt.plot(filtered_signal[0:params["fs_sub"], 0, 0])
+            plt.title('Filtered signal')
+            plt.xlabel('Samples')
+            plt.suptitle(f"{type_data}")
+            plt.savefig(f"{self.output_path_figs}{type_data}.png")
+            print('saved image at ', f"{self.output_path_figs}{type_data}.png")
+        
+            plt.close()
+        else:
+            
+            plt.figure(figsize=(20, 10), tight_layout=True)
+            plt.subplot(3, 1, 1)
+            plt.plot(data[0:self.fs, 0])
+            plt.title('Original signal')
+            plt.xlabel('Samples')
+            plt.subplot(3, 1, 2)
+            plt.plot(data_downsampled[0:params["fs_sub"], 0])
+            plt.xlabel('Samples')
+            plt.title('Downsampled signal')
+            plt.subplot(3, 1, 3)
+            plt.plot(filtered_signal[0:params["fs_sub"], 0])
+            plt.title('Filtered signal')
+            plt.xlabel('Samples')
+            plt.suptitle(f"{type_data}")
+            plt.savefig(f"{self.output_path_figs}{type_data}.png")
+            print('saved image at ', f"{self.output_path_figs}{type_data}.png")
+        
+            plt.close()
+
 
         
         return data_normalized
@@ -139,22 +161,40 @@ class Inference_Heartlab:
 
         # Load data
 
-        X_1channel,egm_tensor_RA,egm_tensor_LA,tank_el_position=self.load_data()
+        X_1channel,egm_tensor_RA,egm_tensor_LA,tank_el_position, matrix_RA, matrix_LA, matrix_BSPMS=self.load_data()
 
-        print("Tamaño de X_1channel", X_1channel.shape)
-        print("Tamaño de egm_tensor_RA", egm_tensor_RA.shape)
-        print("Tamaño de egm_tensor_LA", egm_tensor_LA.shape)
+        print("Shape X_1channel", X_1channel.shape)
+        print("Shape egm_tensor_RA", egm_tensor_RA.shape)
+        print("Shape egm_tensor_LA", egm_tensor_LA.shape)
 
         #TODO Explore more options
         egm_tensor=np.concatenate((egm_tensor_LA,egm_tensor_RA ), axis=1)
 
         #Preprocess data
-        X_1channel_pre=self.preprocess_data(X_1channel, self.params, "bspms")
+        X_1channel_pre=self.preprocess_data(matrix_BSPMS, self.params, "bspms")
         egm_pre=self.preprocess_data(egm_tensor, self.params, "egm")
 
-        X_1channel_reshaped=bspm_to_images(X_1channel_pre, tank_el_position)
+        #X_1channel_reshaped=bspm_to_images(X_1channel_pre, tank_el_position)
         
-        bspms_reshaped=X_1channel_pre.reshape(X_1channel_pre.shape[0], 12, 5) #Example of only reshaping
+        frames = []
+        for instant in range(0, 4000):
+            # Crear la figura
+            fig, ax = plt.subplots()
+            ax.imshow(X_1channel_pre[instant, :, :], cmap='gray')  # Puedes cambiar el colormap
+            ax.set_title('Video BSPMS')
+            ax.axis('off')  # Ocultar ejes
+            # Guardar temporalmente la imagen
+            temp_path = os.path.join(self.output_path_figs, f"bspm_frame_{instant}.png")
+            plt.savefig(temp_path)
+            plt.close()
+    
+            # Cargar imagen y añadirla a la lista de frames
+            frames.append(imageio.imread(temp_path))
+        gif_path=os.path.join(self.output_path_figs, "bspm_video_32_32.gif")
+        # Guardar el GIF
+        imageio.mimsave(gif_path, frames, duration=5)  # Ajusta 'duration' para cambiar la velocidad
+
+        print(f"GIF guardado en: {gif_path}")
 
         frames = []
         

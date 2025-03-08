@@ -1,9 +1,11 @@
 import h5py  
 import matplotlib.pyplot as plt
+import scipy.io as sio
 
 class LoadExploreData:
     def __init__(self):
         self.path_to_data="/home/pdi/miriamgf/tesis/Autoencoders/Real_data/HEartLab/data_E18_F02_R02.mat"
+        self.path_to_save="/home/pdi/miriamgf/tesis/Autoencoders/Real_data/HEartLab/data_E18_F02_R02_selection.mat"
     
     def load_and_select_fields(self):
         with h5py.File(self.path_to_data, "r") as f:
@@ -19,11 +21,6 @@ class LoadExploreData:
             signal_tank=f["data"]["filtered"]["electric"]["TANK"]
 
 
-            plt.figure()
-            plt.plot(signal_MEA1_RA[0:4000, 0])
-            plt.savefig("/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/inference_heartlab/example.png")
-            print("/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/inference_heartlab/example.png")
-            plt.close()
         
             print("MEA1 (RA) signal shape:", signal_MEA1_RA.shape)
             print("MEA3 (LA) signal shape:", signal_MEA3_LA.shape)
@@ -73,18 +70,29 @@ class LoadExploreData:
             signal_MEA3_LA=f["data"]["raw"]["electric"]["MEA3"]
             signal_tank=f["data"]["raw"]["electric"]["TANK"]
 
+            signal_MEA1_RA_filt=f["data"]["filtered"]["electric"]["MEA1"]
+            signal_MEA3_LA_filt=f["data"]["filtered"]["electric"]["MEA3"]
+            signal_tank_filt=f["data"]["filtered"]["electric"]["TANK"]
 
-            #Save as .mat file
-            import scipy.io as sio
+            matrix_signal_MEA1_RA=f["data"]["matrix"]["electric"]["MEA1"]
+            matrix_signal_MEA3_LA=f["data"]["matrix"]["electric"]["MEA3"]
+            matrix_signal_tank=f["data"]["matrix"]["electric"]["TANK"]
 
-            path_to_save="/home/pdi/miriamgf/tesis/Autoencoders/Real_data/HEartLab/data_E18_F02_R02_selection.mat"
 
-            sio.savemat(path_to_save, {'signal_MEA1_RA': signal_MEA1_RA,
+            sio.savemat(self.path_to_save, {'signal_MEA1_RA': signal_MEA1_RA,
                                                 'signal_MEA3_LA': signal_MEA3_LA,
                                                 'signal_tank': signal_tank, 
-                                                "tank_el_position": tank_el_position})
+                                                'tank_el_position': tank_el_position, 
+                                                'signal_MEA1_RA_filt': signal_MEA1_RA_filt,
+                                                'signal_MEA3_LA_filt': signal_MEA3_LA_filt,
+                                                'signal_tank_filt': signal_tank_filt, 
+                                                'matrix_signal_MEA1_RA': matrix_signal_MEA1_RA, 
+                                                'matrix_signal_MEA3_LA':matrix_signal_MEA3_LA,
+                                                'matrix_signal_tank':matrix_signal_tank
+                                               })
             
-            print("Saved as .mat file in:", path_to_save)
+            
+            print("Saved as .mat file in:", self.path_to_save)
 
     def run(self):
         self.load_and_select_fields()

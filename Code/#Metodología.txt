@@ -1,15 +1,21 @@
 #1. Entrenamiento --> python scripts/train_multioutput_optuna.py --algorithm 'OMAMI_VAE' --n_nodes 2048 --filter_EGM false > output/logs/output_OMAMI_VAE_no_filt.log 2>&1 
     |
     '-> Output: output/experiments/algorithm_ID/: model, history, training splits
-#2. Evaluación ZOT --> python /home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/scripts/evaluation/evaluate_tik.py
+#2. Evaluación --> python /home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/scripts/evaluation/evaluate_main.py
     |
     '-> Output: output/experiments/algorithm_ID/metrics_tik.csv: metrics ZOT
-
-#3. Evaluación DL --> python /home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/scripts/evaluation/evaluate_dl.py
     |
-    '-> Output: output/experiments/algorithm_ID/metrics_tik.csv: metrics dl
-#3. Evaluación reports agregados --> /home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/scripts/evaluation/evaluate_3d_test.ipynb
-#4. Visualización 2d Mejor/Peor --> /home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/scripts/visualization/2d_plot_egm_bpsm.ipynb
-#5. Visualización 3d Mejor/Peor --> /home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/scripts/visualization/3d_plot_egm_bpsm.py
+    '-> Output: output/experiments/algorithm_ID/metrics_dl.csv: metrics DL
+    |
+    '-> Output: output/experiments/algorithm_ID/metrics_region.csv: metrics per region
+
+#3. Evaluación reports agregados --> /home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/scripts/evaluation/report_metrics.py
+    |
+    '-> Output: output/evaluation/agg_results_figs/algorithm_ID/: figures metrics comparing patients and methods
+    |
+    '-> Output: output/evaluation/agg_results_figs/algorithm_ID/: csv metrics comparing patients and methods
+
+#4. Visualización 2d --> /home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/scripts/visualization/2d_plot.ipynb
+#5. Visualización 3d --> /home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/scripts/visualization/3d_plot_egm_bpsm.py
     |
     '-> Output: output/renderized_heart/algorithm_ID/GIF: Mapping Voltage, Corr, Freq

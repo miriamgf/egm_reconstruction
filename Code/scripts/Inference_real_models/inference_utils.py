@@ -35,8 +35,8 @@ def remove_mean(signal):
 
     signotmean = np.zeros(signal.shape)
 
-    for index in range(0, signal.shape[0]):
-        signotmean[index, :] = sigproc.detrend(signal[index, :], type="constant")
+    for node in range(0, signal.shape[0]):
+        signotmean[node, :] = sigproc.detrend(signal[node, :], type="constant")
     return signotmean.T
 
 def ECG_filtering(signal, fs, order=2, f_low=3, f_high=30):
