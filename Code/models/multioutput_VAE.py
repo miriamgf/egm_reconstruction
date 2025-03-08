@@ -48,10 +48,12 @@ class MultiOutput_VAE(Model):
             kernel_regularizer=tf.keras.regularizers.l2(params["l2_reg"]),
         )
         self.conv2 = layers.Conv3D(
-            32, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
+            32, (5, 2, 2), strides=1, padding="same", activation="leaky_relu", 
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]) #additional
         )
         self.conv3 = layers.Conv3D(
-            16, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
+            16, (5, 2, 2), strides=1, padding="same", activation="leaky_relu", 
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]) #additional
         )
         self.maxpool1 = layers.MaxPooling3D((1, 2, 2))
         self.conv4 = layers.Conv3D(
@@ -64,7 +66,8 @@ class MultiOutput_VAE(Model):
         )
         self.maxpool2 = layers.MaxPooling3D((1, 2, 2))
         self.conv5 = layers.Conv3D(
-            4, (5, 2, 2), strides=1, padding="same", activation="linear"
+            4, (5, 2, 2), strides=1, padding="same", activation="linear", 
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]) #additional
         )
         self.maxpool3 = layers.MaxPooling3D((1, 1, 2))
         self.flatten = layers.Flatten()
@@ -98,11 +101,13 @@ class MultiOutput_VAE(Model):
         # self.decoder_conv1 = layers.Conv3D(4, (5, 2, 2), strides=1, padding="same", activation="leaky_relu", kernel_initializer=initializer)
         self.upsample1 = layers.UpSampling3D((1, 1, 2))
         self.decoder_conv2 = layers.Conv3D(
-            16, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
+            16, (5, 2, 2), strides=1, padding="same", activation="leaky_relu", 
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]) #additional
         )
         self.upsample2 = layers.UpSampling3D((1, 2, 2))
         self.decoder_conv3 = layers.Conv3D(
-            32, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
+            32, (5, 2, 2), strides=1, padding="same", activation="leaky_relu", 
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]) #additional
         )
         self.upsample3 = layers.UpSampling3D((1, 2, 2))
         self.decoder_output = layers.Conv3D(
@@ -139,7 +144,8 @@ class MultiOutput_VAE(Model):
         self.upsampling3d_2 = layers.UpSampling3D((1, 2, 2))
 
         self.conv3d_3 = layers.Conv3D(
-            3, (5, 3, 3), strides=(1, 1, 1), padding="same", activation="leaky_relu"
+            3, (5, 3, 3), strides=(1, 1, 1), padding="same", activation="leaky_relu", 
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]) #additional
         )
 
         self.time_distributed = layers.TimeDistributed(layers.Flatten())
@@ -147,7 +153,8 @@ class MultiOutput_VAE(Model):
         self.lstm = layers.LSTM(self.params["LSTM_units"], return_sequences=True)
         self.dropout = layers.Dropout(self.params["dropout"])
         self.dense = layers.Dense(
-            n_nodes, activation="leaky_relu", name="Regressor_output"
+            n_nodes, activation="leaky_relu", name="Regressor_output", 
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]) #additional
         )
 
         self.model = self.assemble_full_model(input_shape_, n_nodes)

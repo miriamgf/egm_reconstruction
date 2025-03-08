@@ -35,10 +35,12 @@ class MultiOutput:
             kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"])
         )(inputs)
         encoder = layers.Conv3D(
-            64, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
+            64, (5, 2, 2), strides=1, padding="same", activation="leaky_relu", 
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]) #Additional
         )(encoder)
         encoder = layers.Conv3D(
-            32, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
+            32, (5, 2, 2), strides=1, padding="same", activation="leaky_relu", 
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]) #additional
         )(encoder)
         encoder = layers.MaxPooling3D((1, 2, 2))(encoder)
         encoder = layers.Conv3D(
@@ -51,7 +53,8 @@ class MultiOutput:
         )(encoder)
         encoder = layers.MaxPooling3D((1, 2, 2))(encoder)
         encoder = layers.Conv3D(
-            12, (5, 2, 2), strides=1, padding="same", activation="linear"
+            12, (5, 2, 2), strides=1, padding="same", activation="linear", 
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]) #additional
         )(encoder)
         encoder = layers.MaxPooling3D((1, 1, 2))(encoder)
         return encoder
@@ -59,15 +62,18 @@ class MultiOutput:
     def build_decoder_module(self, inputs, input_shape, encoder):
 
         decoder = layers.Conv3D(
-            12, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
+            12, (5, 2, 2), strides=1, padding="same", activation="leaky_relu", 
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]) #additional
         )(encoder)
         decoder = layers.UpSampling3D((1, 1, 2))(decoder)
         decoder = layers.Conv3D(
-            32, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
+            32, (5, 2, 2), strides=1, padding="same", activation="leaky_relu", 
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]) #additional
         )(decoder)
         decoder = layers.UpSampling3D((1, 2, 2))(decoder)
         decoder = layers.Conv3D(
-            32, (5, 2, 2), strides=1, padding="same", activation="leaky_relu"
+            32, (5, 2, 2), strides=1, padding="same", activation="leaky_relu", 
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]) #additional
         )(decoder)
         decoder = layers.UpSampling3D((1, 2, 2))(decoder)
         decoder = layers.Conv3D(
@@ -123,7 +129,8 @@ class MultiOutput:
         #x = MultiHeadAttention(num_heads=4, key_dim=self.params["LSTM_units"])(x, x)
 
         x = layers.Dropout(self.params["dropout"])(x)
-        x = layers.Dense(n_nodes, activation="leaky_relu", name="reconstruction")(x)
+        x = layers.Dense(n_nodes, activation="leaky_relu", name="reconstruction", 
+                        kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x) #additional
 
         return x
 

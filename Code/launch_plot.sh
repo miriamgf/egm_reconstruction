@@ -17,17 +17,17 @@
 log_file="output/logs/plots/general_log.log" 
 echo "General files at: $log_file"
 
-echo "Saving logs at: output/logs/plots/OMAMI_no_filt_Optuna_bs_fs_Optuna_repeated_2D.log" | tee -a "$log_file"
-nohup python -u scripts/visualization/2d_plot.py 2>&1 --algorithm_ID 'OMAMI_no_filt_Optuna_bs_fs_Optuna_repeated' > output/logs/plots/OMAMI_no_filt_Optuna_bs_fs_Optuna_repeated_2D.log 
-wait
+#echo "Saving logs at: output/logs/plots/OMAMI_no_filt_Optuna_bs_fs_Optuna_repeated_2D.log" | tee -a "$log_file"
+#nohup python -u scripts/visualization/2d_plot.py 2>&1 --algorithm_ID 'OMAMI_no_filt_Optuna_bs_fs_Optuna_repeated' > output/logs/plots/OMAMI_no_filt_Optuna_bs_fs_Optuna_repeated_2D.log 
+#wait
 
 echo "Saving logs at: output/logs/plots/OMAMI_no_filt_Optuna_bs_fs_Optuna_repeated_3D.log" | tee -a "$log_file"
 nohup python -u scripts/visualization/3d_plot_egm_bpsm.py 2>&1 --algorithm_ID 'OMAMI_no_filt_Optuna_bs_fs_Optuna_repeated' > output/logs/plots/OMAMI_no_filt_Optuna_bs_fs_Optuna_repeated_3D.log
 wait
 
-echo "Saving logs at: output/logs/plots/OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna_repeated_2D.log" | tee -a "$log_file"
-nohup python -u scripts/visualization/2d_plot.py 2>&1 --algorithm_ID 'OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna_repeated' > output/logs/plots/OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna_repeated_2D.log 
-wait
+#echo "Saving logs at: output/logs/plots/OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna_repeated_2D.log" | tee -a "$log_file"
+#nohup python -u scripts/visualization/2d_plot.py 2>&1 --algorithm_ID 'OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna_repeated' > output/logs/plots/OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna_repeated_2D.log 
+#wait
 
 echo "Saving logs at: output/logs/plots/OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna_repeated_3D.log" | tee -a "$log_file"
 nohup python -u scripts/visualization/3d_plot_egm_bpsm.py 2>&1 --algorithm_ID 'OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna_repeated' > output/logs/plots/OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna_repeated_3D.log 

@@ -12,6 +12,7 @@ import random
 import time
 import json
 
+
 import matplotlib.pyplot as plt
 #import mlflow
 import scipy
@@ -40,7 +41,7 @@ from src.training.optuna_opt import OptunaOpt
 from keras import backend as K
 from tensorflow.keras.models import load_model
 from config import str_to_bool
-
+from tools_.data_augmentation import DataAugmentation
 from tools_.load_dataset import LoadDataset
 from tools_.preprocess_data import Preprocess_Dataset
 from tools_.preprocessing_compression import *
@@ -98,12 +99,12 @@ print(type(patches_oclussion))
 
 params = ParseHiperparams().parse_default_hyperparams()
 
-#params["algorithm"]='OMAMI_VAE_Reduced'
+params["algorithm"]='OMAMI_VAE'
 
 if params["algorithm"]=='OMAMI':
 
     print('Load OMAMI Optimal hyperparams')
-    path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_no_filt_Optuna_bs_fs_Optuna/hyperparams.json'
+    path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_no_filt_Optuna_bs_fs_Optuna_repeated/hyperparams.json'
     params=ParseHiperparams().load_best_hyperparams(path_best_params)
     params['optuna_optimization']=False
     #params["n_epochs"]=30
@@ -116,7 +117,7 @@ if params["algorithm"]=='OMAMI':
 elif params["algorithm"]=='OMAMI_VAE':
     
     print('Load OMAMI VAE Optimal hyperparams')
-    path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna/hyperparams.json'
+    path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna_repeated/hyperparams.json'
     params=ParseHiperparams().load_best_hyperparams(path_best_params)
     params['optuna_optimization']=False
 
@@ -131,6 +132,7 @@ try:
     parser.add_argument("--n_nodes", type=int, help="682, 1024", required=False)
     parser.add_argument("--fold", type=int, help="0, 1, 2, 3, 4", required=False)
     parser.add_argument("--filter_EGM", type=str_to_bool, help="True or False", required=False)
+    parser.add_argument("--shuffle_patient", type=str_to_bool, help="True or False", required=False)
 
     args = parser.parse_args()
     algorithm = args.algorithm
@@ -138,10 +140,11 @@ try:
     n_nodes = args.n_nodes
     filter_EGM= args.filter_EGM
     fold=args.fold
-
-
+    shuffle_patient=args.shuffle_patient
+    
     params["algorithm"]=algorithm
     params["n_nodes_regression"]=n_nodes
+    params["shuffle_patient"]=shuffle_patient
 
     if optuna:
         params["optuna_optimization"] = True
@@ -168,11 +171,12 @@ params["filter_EGM"]=False
 params['optuna_optimization']=False
 print('Params to train: ', params)
 
+
 #params['cross_validation']=True
 #params["fold"] = fold
 
 SNR_em_noise = None
-SNR_white_noise = 100
+SNR_white_noise = 20
 patches_oclussion = "PT"
 experiment_number = 0
 unfold_code = 1
@@ -198,25 +202,9 @@ else:
 
 if params["optuna_optimization"]:
     experiment_name = f"{experiment_name}_Optuna"
-'''
-params["3D_depth"]=5
-params["parallel_scope"]=True
-params["early_stopping_patience"]=10
-params["algorithm"] = "OMAMI_VAE"
-params["num_batch_iter"]=2
-params["learning_rate"]=0.001
-params["batch_size"]=400
-params["fs_sub"]=200
-params["n_epochs"]=2
-'''
-params["num_batch_iter"]=1
-#params["batch_size"]=400
-#params["fs_sub"]=200
-#params["optuna_optimization"]=True
+
+params["num_batch_iter"]=5
 params["n_trials"]=40
-#params["n_epochs"]=1
-#params["parallel_scope"]=True
-#params["optuna_optimization"]=True
 experiment_name = f"{experiment_name}_bs_fs_Optuna"
 
 
@@ -232,11 +220,13 @@ if algorithm == "OMAMI":
 elif algorithm == "OMAMI_VAE":
     experiment_name="OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna_repeated"
 
+experiment_name= "toy"
+params["dropout"]=0.7
 print('Experiment name: ', experiment_name)
 
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
+data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data_short/"
 torsos_dir = "../../../../Labeled_torsos/"
 figs_dir = "output/figures/"
 models_dir = "output/model/"
@@ -289,6 +279,11 @@ print(all_model_names)
 # Load data
 if params["fs"] == params["fs_sub"]:
     params["fs"] = params["fs_sub"]
+
+try:
+    print(params["shuffle_patient"])
+except:
+    params["shuffle_patient"]=False
  
 
 Transfer_model = False  # Transfer learning from sinusoids
@@ -379,6 +374,7 @@ os.makedirs('output/figures/input_output/', exist_ok=True)
 plt.savefig('output/figures/input_output/before_norm.png')
 """
 
+
 # Preprocess data
 (
     x_train,
@@ -409,6 +405,7 @@ plt.savefig('output/figures/input_output/before_norm.png')
     transfer_matrices,
     experiment_dir,
     norm_egm=True,
+    shuffle_patient= True#params["shuffle_patient_order"]
 )()
 
 
@@ -437,6 +434,13 @@ plt.legend()
 plt.savefig(experiment_dir+'preprocessed_signals_feat_opt.png')
 print('saved image at ', experiment_dir+'preprocessed_signals_feat_opt.png')
 plt.close()
+
+
+#Data Augmentation
+params["time_masking"]=True
+if params["time_masking"]:
+    x_train = DataAugmentation(params, x_train).time_masking()
+
 
 print("Algorithm selected:", params["algorithm"])
 model, history = TrainModel(
