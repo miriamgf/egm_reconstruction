@@ -91,7 +91,11 @@ class EvaluateDL:
         ]
 
         self.SNR_em_noise = None
-        self.SNR_white_noise = 100
+        try:
+            self.SNR_white_noise = self.params["SNR_white_noise"]
+        except:
+            self.SNR_white_noise = 100
+
         self.patches_oclussion = "PT"
         self.unfold_code = 1
 

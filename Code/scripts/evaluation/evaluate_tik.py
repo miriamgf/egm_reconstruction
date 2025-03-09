@@ -71,7 +71,10 @@ class EvaluateTikhonov:
         ]
 
         self.SNR_em_noise = None
-        self.SNR_white_noise = 100
+        try:
+            self.SNR_white_noise = self.params["SNR_white_noise"]
+        except:
+            self.SNR_white_noise = 100
         self.patches_oclussion = "PT"
         self.unfold_code = 1
 
@@ -162,7 +165,7 @@ class EvaluateTikhonov:
         return bspm_signal_norm, egm_tensor, Y_model, transfer_matrix_64
 
 
-    def inference_tik(self, bspm_signal_norm, egm_flat, Y_model, transfer_matrix_64):
+    def inference_tik(self, bspm_signal_norm, egm_flat, Y_model, transfer_matrix_64, patient):
         
 
         ObjTik = TikhonovReconstruction(bspm_signal_norm.T, transfer_matrix_64,
@@ -170,7 +173,15 @@ class EvaluateTikhonov:
         tik_rec = ObjTik(plot_L_curve=True)
         tik_batches = ObjTik.tik_post_process_to_plot(tik_rec, self.fs_sub, self.divisible_rows, self.n_batch)
         tik_flat = tik_batches.reshape((tik_batches.shape[0] * tik_batches.shape[1], tik_batches.shape[2]))
-        #y_label = normalize_by_models(egm_flat, Y_model)
+
+        #save for plotting
+        tik_dict = {
+            "tik_rec": tik_rec.tolist()
+        }
+        path_to_save=f"{self.experiment_dir}{patient}_tik_array.json"
+        with open(path_to_save, "w") as f:
+            json.dump(tik_dict, f)
+        print("Saved ZOT at:", path_to_save)
 
         return tik_flat, egm_flat
     
@@ -195,7 +206,7 @@ class EvaluateTikhonov:
 
         for cont, patient in enumerate(self.test_patients, start=1):
             bspm_signal_norm, egm_flat, Y_model, transfer_matrix_64= self.load_and_process_patient(patient, cont)
-            prediction, y_label = self.inference_tik(bspm_signal_norm, egm_flat, Y_model, transfer_matrix_64)   
+            prediction, y_label = self.inference_tik(bspm_signal_norm, egm_flat, Y_model, transfer_matrix_64, patient)   
             prediction=self.postprocess_tik(prediction)         
             MetricsObj = Metrics(algorithm_ID=self.algorithm_ID, model_name=patient, tik=self.tik)
             df_metrics, metrics_all_nodes = MetricsObj.compute_metrics(prediction, y_label, fs=self.fs_sub)

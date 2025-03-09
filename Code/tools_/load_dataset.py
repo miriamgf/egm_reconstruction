@@ -1093,12 +1093,6 @@ class LoadDataset_BSPS:
                 matrix_original=np.array(loaded_data['matrix[0]'])
                 '''                  
 
-                plt.figure()
-                plt.plot(y[0, 0:1000])
-                plt.title('Noisy signal 1')
-                plt.savefig('output/figures/input_output/y_ev.png')
-                print('output/figures/input_output/y_ev.png')
-                plt.close()
             
 
                 # RESAMPLING signal to fs= fs_sub
@@ -1164,12 +1158,7 @@ class LoadDataset_BSPS:
                             )
                         )
                     
-                    plt.figure()
-                    plt.plot(tensor_model_noisy[0:1000, 0, 0])
-                    plt.title('Noisy signal 1')
-                    plt.savefig('output/figures/input_output/noisy_signal_2.png')
-                    print('output/figures/input_output/noisy_signal_2.png')
-                    plt.close()
+
 
                     # 5) Filter AFTER adding noise
 
@@ -1178,12 +1167,7 @@ class LoadDataset_BSPS:
                     )
                     tensor_model = tensor_model_filt
 
-                    plt.figure()
-                    plt.plot(tensor_model_filt[0:1000, 0, 0])
-                    plt.title('Noisy signal 1')
-                    plt.savefig('output/figures/input_output/filtered_signal_2.png')
-                    print('output/figures/input_output/filtered_signal_2.png')
-                    plt.close()
+
 
 
                     # Turn off electrodes

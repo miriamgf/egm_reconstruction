@@ -5,44 +5,9 @@
 # Ejecutar cada comando en segundo plano y redirigir la salida a archivos de log
 
 
-#echo "python output/logs/evaluation/evaluate_tik_OMAMI_no_filt_tk.log"
-#nohup python -u  scripts/evaluation/evaluate_tik.py --algorithm_ID 'OMAMI_no_filt' > output/logs/evaluation/evaluate_tik_OMAMI_no_filt_tk.log 2>&1 &
-#wait
 
-#echo "output/logs/OMAMI_no_filt_optuna_long.log"
-#nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --optuna true --filter_EGM false > output/logs/OMAMI_no_filt_optuna_long.log 2>&1  &
-#wait
-#echo "output/logs/OMAMI_no_filt_optuna_long.log"
-#nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --optuna true --filter_EGM false > output/logs/OMAMI_no_filt_optuna_long.log 2>&1  &
-#wait
-echo "output/logs/OMAMI_no_filt_Optuna_bs_fs_Optuna_repeated.log"
-nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --optuna true --filter_EGM false > output/logs/OMAMI_no_filt_Optuna_bs_fs_Optuna_repeated.log 2>&1  &
+
+echo "Saving training log at: output/logs/OMAMI_no_filt_testing2_repeated_l2.log"
+nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI_no_filt_testing2_repeated' --optuna false --SNR_white_noise 20 --filter_EGM false > output/logs/OMAMI_no_filt_testing2_repeated_l2.log 2>&1  &
 wait
-echo "output/logs/OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna_repeated.log"
-nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI_VAE' --optuna true --filter_EGM false > output/logs/OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna_repeated.log 2>&1  &
 
-
-
-#echo "output/logs/OMAMI_no_filt_Optuna_VAE_testing.log"
-#nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI_VAE' --optuna true --filter_EGM false > output/logs/OMAMI_no_filt_optuna_VAE_testing.log 2>&1 &
-
-
-
-
-#echo "output/logs/output_OMAMI_VAE_no_filt_bs_fs.log"
-#nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI_VAE' --optuna true --filter_EGM false > output/logs/output_OMAMI_VAE_no_filt_bs_fs.log 2>&1 
-#wait
-
-
-
-#echo "output/logs/output_OMAMI_VAE_optuna.log"
-#nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --n_nodes 2048 --filter_EGM false --fold 3 > output/logs/output_OMAMI_optuna_fold_3.log 2>&1 
-#wait
-
-#nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI_VAE' --n_nodes 2048 --filter_EGM false > output/logs/output_OMAMI_VAE_no_filt.log 2>&1 
-#wait
-
-#echo "OMAMI ski"
-#nohup python scripts/train_multioutput_optuna.py --algorithm 'OMAMI_ski' > output/logs/output_AE_ski_weighted.log 2>&1 
-#./simple_launch.sh
-#--filter_EGM false

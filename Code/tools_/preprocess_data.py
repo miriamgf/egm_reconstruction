@@ -584,10 +584,11 @@ class Preprocess_Dataset:
 
             if self.shuffle_patient:
 
+                print('Random shuffling of patients applied')
+
                 random.shuffle(train_models)
                 random.shuffle(test_models)
                 random.shuffle(val_models)
-
 
             x_train = self.X_1channel[np.in1d(self.AF_models, train_models)]
             x_test = self.X_1channel[np.in1d(self.AF_models, test_models)]

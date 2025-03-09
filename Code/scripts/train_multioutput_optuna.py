@@ -58,71 +58,35 @@ SEED = 42
 gpus = tf.config.experimental.list_physical_devices('GPU')
 print('Available GPUS:', gpus)
 
-
-'''
-if gpus:
-    try:
-        tf.config.experimental.set_virtual_device_configuration(
-            gpus[0],
-            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=22240)]  # 22GB de 24GB, LIMITAR USO PARA PROTEGER
-        )
-    except RuntimeError as e:
-        print(e)
-'''
-
-
-
-"""
-# parse args
-print('parsing')
-parser = argparse.ArgumentParser(description="Noise params")
-parser.add_argument('--SNR_em_noise', type=int, help='EM noise SNR', required=True)
-parser.add_argument('--SNR_white_noise', type=int, help='white noise SNR', required=True)
-parser.add_argument('--patches_oclussion', type= str, help='Oclussion patches', required=True)
-parser.add_argument('--unfold_code', type=int, help='Unfolding order', required=True)
-parser.add_argument('--experiment_number', type=int,  help='number of experiment', required=True)
-
-
-args = parser.parse_args()
-
-
-SNR_em_noise = args.SNR_em_noise
-SNR_white_noise = args.SNR_white_noise
-patches_oclussion = args.patches_oclussion
-unfold_code =args.unfold_code
-experiment_number = args.experiment_number
-
-print(type(patches_oclussion))
-#Run script IDE
-
-"""
-
 params = ParseHiperparams().parse_default_hyperparams()
+#default params
+SNR_em_noise = None
+
+patches_oclussion = "PT"
+unfold_code = 1
+params["SNR_white_noise"]=100
+params["filter_EGM"]=False
+params['optuna_optimization']=False
+print('Params to train: ', params)
+
 
 params["algorithm"]='OMAMI_VAE'
 
 if params["algorithm"]=='OMAMI':
 
-    print('Load OMAMI Optimal hyperparams')
-    path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_no_filt_Optuna_bs_fs_Optuna_repeated/hyperparams.json'
+    algorithm_ID_copy_config="OMAMI_no_filt_testing2_repeated"
+    path_best_params=f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/{algorithm_ID_copy_config}/hyperparams.json"
     params=ParseHiperparams().load_best_hyperparams(path_best_params)
     params['optuna_optimization']=False
-    #params["n_epochs"]=30
-    #params["n_batch"]=400
-    #params["fs_sub"]=200
-    #params['optuna_optimization']=True
-
-    #params["filter_EGM"]=False
+    print(f"Load OMAMI: {algorithm_ID_copy_config} Optimal hyperparams")
 
 elif params["algorithm"]=='OMAMI_VAE':
     
-    print('Load OMAMI VAE Optimal hyperparams')
-    path_best_params='/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna_repeated/hyperparams.json'
+    algorithm_ID_copy_config= "OMAMI_VAE_no_filt_testing_repeated"
+    path_best_params=f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/{algorithm_ID_copy_config}/hyperparams.json"
     params=ParseHiperparams().load_best_hyperparams(path_best_params)
     params['optuna_optimization']=False
-
-    #params["n_batch"]=400
-    #params["fs_sub"]=200
+    print(f"Load OMAMI VAE: {algorithm_ID_copy_config} Optimal hyperparams")
 
 try:
     print("Parsing bash params")
@@ -133,6 +97,14 @@ try:
     parser.add_argument("--fold", type=int, help="0, 1, 2, 3, 4", required=False)
     parser.add_argument("--filter_EGM", type=str_to_bool, help="True or False", required=False)
     parser.add_argument("--shuffle_patient", type=str_to_bool, help="True or False", required=False)
+    parser.add_argument("--time_masking", type=str_to_bool, help="True or False", required=False)
+
+    #Noise
+    parser.add_argument('--SNR_em_noise', type=int, help='EM noise SNR', required=False)
+    parser.add_argument('--SNR_white_noise', type=int, help='white noise SNR', required=False)
+    parser.add_argument('--patches_oclussion', type= str, help='Oclussion patches', required=False)
+    parser.add_argument('--unfold_code', type=int, help='Unfolding order', required=False)
+
 
     args = parser.parse_args()
     algorithm = args.algorithm
@@ -141,10 +113,27 @@ try:
     filter_EGM= args.filter_EGM
     fold=args.fold
     shuffle_patient=args.shuffle_patient
+    time_masking=args.time_masking
+    SNR_white_noise=args.SNR_white_noise
+    SNR_em_noise=args.SNR_em_noise
     
     params["algorithm"]=algorithm
     params["n_nodes_regression"]=n_nodes
-    params["shuffle_patient"]=shuffle_patient
+
+    if shuffle_patient is not None:
+        params["shuffle_patient"]=shuffle_patient
+    else:
+        params["shuffle_patient"]=False
+    
+    if time_masking is not None:
+        params["time_masking"]=time_masking
+    else:
+        params["time_masking"]=False
+    
+    if SNR_white_noise is not None:
+        params["SNR_white_noise"]=SNR_white_noise
+    else:
+        params["SNR_white_noise"]=100
 
     if optuna:
         params["optuna_optimization"] = True
@@ -164,24 +153,14 @@ try:
 
 except:
     algorithm = params["algorithm"]
+    SNR_white_noise = 100
+
     print('Failed in parsing bash params :( ')
     pass
 
-params["filter_EGM"]=False
-params['optuna_optimization']=False
-print('Params to train: ', params)
 
 
-#params['cross_validation']=True
-#params["fold"] = fold
-
-SNR_em_noise = None
-SNR_white_noise = 20
-patches_oclussion = "PT"
-experiment_number = 0
-unfold_code = 1
-
-experiment_name = algorithm
+experiment_name = algorithm_ID_copy_config
 
 if params["cross_validation"]:
     experiment_name = f"{experiment_name}_fold_{params['fold']}"
@@ -196,37 +175,40 @@ if params["algorithm"] == "OMAMI":
 else:
     params["fs_sub"]=100
     params["batch_size"]=200
-    #params["loss_weight_1"]=1
-    #params["loss_weight_1"]=15
-
 
 if params["optuna_optimization"]:
     experiment_name = f"{experiment_name}_Optuna"
 
-params["num_batch_iter"]=5
-params["n_trials"]=40
-experiment_name = f"{experiment_name}_bs_fs_Optuna"
-
-
 #params["n_epochs"]=1
 print(params)
 
+#Regularization experiments
+try:
+    print(params["shuffle_patient"])
+except:
+    params["shuffle_patient"]=False
+try:
+    print(params["time_masking"])
+except:
+    params["time_masking"]=False
 
-#experiment_name='pruebas interpol'
+experiment_name = experiment_name + "_l2"
+if params["shuffle_patient"]:
+    experiment_name= experiment_name + "_shuffle_patient"
+if params["time_masking"]:
+    experiment_name= experiment_name + "_time_masking"
+if params["SNR_white_noise"] != 100:
+    experiment_name= experiment_name + "_noise_20"
 
+params["early_stopping_patience"] = 40
+params["n_epochs"]=50
 
-if algorithm == "OMAMI":
-    experiment_name="OMAMI_no_filt_Optuna_bs_fs_Optuna_repeated"
-elif algorithm == "OMAMI_VAE":
-    experiment_name="OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna_repeated"
-
-experiment_name= "toy"
-params["dropout"]=0.7
 print('Experiment name: ', experiment_name)
+
 
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data_short/"
+data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
 torsos_dir = "../../../../Labeled_torsos/"
 figs_dir = "output/figures/"
 models_dir = "output/model/"
@@ -280,10 +262,7 @@ print(all_model_names)
 if params["fs"] == params["fs_sub"]:
     params["fs"] = params["fs_sub"]
 
-try:
-    print(params["shuffle_patient"])
-except:
-    params["shuffle_patient"]=False
+
  
 
 Transfer_model = False  # Transfer learning from sinusoids
@@ -440,14 +419,12 @@ plt.close()
 params["time_masking"]=True
 if params["time_masking"]:
     x_train = DataAugmentation(params, x_train).time_masking()
-
+    print("Data augmentation applied")
 
 print("Algorithm selected:", params["algorithm"])
 model, history = TrainModel(
     params, x_train, x_test, x_val, y_train, y_test, y_val, models_dir, experiment_dir
 )()
-
-
 
 
 ############## INFERENCE ###############

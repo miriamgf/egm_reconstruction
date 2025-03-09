@@ -35,8 +35,8 @@ try:
 
 except:
     algorithm_ID = "OMAMI_no_filt_testing2_repeated"
-    evaluate_dl=True
-    evaluate_tik=False
+    evaluate_dl=False
+    evaluate_tik=True
 
 
 test_patients = [

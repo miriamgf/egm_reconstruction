@@ -43,7 +43,7 @@ import time
 # CONFIGURE
 #---------------------------------------------------------------------------------------------------------------------
 
-plot_BSP = True
+plot_BSP = False
 plot_Tikhonov = True
 plot_DL= True
 plot_correlation_DL = True
@@ -57,6 +57,8 @@ plot_DTW_tik = True
 
 plot_DF_maps_DL = False
 plot_DF_maps_tik = False
+
+load_tik_array=True
 
 torso_num=2
 
@@ -88,7 +90,7 @@ try:
         print(algorithm_ID)
     
 except:
-        experiment_ID_list=[["OMAMI_no_filt_testing2"]]
+        experiment_ID_list=[["OMAMI_no_filt_testing2_repeated"]]
 
 
 testing_id=0
@@ -307,7 +309,19 @@ for model_name in test_patients:
         if plot_Tikhonov or plot_correlation_tik or plot_rmse_tik or plot_correlation_tik or plot_DF_maps_tik or plot_coherence_tik or plot_DTW_tik: 
 
             ObjTik=TikhonovReconstruction(bspm_signal_norm.T, transfer_matrix, order=0)
-            tik_rec=ObjTik() 
+
+            if load_tik_array:
+                try:
+                    path_to_object=f"{experiment_dir}{model_name[0]}_tik_array.json"
+                    with open(path_to_object, "r") as f:
+                        tik_dict = json.load(f)
+                        tik_rec=np.array(tik_dict["tik_rec"])
+                except:
+                    print("Tikhonov Object not available. Computing ZOT inference...")
+                    ObjTik=TikhonovReconstruction(bspm_signal_norm.T, transfer_matrix, order=0)
+                    tik_rec=ObjTik() 
+            else:
+                tik_rec=ObjTik() 
 
             tik_batches=ObjTik.tik_post_process_to_plot(tik_rec, fs, divisible_rows, n_batch)
             tik_flat = tik_batches.reshape(
