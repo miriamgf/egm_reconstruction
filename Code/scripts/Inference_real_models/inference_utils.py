@@ -1,15 +1,20 @@
 import numpy as np
 import scipy.signal as sigproc
 import cv2
-import matplotlib.pyplot as plt
 from scipy.stats import spearmanr
 
 def normalize_array(array, high, low, axis_n=0):
     """
-    This functions normalized a 2D 'array' along axis 'axis_n' and between the values 'high' and 'low'
+    Normalizes a 2D array along the specified axis to be within the given range [low, high].
 
-    To normalize a full signal, indicate the index dimension
+    Parameters:
+        array (ndarray): Input 2D array.
+        high (float): Upper bound of the normalization range.
+        low (float): Lower bound of the normalization range.
+        axis_n (int, optional): Axis along which to normalize (default is 0).
 
+    Returns:
+        ndarray: Normalized array.
     """
     mins = np.min(array, axis=axis_n)
     maxs = np.max(array, axis=axis_n)
@@ -23,13 +28,13 @@ def normalize_array(array, high, low, axis_n=0):
 
 def remove_mean(signal):
     """
-    Remove mean from signal
+    Removes the mean from each row (node) of a 2D signal.
 
     Parameters:
-        signal (array): signal to process
+        signal (ndarray): 2D array where each row is a signal from a node.
 
     Returns:
-        signotmean: signal with its mean removed
+        ndarray: Signal with mean removed for each row.
     """
     signal=signal.T
 
@@ -41,18 +46,17 @@ def remove_mean(signal):
 
 def ECG_filtering(signal, fs, order=2, f_low=3, f_high=30):
     """
-    Frequency filtering of ECG-EGM.
-    SR model: low-pass filtering, 4th-order Butterworth filter.
-    FA models: bandpass filtering, 4th-order Butterworth filter.
+    Applies bandpass filtering to an ECG signal using a Butterworth filter.
 
     Parameters:
-        signal (array): signal to process
-        fs (int): sampling rate
-        f_low (int-float): low cut-off frecuency (default=3Hz)
-        f_high (int-float): high cut-off frecuency (default=30Hz)
-        model (string): FA model to assess (default: SR)
+        signal (ndarray): Input signal.
+        fs (int): Sampling frequency.
+        order (int, optional): Filter order (default is 2).
+        f_low (float, optional): Low cut-off frequency (default is 3 Hz).
+        f_high (float, optional): High cut-off frequency (default is 30 Hz).
+
     Returns:
-        proc_ECG_EGM (array): filtered ECG-EGM
+        ndarray: Filtered signal.
     """
 
     sig_temp = remove_mean(signal)
@@ -78,96 +82,162 @@ def ECG_filtering(signal, fs, order=2, f_low=3, f_high=30):
 
     return proc_ECG_EGM
 
-def bspm_to_images(bspms, tank_el_position):
-    '''
-    This function reshapes 1D bspms into 2D and interpolates to fit the input shape
-    
-    '''
+def map_custom_electrodes(bspms):
+    """
+    Reshapes and interpolates 1D BSPM signals into 2D images.
 
-    matrix_2D=[[ 145, 146, 155, 156, 165, 166, 129, 130, 139, 140, 181, 182], 
+    Parameters:
+        bspms (ndarray): BSPM signals.
+        tank_el_position (ndarray): Electrode positions.
+        from_12_5 (bool, optional): Whether the input is reshaped from (12,5) format (default is False).
+
+    Returns:
+        ndarray: Reshaped and interpolated BSPM images.
+    """
+
+    matrix_2D= [[ 145, 146, 155, 156, 165, 166, 129, 130, 139, 140, 181, 182], 
                 [ 147, 147, 157, 157, 167, 167, 131, 131, 141, 141, 183, 183],
                 [ 148, 149, 158, 159, 168, 169, 132, 133, 142, 143, 184, 185],
                 [ 150, 151, 160, 161, 170, 171, 134, 135, 144, 177, 186, 187],
                 [ 152, 152, 162, 162, 172, 172, 136, 136, 178, 178, 188, 188],
                 [ 153, 154, 163, 164, 173, 174, 137, 138, 179, 180, 189, 190]]
+    
+    valores_unicos = sorted(set(sum(matrix_2D, [])))
 
-    bspms_reshaped=bspms.reshape(bspms.shape[0], 12, 5)
+    # Crear el diccionario con mapeo consecutivo
+    mapeo = {valor: idx + 1 for idx, valor in enumerate(valores_unicos)}
+
+    # Mostrar el resultado
+    print(mapeo)
+
+    front=np.array([[145, 146, 155, 156],
+                    [147, 147, 157, 157],
+                    [148, 149, 158, 159], 
+                    [150, 151, 160, 161], 
+                    [152, 152, 162, 162], 
+                    [153, 154, 163, 164]])
+    
+    back=np.array([[129, 130, 139, 140], 
+                  [131, 131, 141, 141], 
+                  [132, 133, 142, 143],
+                  [134, 135, 144, 177],
+                  [136, 136, 178, 178],
+                  [137, 138, 179, 180]])
+    
+    lat_L = np.array([[165, 166], 
+                     [167, 167], 
+                     [168, 169], 
+                     [170, 171],
+                     [172, 172],
+                     [173, 174]])
+    
+    lat_R=np.array([[181,182], 
+                   [183,183],
+                   [184,185],
+                   [186,187],
+                   [188,188],
+                   [189, 190]])
+    
+    conc=np.concatenate((front,lat_L, back, lat_R, front), axis=1)
+    conc_mapped = np.vectorize(mapeo.get)(conc)
+
+    new_order = np.array(conc_mapped).flatten() - 1  # Ajustamos los índices
+    valid_indices = [idx for idx in new_order if 0 <= idx < 60]
+
+    # Reordenamos las columnas del array signals
+    signals_reordered = bspms[:, valid_indices]
+    signals_reordered_reshape = np.reshape(signals_reordered, (signals_reordered.shape[0], 
+                                                               conc_mapped.shape[0], 
+                                                               conc_mapped.shape[1]) )
+
+    return signals_reordered_reshape
+
+    
+
+def bspm_to_images(bspms, tank_el_position, from_12_5=False, custom_layout=True):
+    """
+    Reshapes and interpolates 1D BSPM signals into 2D images.
+
+    Parameters:
+        bspms (ndarray): BSPM signals.
+        tank_el_position (ndarray): Electrode positions.
+        from_12_5 (bool, optional): Whether the input is reshaped from (12,5) format (default is False).
+
+    Returns:
+        ndarray: Reshaped and interpolated BSPM images.
+    """
+
+    if custom_layout:
+        bspms=map_custom_electrodes(bspms)
+    
+    bspms_before_interpol=bspms
+
+
+    if from_12_5:
+        bspms=bspms.reshape(bspms.shape[0], 12, 5)
     bspms_interpol_array=[]
-    for element in range(bspms_reshaped.shape[0]):
-        signal=bspms_reshaped[element, :, :]
+    for element in range(bspms.shape[0]):
+        signal=bspms[element, :, :]
         element_interp = cv2.resize(signal, (12, 32), interpolation=cv2.INTER_CUBIC)
 
         '''
         plt.figure()
         plt.subplot(1, 2, 1)
-        plt.imshow(bspms_reshaped[element, :, :], cmap='gray')
+        plt.imshow(bspms[element, :, :], cmap='gray')
         plt.title('Original BSPM')
         plt.subplot(1, 2, 2)
         plt.imshow(element_interp, cmap='gray')
         plt.title('interpolated BSPM')
-        plt.savefig(f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/inference_heartlab/interpolated_bspm_{element}.png")
+        plt.savefig(f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/inference_heartlab/interpolated_bspm_{element}_bicubic.png")
         plt.close()
-        print('saved image at ', f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/inference_heartlab/interpolated_bspm_{element}.png")
+        print('saved image at ', f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/inference_heartlab/interpolated_bspm_{element}_bicubic.png")
         '''
 
         bspms_interpol_array.append(element_interp)
+
     bspms_reshaped=np.array(bspms_interpol_array)
     bspms_reshaped = np.transpose(bspms_reshaped, (0, 2, 1))
 
-        
 
-    '''
-    bspms_reshaped
-    for instant_i in range(bspms.shape[0]):
-        bspms_instant=bspms[instant_i, :]
-        id_to_signal = dict(zip(tank_el_position.flatten(), bspms_instant))
-        mapped_signal_matrix = np.vectorize(lambda x: id_to_signal.get(x, np.nan))(matrix_2D)
-        bspms_reshaped.append(mapped_signal_matrix)
-    bspms_reshaped=np.array(bspms_reshaped)
-    '''
-    return bspms_reshaped
+    return bspms_reshaped, bspms_before_interpol
 
 def correlation_by_node(array1, array2):
-                """
-                Calcula la correlación de Spearman entre las columnas de dos arrays.
+    """
+    Computes Spearman correlation for each node (column) between two arrays.
 
-                Args:
-                    array1: un array de numpy de dimensión (n,m)
-                    array2: otro array de numpy de dimensión (n,m)
+    Parameters:
+        array1 (ndarray): First array (n, m).
+        array2 (ndarray): Second array (n, m).
 
-                Returns:
-                    Un array de numpy de dimensión (m,) que contiene la correlación de Spearman
-                    de las columnas de array1 y array2.
-                """
+    Returns:
+        ndarray: Array of correlation values for each node (column).
+    """
 
-                # Verificar si ambos arrays tienen las mismas dimensiones
-                assert (
-                    array1.shape == array2.shape
-                ), "Los arrays deben tener las mismas dimensiones."
+    # Check identical dimensions
+    assert (
+        array1.shape == array2.shape
+    ), "Arrays must have the identical dimensions"
 
-                # Calcular la correlación de Spearman de las columnas de ambos arrays
-                n_cols = array1.shape[1]
-                print('Computing correlation in :', n_cols, 'nodes')
-                corr = np.zeros(n_cols)
-                for i in range(n_cols):
-                    corr[i], _ = spearmanr(array1[:, i], array2[:, i]) # or pearsonr
+    # Compute correlation node-wise
+    n_cols = array1.shape[1]
+    print('Computing correlation in :', n_cols, 'nodes')
+    corr = np.zeros(n_cols)
+    for i in range(n_cols):
+        corr[i], _ = spearmanr(array1[:, i], array2[:, i]) # or pearsonr
 
-                return corr
+    return corr
 
 def reshape_tensor(tensor, n_dim_input, n_dim_output):
     """
-    Reshapes the tensors used during pipeline, considering that the first two dimensions are (#n batches, batch size).
-    In the case of n_dim_input = 5, the last dimension is the number of channels.
+    Reshapes a tensor based on specified input and output dimensions.
 
-    Parameters
-    ----------
-    tensor: tensor to reshape
-    n_dim_input: input shape
-    n_dim_output: desired output shape
+    Parameters:
+        tensor (ndarray): Input tensor.
+        n_dim_input (int): Original number of dimensions.
+        n_dim_output (int): Desired number of dimensions.
 
-    Returns
-    -------
-
+    Returns:
+        ndarray: Reshaped tensor.
     """
 
     try:
@@ -225,14 +295,19 @@ def reshape_tensor(tensor, n_dim_input, n_dim_output):
         )
 
 def batch_generation(data, batch_size, type_data):
-    '''
-    This function operates batch generation prior to inference
-    
-    
-    '''
-    rows = data.shape[0]
+    """
+    Generates batches for inference based on data type.
+
+    Parameters:
+        data (ndarray): Input data.
+        batch_size (int): Batch size.
+        type_data (str): Type of data ('bspm' or 'egms').
+
+    Returns:
+        ndarray: Batches of data.
+    """
+
     n_batch=batch_size
-    divisible_rows = (rows // n_batch) * n_batch
 
     if type_data== "bspm":
         # Batch generation
@@ -262,9 +337,5 @@ def batch_generation(data, batch_size, type_data):
                 ),
             )
     
-    #Remove Nans
-    data_in_batches = np.nan_to_num(
-        data_in_batches, nan=0.0
-    )  # Nans generated during noise addition
 
     return data_in_batches

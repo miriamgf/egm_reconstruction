@@ -19,7 +19,6 @@ from scripts.Tikhonov.compute_tik import TikhonovReconstruction
 from scripts.evaluation.metrics import Metrics
 from numpy import reshape
 from models.multioutput_VAE import  SamplingLayer
-from scripts.Tikhonov.compute_tik import TikhonovReconstruction
 from scripts.evaluate_function import *
 from tools_.tools_inference import *
 import seaborn as sns
@@ -43,6 +42,7 @@ class Visualize2D:
         self.list_metrics = list_metrics
         self.nperseg=600
         self.nperseg_value=self.nperseg
+        self.load_tik_array=True
 
     def create_output_directory(self, algorithm_ID, model_name):
         """ Verifica si la carpeta de salida existe, si no, la crea. """
@@ -238,7 +238,19 @@ class Visualize2D:
             #Compute Tikhonov
 
             ObjTik=TikhonovReconstruction(bspm_signal_norm, transfer_matrix_64, order=0)
-            tik_rec=ObjTik() 
+            if self.load_tik_array:
+                try:
+                    path_to_object=f"{experiment_dir}{model_name[0]}_tik_array.json"
+                    with open(path_to_object, "r") as f:
+                        tik_dict = json.load(f)
+                        tik_rec=np.array(tik_dict["tik_rec"])
+                except:
+                    print("Tikhonov Object not available. Computing ZOT inference...")
+                    ObjTik=TikhonovReconstruction(bspm_signal_norm.T, transfer_matrix, order=0)
+                    tik_rec=ObjTik() 
+            else:
+                tik_rec=ObjTik() 
+            #tik_rec=ObjTik() 
             tik_batches=ObjTik.tik_post_process_to_plot(tik_rec, self.fs, divisible_rows, self.n_batch)
             tik_flat = tik_batches.reshape(
                 (tik_batches.shape[0] * tik_batches.shape[1], tik_batches.shape[2])

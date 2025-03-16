@@ -74,6 +74,11 @@ class LoadExploreData:
             signal_MEA3_LA_filt=f["data"]["filtered"]["electric"]["MEA3"]
             signal_tank_filt=f["data"]["filtered"]["electric"]["TANK"]
 
+            plt.figure()
+            plt.plot(signal_MEA1_RA_filt[0:4000, 0])
+            plt.savefig("output/figures/inference_heartlab/signal_MEA3_LA_filt.png")
+            plt.close()
+
             matrix_signal_MEA1_RA=f["data"]["matrix"]["electric"]["MEA1"]
             matrix_signal_MEA3_LA=f["data"]["matrix"]["electric"]["MEA3"]
             matrix_signal_tank=f["data"]["matrix"]["electric"]["TANK"]

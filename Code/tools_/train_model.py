@@ -391,7 +391,7 @@ class TrainModel:
         else:
             optimizer = Adam(learning_rate=initial_learning_rate)
 
-        tensorboard_callback = TensorBoard(log_dir='output/tensorboard/logs/'+self.params['algorithm'], histogram_freq=1)
+        tensorboard_callback = TensorBoard(log_dir='output/tensorboard/logs/'+self.params['experiment_name'], histogram_freq=1)
 
         callbacks_list = [early_stopping_callback, tensorboard_callback, lr_scheduler ]
         print(callbacks_list)

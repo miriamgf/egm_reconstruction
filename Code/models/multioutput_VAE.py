@@ -6,6 +6,8 @@ import tensorflow as tf
 from keras import layers
 from keras import Model
 
+from models.attention import BahdanauAttention, LuongAttention
+
 tf.config.experimental_run_functions_eagerly(
     True
 )  # Para versiones anteriores de TensorFlow 2.x
@@ -151,10 +153,16 @@ class MultiOutput_VAE(Model):
         self.time_distributed = layers.TimeDistributed(layers.Flatten())
         self.batch_norm = layers.LayerNormalization(axis=1)
         self.lstm = layers.LSTM(self.params["LSTM_units"], return_sequences=True)
+        if self.params["attention_layer"]:
+            print('Applying attention')
+            self.attention = LuongAttention(self.params["LSTM_units"], mode="dot")
+            #self.attention, attention_weights = attention
+
+    #LuongAttention
         self.dropout = layers.Dropout(self.params["dropout"])
         self.dense = layers.Dense(
             n_nodes, activation="leaky_relu", name="Regressor_output", 
-            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]) #additional
+            kernel_regularizer=tf.keras.regularizers.l2(0.0001) #additional
         )
 
         self.model = self.assemble_full_model(input_shape_, n_nodes)
@@ -227,6 +235,7 @@ class MultiOutput_VAE(Model):
         x = self.time_distributed(x)
         x = self.batch_norm(x)
         x = self.lstm(x)
+        x, weights_att=self.attention(x)
         x = self.dropout(x)
         x = self.dense(x)
 

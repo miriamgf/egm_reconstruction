@@ -4,6 +4,8 @@ from keras.layers import BatchNormalization, LayerNormalization
 from tensorflow.keras import layers, Model
 from tensorflow.keras.layers import MultiHeadAttention
 
+from models.attention import BahdanauAttention, LuongAttention
+
 
 # referencia: https://towardsdatascience.com/building-a-multi-output-convolutional-neural-network-with-keras-ed24c7bc1178
 
@@ -126,11 +128,19 @@ class MultiOutput:
         x = LayerNormalization(epsilon=1e-5, axis=1)(x)
 
         x = layers.LSTM(self.params["LSTM_units"], return_sequences=True)(x)
-        #x = MultiHeadAttention(num_heads=4, key_dim=self.params["LSTM_units"])(x, x)
+
+        if self.params["attention_layer"]:
+            print('Applying attention')
+            attention = LuongAttention(self.params["LSTM_units"], mode="dot")
+            x, attention_weights = attention(x, x)
+
+            #LuongAttention
+        
 
         x = layers.Dropout(self.params["dropout"])(x)
         x = layers.Dense(n_nodes, activation="leaky_relu", name="reconstruction", 
-                        kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x) #additional
+                        kernel_regularizer=tf.keras.regularizers.l2(0.0001)
+                        )(x) #additional
 
         return x
 

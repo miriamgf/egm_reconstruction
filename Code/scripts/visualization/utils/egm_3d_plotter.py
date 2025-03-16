@@ -117,211 +117,131 @@ class EGM_3D_PLOTTER:
                 y_reconstructed = y_reconstructed.reshape(-1, y_reconstructed.shape[2]) 
             
         else:
-            try:
-                model = sio.loadmat(self.model_path)[self.model_name]
-                print('Loaded model ', self.model_name)
-            except:
-                modified_name = self.model_name[0]
-                self.model_name = "model" + modified_name.strip()
-                model = sio.loadmat(self.model_path)[self.model_name]
-                print('Loaded model ', self.model_name)                
+            
 
             try:
                 geom = sio.loadmat(self.geom_path_CF)["geometries"]
             except:
                 geom = sio.loadmat(self.geom_path_CF)
 
-            # Extraer datosy
-            try:
-                y_reconstructed = model["reconstruction"][0,0]
-            except:
-                normalized_name = " ".join(self.model_name.split())
-                self.model_name = "model" + normalized_name.strip()
-
-            y_label = model["label"][0,0]
+            
+            
+            y_reconstructed =None
+            y_label = None
             heart = geom["heart"]
             faces = heart["faces"][0, 0] - 1  # Convertir a índice base 0
             vertices = heart["vertices"][0, 0]
 
         return y_reconstructed, y_label, faces, vertices
     
-    def plot_egm_front_back(self, y_reconstructed, y_label, faces, vertices, normalizar=True):  
-        
+    def plot_only_label(self, y_label, faces, vertices, normalizar=True, frames=1):
         '''
-        This functions 
-        
+        This function plots only labels with front (left) and back (right) in a single figure.
         '''
-        renderer_var = EGMRenderer_EGM(faces, vertices, min_val=-0.6, max_val=0.6)
-        try:
-            renderer_label = EGMRenderer_EGM(faces, vertices,  min_val=-0.6, max_val=0.6)
-        except:
-            y_label=y_label[0][0]
-            renderer_label = EGMRenderer_EGM(faces, vertices,  min_val=-0.6, max_val=0.6)
+        # Crear dos renderizadores para front y back
+        renderer_front = EGMRenderer_EGM(faces, vertices, min_val=-1, max_val=1)
+        renderer_back = EGMRenderer_EGM(faces, vertices, min_val=-1, max_val=1)
 
-        if y_reconstructed.ndim>2:
-            y_reconstructed = y_reconstructed.reshape(-1, y_reconstructed.shape[2]) 
-
+        # Normalización opcional
         if normalizar:
             y_label_n = np.zeros_like(y_label)
             for nodo in range(y_label.shape[1]):  
                 min_val = np.min(y_label[:, nodo])
                 max_val = np.max(y_label[:, nodo])
-                
                 if max_val != min_val:  
                     y_label_n[:, nodo] = (y_label[:, nodo] - min_val) / (max_val - min_val)
                 else:
                     y_label_n[:, nodo] = 0  
-
-            var_represent = y_reconstructed
             var_represent_original = y_label_n
+        else:
+            var_represent_original = y_label
 
-        var_represent=y_label
-        var_represent_original=y_label
+        # Configurar Viewport: Front a la izquierda, Back a la derecha
+        renderer_front.renderer.SetViewport(0.0, 0.0, 0.5, 1.0)  # Izquierda
+        renderer_back.renderer.SetViewport(0.5, 0.0, 1.0, 1.0)  # Derecha
 
-        elevation_values_range = [30]
+        # Crear colormap
+        custom_lut, cmap = self.create_custom_colormap_voltage()
+        renderer_front.mapper.SetLookupTable(custom_lut)
+        renderer_back.mapper.SetLookupTable(custom_lut)
 
-        for elevation_value in elevation_values_range:
-            '''
-            if var_represent.shape[1]!=2048:
-                var_represent=var_represent[0][0]
-                var_represent_original=var_represent_original[0][0]
-            '''
-            # Configurar renderizadores como subplots
-            renderer_var.renderer.SetViewport(0.0, 0.0, 0.5, 1.0)  # Subplot izquierdo
-            renderer_label.renderer.SetViewport(0.5, 0.0, 1.0, 1.0)  # Subplot derecho
+        # Configurar fondo blanco
+        renderer_front.renderer.SetBackground(1, 1, 1)
+        renderer_back.renderer.SetBackground(1, 1, 1)
 
-            # Configurar fondo blanco
-            renderer_var.renderer.SetBackground(1, 1, 1)  # Gris claro
-            renderer_label.renderer.SetBackground(1, 1, 1)  # Gris claro
+        # Crear títulos para cada vista
+        title_front = vtk.vtkTextActor()
+        title_front.SetInput("Front (270°)")
+        title_front.GetTextProperty().SetFontSize(25)
+        title_front.GetTextProperty().SetColor(0, 0, 0)
+        title_front.SetPosition(200, 500)
+        renderer_front.renderer.AddActor2D(title_front)
 
-            # Create a text actor for var_represent
-            title_var = vtk.vtkTextActor()
-            title_var.SetInput(f"Reconstructed ({self.model_name})")
-            title_varprop = title_var.GetTextProperty()
-            title_varprop.SetFontFamilyToArial()
-            title_varprop.SetFontSize(20)
-            #title_varprop.BoldOn()
-            title_varprop.SetColor(0, 0, 0)  # Black color
-            title_var.SetPosition(200, 500)  # Adjust position manually as needed
-            renderer_var.renderer.AddActor2D(title_var)
+        title_back = vtk.vtkTextActor()
+        title_back.SetInput("Back (30°)")
+        title_back.GetTextProperty().SetFontSize(25)
+        title_back.GetTextProperty().SetColor(0, 0, 0)
+        title_back.SetPosition(200, 500)
+        renderer_back.renderer.AddActor2D(title_back)
 
-            # Create a text actor for label
-            title_label = vtk.vtkTextActor()
-            title_label.SetInput("Real")
-            title_labelprop = title_label.GetTextProperty()
-            title_labelprop.SetFontFamilyToArial()
-            title_labelprop.SetFontSize(25)
-            #title_labelprop.BoldOn()
-            title_labelprop.SetColor(0, 0, 0)  # Black color
-            title_label.SetPosition(300, 500)  # Adjust position manually as needed
+        # Crear barra de color
+        scalar_bar = vtk.vtkScalarBarActor()
+        scalar_bar.SetLookupTable(renderer_front.mapper.GetLookupTable())
+        scalar_bar.GetLabelTextProperty().SetColor(0, 0, 0)
+        scalar_bar.SetNumberOfLabels(5)
+        scalar_bar.SetTitle("mV")
+        scalar_bar.SetPosition(0.9, 0.2)  # Alineada a la derecha
+        scalar_bar.SetWidth(0.05)
+        scalar_bar.SetHeight(0.6)
 
-            # Add the titles to the renderers
+        renderer_back.renderer.AddActor2D(scalar_bar)
 
-            renderer_label.renderer.AddActor2D(title_label)
+        # Crear ventana de renderizado combinada
+        render_window = vtk.vtkRenderWindow()
+        render_window.SetOffScreenRendering(True)
+        render_window.SetSize(1600, 600)  # Doble de ancho para ambas vistas
+        render_window.AddRenderer(renderer_front.renderer)
+        render_window.AddRenderer(renderer_back.renderer)
 
-            # Scalar bars remain unchanged but without titles
-            scalar_bar_var = vtk.vtkScalarBarActor()
-            scalar_bar_var.SetLookupTable(renderer_var.mapper.GetLookupTable())
-            scalar_bar_var.GetLabelTextProperty().SetColor(0, 0, 0)  # Set font color to black
-            scalar_bar_var.GetLabelTextProperty().SetItalic(False)  # Ensure text is not italicized
-            scalar_bar_var.GetLabelTextProperty().SetShadow(False) 
-            scalar_bar_var.GetLabelTextProperty().SetFontFamilyToArial()  # Set font to Arial
-            scalar_bar_var.GetLabelTextProperty().SetFontSize(15) 
-            scalar_bar_var.SetNumberOfLabels(5)
+        # Configurar las cámaras
+        center = renderer_front.mesh.GetCenter()
+        for renderer, elevation in zip([renderer_front, renderer_back], [270, 30]):
+            renderer.camera.SetPosition(center[0], center[1], center[2] + 35)
+            renderer.camera.SetFocalPoint(center[0], center[1], center[2])
+            renderer.camera.SetViewUp(1, 0, 0)
+            renderer.camera.Elevation(elevation)
+            renderer.renderer.ResetCameraClippingRange()
 
-            scalar_bar_label = vtk.vtkScalarBarActor()
-            scalar_bar_label.SetLookupTable(renderer_label.mapper.GetLookupTable())
-            scalar_bar_label.GetLabelTextProperty().SetColor(0, 0, 0)  # Set font color to black
-            scalar_bar_label.SetNumberOfLabels(5)
+        # Configurar filtro de imagen
+        window_to_image_filter = vtk.vtkWindowToImageFilter()
+        window_to_image_filter.SetInput(render_window)
 
-            renderer_var.renderer.AddActor2D(scalar_bar_var)
-            renderer_label.renderer.AddActor2D(scalar_bar_label)
+        # Configurar salida de video
+        output_video = os.path.join(self.output_directory, f"{self.model_name}.gif")
+        fps = 10  # Frames por segundo
 
-
-            # Configurar la ventana de renderizado conjunta
-            render_window = vtk.vtkRenderWindow()
-            render_window.SetOffScreenRendering(True)
-
-            render_window.SetSize(1600, 600)  # Tamaño total de la ventana
-            render_window.AddRenderer(renderer_var.renderer)
-            render_window.AddRenderer(renderer_label.renderer)
-
-            # Configurar la cámara para ambos subplots
-            center = renderer_var.mesh.GetCenter()
-            i=0
-            for renderer in [renderer_var, renderer_label]:
-                
-                renderer.camera.SetPosition(center[0], center[1], center[2] + 35)  # Alejar la cámara
-                renderer.camera.SetFocalPoint(center[0], center[1], center[2])  # Enfocar al centro
-                renderer.camera.SetViewUp(1, 0, 0)  # Eje vertical hacia arriba
-                if i==1:
-                    renderer.camera.Elevation(elevation_value+240)  # Flip de 180 grados sobre el eje horizontal
-                else:
-                    renderer.camera.Elevation(elevation_value)  # Flip de 180 grados sobre el eje horizontal
-
-                renderer.camera.Azimuth(0)  # Rotar 0 grados en azimut
-                renderer.renderer.ResetCameraClippingRange()
-                i+=1
+        array_frames = []
+        for instant in range(0, self.duration, frames):
+            vtk_scalars_label = numpy_to_vtk(var_represent_original[instant, :], deep=True)
+            renderer_front.mesh.GetPointData().SetScalars(vtk_scalars_label)
+            renderer_back.mesh.GetPointData().SetScalars(vtk_scalars_label)
             
+            renderer_front.mesh.Modified()
+            renderer_back.mesh.Modified()
 
-            # Configurar el filtro para capturar imágenes
-            window_to_image_filter = vtk.vtkWindowToImageFilter()
-            window_to_image_filter.SetInput(render_window)
+            render_window.Render()
+            window_to_image_filter.Modified()
+            window_to_image_filter.Update()
 
-            #configure video
-            if elevation_value == 270:
-                view = "front"
-            elif elevation_value == 30:
-                view = "back"
-            if self.tikhonov:
-                output_video = os.path.join(self.output_directory, f"egm_rec_tikhonov_{view}.gif")
-            else:
-                output_video = os.path.join(self.output_directory, f"egm_rec_DL_{view}.gif")
-            
-            if self.all_egms:
-                output_video = os.path.join(self.output_directory, f"{self.model_name}.gif")
+            image_data = window_to_image_filter.GetOutput()
+            dims = image_data.GetDimensions()
+            vtk_array = vtk.util.numpy_support.vtk_to_numpy(image_data.GetPointData().GetScalars())
+            frame = vtk_array.reshape((dims[1], dims[0], 3))[::-1]  # Invertir eje Y
+            array_frames.append(frame)
 
-            fps = 10  # Frames por segundo
-
-            array_frames=[]
-            # Iterar sobre instantes y generar frames
-            for instant in range(0, self.duration, 1):  # Cada 500 instantes
-                # Actualizar los datos escalares de los dos renderizadores
-                vtk_scalars_var = numpy_to_vtk(var_represent[instant, :], deep=True)
-                vtk_scalars_label = numpy_to_vtk(var_represent_original[instant, :], deep=True)
-
-                renderer_var.mesh.GetPointData().SetScalars(vtk_scalars_var)
-                renderer_label.mesh.GetPointData().SetScalars(vtk_scalars_label)
-
-                renderer_var.mesh.Modified()
-                renderer_label.mesh.Modified()
-
-                # Renderizar la ventana con subplots
-                render_window.Render()
-
-                # Guardar la imagen como PNG
-                window_to_image_filter.Modified()
-                window_to_image_filter.Update()
-
-                output_file = os.path.join(self.output_directory, f"frame_{instant:04d}.png")
-                writer = vtk.vtkPNGWriter()
-                writer.SetFileName(output_file)
-                writer.SetInputData(window_to_image_filter.GetOutput())
-                writer.Write()
-
-                # Obtener la imagen como un array numpy
-                image_data = window_to_image_filter.GetOutput()
-                dims = image_data.GetDimensions()
-                vtk_array = vtk.util.numpy_support.vtk_to_numpy(image_data.GetPointData().GetScalars())
-                frame = vtk_array.reshape((dims[1], dims[0], 3))[::-1]  # Invertir eje Y
-                array_frames.append(frame)
-
-                #print(f"Frame guardado: {output_file}")
-                os.remove(output_file)
-
-            # Liberar el objeto VideoWriter
-            imageio.mimsave(output_video, array_frames,format='GIF', fps=10)
-            print(f"Video guardado en {output_video}")
+        # Guardar GIF
+        imageio.mimsave(output_video, array_frames, format='GIF', fps=5)
+        print(f"Video guardado en {output_video}")
 
 
 
@@ -544,6 +464,10 @@ class EGM_3D_PLOTTER:
             # Liberar el objeto VideoWriter
             imageio.mimsave(output_video, array_frames,format='GIF', fps=10)
             print(f"Video guardado en {output_video}")
+
+
+
+    
 
 
     

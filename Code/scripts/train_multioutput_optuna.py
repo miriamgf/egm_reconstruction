@@ -6,46 +6,38 @@ sys.stdout.reconfigure(line_buffering=True)
 sys.stderr.reconfigure(line_buffering=True)
 import argparse
 import datetime
+import time as t
 import os
 import pickle
 import random
 import time
 import json
 
-
 import matplotlib.pyplot as plt
-#import mlflow
 import scipy
 import tensorflow as tf
-import tools_
-import tools_.oclusion
-from evaluate_function import evaluate_function_multioutput, evaluate_function_multioutput
 from numpy import *
 from scipy.io import savemat
 import h5py
-
-import tools_
-import tools_.tools
- 
-
-from tools_.df_mapping import *
-from tools_.tools import *
-
 import argparse
 import datetime
 import time
-
 import tensorflow as tf
-from config import ParseHiperparams, GetMetadata
-from src.training.optuna_opt import OptunaOpt
 from keras import backend as K
 from tensorflow.keras.models import load_model
+
+from config import ParseHiperparams, GetMetadata
+from src.training.optuna_opt import OptunaOpt
 from config import str_to_bool
 from tools_.data_augmentation import DataAugmentation
 from tools_.load_dataset import LoadDataset
 from tools_.preprocess_data import Preprocess_Dataset
+from evaluate_function import evaluate_function_multioutput, evaluate_function_multioutput
 from tools_.preprocessing_compression import *
 from tools_.train_model import TrainModel
+import tools_.tools
+from tools_.df_mapping import *
+from tools_.tools import *
 
 
 # Clear GPU
@@ -68,10 +60,9 @@ params["SNR_white_noise"]=100
 params["filter_EGM"]=False
 params['optuna_optimization']=False
 print('Params to train: ', params)
+params["algorithm"]="OMAMI" #default
 
-
-params["algorithm"]='OMAMI_VAE'
-
+#["algorithm"]='OMAMI_VAE'
 if params["algorithm"]=='OMAMI':
 
     algorithm_ID_copy_config="OMAMI_no_filt_testing2_repeated"
@@ -98,6 +89,8 @@ try:
     parser.add_argument("--filter_EGM", type=str_to_bool, help="True or False", required=False)
     parser.add_argument("--shuffle_patient", type=str_to_bool, help="True or False", required=False)
     parser.add_argument("--time_masking", type=str_to_bool, help="True or False", required=False)
+    parser.add_argument("--attention", type=str_to_bool, help="True or False", required=False)
+
 
     #Noise
     parser.add_argument('--SNR_em_noise', type=int, help='EM noise SNR', required=False)
@@ -116,8 +109,27 @@ try:
     time_masking=args.time_masking
     SNR_white_noise=args.SNR_white_noise
     SNR_em_noise=args.SNR_em_noise
-    
+    attention=args.attention
+
     params["algorithm"]=algorithm
+
+    #Load best hiperparams
+    if params["algorithm"]=='OMAMI':
+
+        algorithm_ID_copy_config="OMAMI_no_filt_testing2_repeated"
+        path_best_params=f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/{algorithm_ID_copy_config}/hyperparams.json"
+        params=ParseHiperparams().load_best_hyperparams(path_best_params)
+        params['optuna_optimization']=False
+        print(f"Load OMAMI: {algorithm_ID_copy_config} Optimal hyperparams")
+
+    elif params["algorithm"]=='OMAMI_VAE':
+        
+        algorithm_ID_copy_config= "OMAMI_VAE_no_filt_testing_repeated"
+        path_best_params=f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/{algorithm_ID_copy_config}/hyperparams.json"
+        params=ParseHiperparams().load_best_hyperparams(path_best_params)
+        params['optuna_optimization']=False
+        print(f"Load OMAMI VAE: {algorithm_ID_copy_config} Optimal hyperparams")
+
     params["n_nodes_regression"]=n_nodes
 
     if shuffle_patient is not None:
@@ -135,6 +147,11 @@ try:
     else:
         params["SNR_white_noise"]=100
 
+    if attention is not None:
+        params["attention_layer"]=attention
+    else:
+        params["attention_layer"]=False
+
     if optuna:
         params["optuna_optimization"] = True
         print('Optuna activated. Launching', params["n_trials"], 'trials')
@@ -150,8 +167,9 @@ try:
         params['cross_validation']=True
         params["fold"]=fold
         print('Cross val activated with fold: ', fold)
+except Exception as e:
+    print(e)
 
-except:
     algorithm = params["algorithm"]
     SNR_white_noise = 100
 
@@ -193,17 +211,23 @@ except:
     params["time_masking"]=False
 
 experiment_name = experiment_name + "_l2"
+params["l2_reg"]=0.001
+
+
 if params["shuffle_patient"]:
     experiment_name= experiment_name + "_shuffle_patient"
 if params["time_masking"]:
-    experiment_name= experiment_name + "_time_masking"
+    experiment_name= experiment_name + "_tm"
 if params["SNR_white_noise"] != 100:
-    experiment_name= experiment_name + "_noise_20"
+    print("SNR 20 Applied")
+    experiment_name= experiment_name + "_SNR20"
+if params["attention_layer"]:
+    print("Attention layer added")
+    experiment_name= experiment_name + "_attention"
 
 params["early_stopping_patience"] = 40
-params["n_epochs"]=50
-
 print('Experiment name: ', experiment_name)
+params["experiment_name"]=experiment_name
 
 
 root_logdir = "output/logs/"
@@ -233,7 +257,7 @@ print("Num GPUs:", len(physical_devices))
 for gpu in tf.config.experimental.list_physical_devices("GPU"):
     tf.config.experimental.set_memory_growth(gpu, True)
 
-start = time.time()
+start = t.time()
 
 all_torsos_names = []
 for subdir, dirs, files in os.walk(torsos_dir):
@@ -297,7 +321,6 @@ sinusoids = False
 )()
 
 
-print('################ CHECKING DISTRIBUTION BEFORE PREPROCESSING ################')
 
 plt.figure(figsize=(20, 10))
 plt.subplot(2, 1, 1)
@@ -384,7 +407,7 @@ plt.savefig('output/figures/input_output/before_norm.png')
     transfer_matrices,
     experiment_dir,
     norm_egm=True,
-    shuffle_patient= True#params["shuffle_patient_order"]
+    shuffle_patient= params["shuffle_patient"]
 )()
 
 
@@ -416,7 +439,6 @@ plt.close()
 
 
 #Data Augmentation
-params["time_masking"]=True
 if params["time_masking"]:
     x_train = DataAugmentation(params, x_train).time_masking()
     print("Data augmentation applied")
@@ -812,7 +834,7 @@ global_results.round(3)
 
 
 # %%
-end = time.time()
+end = t.time()
 params["commit_hash"]=GetMetadata().get_git_commit()
 
 params["execution_time"] = (end - start) / 60

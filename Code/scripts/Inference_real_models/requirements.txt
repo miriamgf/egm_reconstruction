@@ -1,0 +1,7 @@
+imageio==2.37.0
+matplotlib==3.9.4
+numpy==1.26.4
+opencv-python==4.11.0.86
+tensorflow==2.15.0
+scipy
+
