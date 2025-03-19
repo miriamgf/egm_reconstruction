@@ -246,7 +246,7 @@ class Visualize2D:
                         tik_rec=np.array(tik_dict["tik_rec"])
                 except:
                     print("Tikhonov Object not available. Computing ZOT inference...")
-                    ObjTik=TikhonovReconstruction(bspm_signal_norm.T, transfer_matrix, order=0)
+                    ObjTik=TikhonovReconstruction(bspm_signal_norm, transfer_matrix_64, order=0)
                     tik_rec=ObjTik() 
             else:
                 tik_rec=ObjTik() 
@@ -490,7 +490,7 @@ if __name__ == "__main__":
         print(algorithm_ID)
     
     except:
-        experiment_ID_list=[['OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna']]
+        experiment_ID_list=[['OMAMI_no_filt_testing2_repeated_no_filt_l2_tm']]
 
     vis = Visualize2D(test_patients, experiment_ID_list, list_metrics)
     vis.run_all()

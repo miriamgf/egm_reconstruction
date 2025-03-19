@@ -44,8 +44,9 @@ import time
 #---------------------------------------------------------------------------------------------------------------------
 
 
-algorithm= "AE_Baseline_inference_egms_matrix_bspm_matrix"
-geom_path_CF = "/home/pdi/miriamgf/tesis/Autoencoders/geometries/Atria_geom/Modelos_computacionales_Carlos_Fambuena/Atria.mat"
+algorithm= "AE_Baseline_inference_egms_matrix_bspm_flat_custom_layout_flipped_cols"
+geom_path_CF = "/home/pdi/miriamgf/tesis/Autoenc
+oders/geometries/Atria_geom/Modelos_computacionales_Carlos_Fambuena/Atria.mat"
 input_directory=f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/CINC25_Heartlab/{algorithm}/"
 output_directory= f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/CINC25_Heartlab/{algorithm}/"
 torso_num=2
@@ -73,4 +74,4 @@ reconstruction_norm=normalize_array(reconstruction, high=1, low=-1, axis_n=0)
 
 #EGM_3d_object.plot_3d_mesh_prediction(reconstruction, label, faces_heart, vertices_heart, normalizar=False)
 
-EGM_3d_object.plot_only_label(reconstruction_norm, faces_heart, vertices_heart, frames=50)
+EGM_3d_object.plot_only_label(reconstruction_norm, faces_heart, vertices_heart, frames=1)

@@ -1,4 +1,4 @@
-log_file="output/logs/overfitting_general.log" 
+log_file="output/logs/attention.log" 
 echo "General files at: $log_file"
 
 
@@ -15,27 +15,7 @@ echo "General files at: $log_file"
 #wait
 
 # Evaluations
-echo "Step: [2/3] Evaluating..."
-echo "Saving evaluation log at: output/logs/evaluation/OMAMI_no_filt_testing2_repeated_l2_tm.log" | tee -a "$log_file"
-nohup python -u scripts/evaluation/evaluate_main.py --algorithm_ID 'OMAMI_no_filt_testing2_repeated_l2_tm' --ev_DL true --ev_TIK true > output/logs/evaluation/OMAMI_no_filt_testing2_repeated_l2_tm.log 2>&1 
-wait
-
-echo "Step: [2/3] Evaluating..."
-echo "Saving evaluation log at: output/logs/evaluation/OMAMI_VAE_no_filt_testing_repeated_l2_tm.log" | tee -a "$log_file"
-nohup python -u scripts/evaluation/evaluate_main.py --algorithm_ID 'OMAMI_VAE_no_filt_testing_repeated_l2_tm' --ev_DL true --ev_TIK true > output/logs/evaluation/OMAMI_VAE_no_filt_testing_repeated_l2_tm.log 2>&1 
-wait
-
-echo "Step: [2/3] Evaluating..."
-echo "Saving evaluation log at: output/logs/evaluation/OMAMI_no_filt_testing2_repeated_l2_SNR20.log" | tee -a "$log_file"
-nohup python -u scripts/evaluation/evaluate_main.py --algorithm_ID 'OMAMI_no_filt_testing2_repeated_l2_SNR20' --ev_DL true --ev_TIK true > output/logs/evaluation/OMAMI_no_filt_testing2_repeated_l2_SNR20.log 2>&1 
-wait
-
-echo "Step: [2/3] Evaluating..."
-echo "Saving evaluation log at: output/logs/evaluation/OMAMI_VAE_no_filt_testing_repeated_l2_SNR20.log" | tee -a "$log_file"
-nohup python -u scripts/evaluation/evaluate_main.py --algorithm_ID 'OMAMI_VAE_no_filt_testing_repeated_l2_SNR20' --ev_DL true --ev_TIK true > output/logs/evaluation/OMAMI_VAE_no_filt_testing_repeated_l2_SNR20.log 2>&1 
-
-log_file="output/logs/overfitting_general.log" 
-echo "General files at: $log_file"
+sleep 10h
 
 # 1. Only L2 and high dropout - AE
 echo "Step: [1/3] Training..."
