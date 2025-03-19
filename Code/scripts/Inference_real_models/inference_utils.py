@@ -2,6 +2,7 @@ import numpy as np
 import scipy.signal as sigproc
 import cv2
 from scipy.stats import spearmanr
+import matplotlib.pyplot as plt
 
 def normalize_array(array, high, low, axis_n=0):
     """
@@ -82,7 +83,7 @@ def ECG_filtering(signal, fs, order=2, f_low=3, f_high=30):
 
     return proc_ECG_EGM
 
-def map_custom_electrodes(bspms):
+def map_custom_electrodes(bspms, flip_cols=True):
     """
     Reshapes and interpolates 1D BSPM signals into 2D images.
 
@@ -102,44 +103,71 @@ def map_custom_electrodes(bspms):
                 [ 152, 152, 162, 162, 172, 172, 136, 136, 178, 178, 188, 188],
                 [ 153, 154, 163, 164, 173, 174, 137, 138, 179, 180, 189, 190]]
     
-    valores_unicos = sorted(set(sum(matrix_2D, [])))
+    unique_vals = sorted(set(sum(matrix_2D, [])))
 
     # Crear el diccionario con mapeo consecutivo
-    mapeo = {valor: idx + 1 for idx, valor in enumerate(valores_unicos)}
+    mapping = {value: idx + 1 for idx, value in enumerate(unique_vals)}
 
     # Mostrar el resultado
-    print(mapeo)
-
-    front=np.array([[145, 146, 155, 156],
-                    [147, 147, 157, 157],
-                    [148, 149, 158, 159], 
-                    [150, 151, 160, 161], 
-                    [152, 152, 162, 162], 
-                    [153, 154, 163, 164]])
+    print(mapping)
     
-    back=np.array([[129, 130, 139, 140], 
-                  [131, 131, 141, 141], 
-                  [132, 133, 142, 143],
-                  [134, 135, 144, 177],
-                  [136, 136, 178, 178],
-                  [137, 138, 179, 180]])
+    f_a=np.array([[129, 130],
+                 [131, 131],
+                 [132, 133],
+                 [134, 135],
+                 [136, 136],
+                 [137, 138]])    
     
-    lat_L = np.array([[165, 166], 
+    f_b=np.array([[139, 140], 
+                  [141, 141], 
+                  [142, 143],
+                  [144, 177],
+                  [178, 178],
+                  [179, 180]])
+    f_c=np.array([[181,182], 
+                [183,183],
+                [184,185],
+                [186,187],
+                [188,188],
+                [189, 190]])
+    f_d=np.array( [[145, 146],
+                [147, 147],
+                [148, 149],
+                [150, 151],
+                [152, 152],
+                [153, 154]])
+    
+    f_e=np.array([[155, 156],
+                [157, 157],
+                [158, 159], 
+                [160, 161], 
+                [162, 162], 
+                [163, 164]])
+    
+    f_f = np.array([[165, 166], 
                      [167, 167], 
                      [168, 169], 
                      [170, 171],
                      [172, 172],
                      [173, 174]])
     
-    lat_R=np.array([[181,182], 
-                   [183,183],
-                   [184,185],
-                   [186,187],
-                   [188,188],
-                   [189, 190]])
+ 
+    #Flip columns
+    if flip_cols:
+        f_a[:, [0, 1]]=f_a[:, [1, 0]]
+        f_b[:, [0, 1]]=f_b[:, [1, 0]]
+        f_c[:, [0, 1]]=f_c[:, [1, 0]]
+        f_d[:, [0, 1]]=f_d[:, [1, 0]]
+        f_e[:, [0, 1]]=f_e[:, [1, 0]]
+        f_f[:, [0, 1]]=f_f[:, [1, 0]]
+        print(f_a)
+
     
-    conc=np.concatenate((front,lat_L, back, lat_R, front), axis=1)
-    conc_mapped = np.vectorize(mapeo.get)(conc)
+    conc=np.concatenate((f_e, f_d, f_c, f_b, f_a, f_f, f_e, f_d), axis=1)
+    
+    conc_mapped = np.vectorize(mapping.get)(conc)
+    
+    print(conc_mapped)
 
     new_order = np.array(conc_mapped).flatten() - 1  # Ajustamos los índices
     valid_indices = [idx for idx in new_order if 0 <= idx < 60]
@@ -177,26 +205,50 @@ def bspm_to_images(bspms, tank_el_position, from_12_5=False, custom_layout=True)
         bspms=bspms.reshape(bspms.shape[0], 12, 5)
     bspms_interpol_array=[]
     for element in range(bspms.shape[0]):
+        
         signal=bspms[element, :, :]
-        element_interp = cv2.resize(signal, (12, 32), interpolation=cv2.INTER_CUBIC)
+        element_interp = cv2.resize(signal, (32, 12), interpolation=cv2.INTER_CUBIC)
 
-        '''
-        plt.figure()
-        plt.subplot(1, 2, 1)
-        plt.imshow(bspms[element, :, :], cmap='gray')
-        plt.title('Original BSPM')
-        plt.subplot(1, 2, 2)
-        plt.imshow(element_interp, cmap='gray')
-        plt.title('interpolated BSPM')
-        plt.savefig(f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/inference_heartlab/interpolated_bspm_{element}_bicubic.png")
-        plt.close()
-        print('saved image at ', f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/inference_heartlab/interpolated_bspm_{element}_bicubic.png")
-        '''
+        if element==0:
+            plt.figure()
+            plt.subplot(1, 2, 1)
+            plt.imshow(bspms[element, :, :], cmap='gray')
+            plt.title('Original BSPM')
+            plt.subplot(1, 2, 2)
+            plt.imshow(element_interp, cmap='gray')
+            plt.title('interpolated BSPM')
+            plt.savefig(f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/inference_heartlab/interpolated_bspm_{element}_bicubic.png")
+            plt.close()
+            print('saved image at ', f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/inference_heartlab/interpolated_bspm_{element}_bicubic.png")
+            
 
         bspms_interpol_array.append(element_interp)
 
     bspms_reshaped=np.array(bspms_interpol_array)
-    bspms_reshaped = np.transpose(bspms_reshaped, (0, 2, 1))
+    bspms_reshaped = np.transpose(bspms_reshaped, (0, 1, 2))
+    plt.figure()
+    plt.subplot(1, 2, 1)
+    plt.imshow(bspms[element, :, :], cmap='gray')
+    plt.title('Original BSPM')
+    plt.subplot(1, 2, 2)
+    plt.imshow(element_interp, cmap='gray')
+    plt.title('interpolated BSPM')
+    plt.savefig(f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/inference_heartlab/interpolated_bspm_{element}_bicubic.png")
+    plt.close()
+    print('saved image at ', f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/inference_heartlab/interpolated_bspm_{element}_bicubic.png")
+    
+    plt.figure()
+    plt.subplot(1, 2, 1)
+    plt.plot(bspms_reshaped[:, 0, 0])
+    plt.title('Original BSPM')
+    plt.subplot(1, 2, 2)
+    plt.plot(bspms_before_interpol[:, 0, 0])
+    plt.title('interpolated BSPM')
+    plt.savefig(f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/inference_heartlab/interpolated_bspm_1d_{element}_bicubic.png")
+    plt.close()
+    print('saved image at ', f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/inference_heartlab/interpolated_bspm_1d_{element}_bicubic.png")
+    
+
 
 
     return bspms_reshaped, bspms_before_interpol

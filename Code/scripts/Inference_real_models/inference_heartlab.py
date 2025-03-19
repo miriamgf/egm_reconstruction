@@ -66,15 +66,9 @@ class Inference_Heartlab:
             self.experiment_name= self.experiment_name + "_bspm_flat"
 
         if self.custom_layout:
-            self.experiment_name= self.experiment_name + "_custom_layout"
-
-            
-        
-
-
+            self.experiment_name= self.experiment_name + "_custom_layout_flipped_cols"
 
         ####################################################
-
 
         #Experiment_dir
         self.experiment_dir= f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/CINC25_Heartlab/{self.experiment_name}/"
@@ -304,10 +298,10 @@ class Inference_Heartlab:
         #Plot BSPM and EGM sample batch 0 (1D)
         plt.figure(figsize=(20, 10))
         plt.subplot(2, 1, 1)
-        plt.plot(X_1channel_in_batches[0, :, 1, 1], label= "Flat")
+        plt.plot(X_1channel_in_batches[0, :, 1, 1, 0])
         plt.title('BSPM')
         plt.subplot(2, 1, 2)
-        plt.plot(egm_in_batches[0, :, 1, 0], label="Matrix")
+        plt.plot(egm_in_batches[0, :, 1, 0])
         plt.title('EGM')
         plt.savefig(self.output_path_figs+"batch_1.png")
         print(self.output_path_figs+"batch_1.png")
