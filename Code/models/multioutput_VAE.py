@@ -235,7 +235,7 @@ class MultiOutput_VAE(Model):
         x = self.time_distributed(x)
         x = self.batch_norm(x)
         x = self.lstm(x)
-        x, weights_att=self.attention(x)
+        x, weights_att=self.attention(x, x)
         x = self.dropout(x)
         x = self.dense(x)
 
