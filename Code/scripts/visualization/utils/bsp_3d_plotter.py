@@ -219,7 +219,7 @@ class BSP_3D_PLOTTER:
 
         fps = 10
         array_frames = []
-        for instant in range(0, self.duration, 1):
+        for instant in range(0, self.duration, 50):
             vtk_scalars_var = numpy_to_vtk(var_represent[:, instant], deep=True)
             vtk_scalars_label = numpy_to_vtk(var_represent_original[:, instant], deep=True)
 

@@ -12,12 +12,13 @@ from scipy.signal import welch, spectrogram
 from tensorflow.keras.models import load_model
 import time
 import argparse
+from numpy import reshape
 
 from tools_.preprocess_data import Preprocess_Dataset
 from tools_.load_dataset import LoadDataset_BSPS
 from scripts.Tikhonov.compute_tik import TikhonovReconstruction
 from scripts.evaluation.metrics import Metrics
-from numpy import reshape
+from models.attention import LuongAttention
 from models.multioutput_VAE import  SamplingLayer
 from scripts.evaluate_function import *
 from tools_.tools_inference import *
@@ -201,7 +202,14 @@ class Visualize2D:
         try:
             model = load_model(weights_path)
         except:
-            model = load_model(weights_path, custom_objects={'SamplingLayer': SamplingLayer})
+            try:
+                model = load_model(weights_path, 
+                                custom_objects={'LuongAttention': LuongAttention, 'SamplingLayer': SamplingLayer})
+                print('loading sampling layer')
+            except:
+                model = load_model(weights_path, 
+                custom_objects={'SamplingLayer': SamplingLayer})
+                print('loading sampling layer')
         #model = load_model(weights_path)
 
         prediction = model.predict(

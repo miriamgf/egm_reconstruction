@@ -1,3 +1,28 @@
+import numpy as np
+import sys
+
+sys.path.append("../Code")
+
+experiment_dir="output/experiments/experiments_VAE"
+
+class OverfittingAssesment:
+    def __init__(self):
+        pass
+
+    def load_history(self, algorithm):
+
+
+        pass
+
+    def run(self):
+        algorithms_list=[]
+        for algorithm in algorithms_list:
+
+            self.load_history(algorithm=algorithm)
+
+
+
+
 def compute_accuracy_gap(history):
     train_acc = np.array(history.history['accuracy'])
     val_acc = np.array(history.history['val_accuracy'])

@@ -170,6 +170,27 @@ class ReportMetrics():
         print('csv saved at: ', path)
 
         return df_mean_metrics
+    
+    def plot_individual_barplots_per_algorithm(self, df, algorithm_ID):
+
+
+        algorithm_ID=algorithm_ID.replace("_", "")
+        # Elegir la métrica a visualizar
+        metrica = f"Correlation_{algorithm_ID}"  # Cambia esto por la métrica que te interese
+
+        # Graficar
+        plt.figure(figsize=(12, 6))
+        plt.bar(df["name"], df[metrica], color="skyblue")
+        plt.xticks(rotation=90, ha="right")  # Rotar etiquetas para mejor visibilidad
+        plt.xlabel("Nombre")
+        plt.ylabel(metrica)
+        plt.title(f"Diagrama de barras de {metrica}")
+        plt.grid(axis="y", linestyle="--", alpha=0.7)
+        plt.ylim([0, 0.8])
+        plt.savefig(f"{self.path_to_save}/barplot_corr_{algorithm}.png")
+        print(f"{self.path_to_save}/barplot_corr_{algorithm}.png")
+        plt.close()
+
 
     def classification_rotor_complexity_tocsv(self, df):
         '''
@@ -285,24 +306,20 @@ class ReportMetrics():
                 x='algorithm',
                 y='value',
                 color="black",
-                alpha=0.5,  # Transparencia para mejor visualización
-                jitter=True  # Separar puntos para que no se sobrepongan
+                alpha=0.5, 
+                jitter=True 
             )
             
-            # Configurar el título y etiquetas
             plt.title(f'{metric} Comparison Across Algorithms (All Patients)')
             plt.ylabel('Metric Value')
             plt.xlabel('Algorithm')
-            plt.xticks(rotation=45)  # Rotar etiquetas del eje X para mejor lectura
+            plt.xticks(rotation=45)  
 
-            # Ajustar el diseño
             plt.tight_layout()
             
-            # Guardar el gráfico como imagen
             plt.savefig(f"{self.path_to_save}/boxplot_across_algorithms_{metric}.png")
 
-            # Mostrar el gráfico
-            plt.show()
+            plt.close()
 
 
 
@@ -315,7 +332,7 @@ class ReportMetrics():
         
         '''
 
-        # 1️⃣ Extraer las columnas de cada dataset
+        # Extraer las columnas de cada dataset
         dl_columns = [col for col in merged_df_dl.columns if col != "name"]
         tik_columns = [col for col in df_tik_merged.columns if col != "name"]
 
@@ -324,12 +341,12 @@ class ReportMetrics():
         tik_metrics = {col.split("_")[0] for col in tik_columns}
         common_metrics = dl_metrics.intersection(tik_metrics)
 
-        # 2️⃣ Agrupar columnas por métrica
+        # Agrupar columnas por métrica
         dl_grouped = {metric: [col for col in dl_columns if col.startswith(metric)] for metric in common_metrics}
         tik_grouped = {metric: [col for col in tik_columns if col.startswith(metric)] for metric in common_metrics}
 
 
-        # 1️⃣ Iterar sobre cada métrica
+        # Iterar sobre cada métrica
         for metric in common_metrics:
             if metric not in dl_grouped or metric not in tik_grouped:
                 continue  # Ignorar métricas no comunes
@@ -337,23 +354,19 @@ class ReportMetrics():
             dl_columns = dl_grouped[metric]
             tik_columns = tik_grouped[metric]
 
-            # 📌 Extraer datos por paciente
             dl_data = merged_df_dl[dl_columns]  # Todas las métricas DL para la métrica actual
             zot_data = df_tik_merged[tik_columns]  # Todas las métricas ZOT para la métrica actual
 
-            # 📌 Crear figura
             plt.figure(figsize=(12, 6))
 
-            # 📌 Posiciones de las cajas (DL y ZOT juntas, pero separadas de otros pacientes)
             num_pacientes = len(merged_df_dl)
             dl_positions = np.arange(num_pacientes) * 3  # Aumentamos la separación entre pacientes
             zot_positions = dl_positions + 0.6  # Acercamos DL y ZOT
 
-            # 📊 Crear boxplots
             bp_dl = plt.boxplot(
-                dl_data.values.T,  # Transponer para que cada paciente tenga su caja
+                dl_data.values.T,  
                 positions=dl_positions,
-                widths=0.35,  # Reducimos el ancho para más separación
+                widths=0.35,  
                 patch_artist=True,
                 boxprops=dict(facecolor="blue", color="blue"),
                 medianprops=dict(color="white"),
@@ -365,7 +378,7 @@ class ReportMetrics():
             bp_zot = plt.boxplot(
                 zot_data.values.T,
                 positions=zot_positions,
-                widths=0.35,  # Reducimos el ancho
+                widths=0.35,  
                 patch_artist=True,
                 boxprops=dict(facecolor="red", color="red"),
                 medianprops=dict(color="white"),
@@ -374,15 +387,13 @@ class ReportMetrics():
                 flierprops=dict(markerfacecolor="red", markeredgecolor="red"),
             )
 
-            # 📌 Etiquetas
-            x_labels = merged_df_dl["name"]  # Nombre de los pacientes
-            plt.xticks(dl_positions + 0.3, x_labels, rotation=90)  # Centrar entre DL y ZOT
+            x_labels = merged_df_dl["name"]  
+            plt.xticks(dl_positions + 0.3, x_labels, rotation=90)  
 
             plt.title(f"Distribución de {metric} por Paciente (DL vs ZOT)")
             plt.xlabel("Pacientes")
             plt.ylabel(metric)
             
-            # ✅ Corregir leyenda manualmente
             dl_patch = mpatches.Patch(color="blue", label="DL")
             zot_patch = mpatches.Patch(color="red", label="ZOT")
             plt.legend(handles=[dl_patch, zot_patch], loc="upper right")
@@ -451,6 +462,10 @@ class ReportMetrics():
                 plt.savefig(path)
                 print(f"Figure saved at: {path}")
                 plt.close()
+    
+    def stratified_evaluation():
+        pass
+
 
         
     def __call__(self, *args, **kwds):
@@ -501,12 +516,14 @@ class ReportMetrics():
         self.barplot_algorithm(merged_df,algorithm_mod_name, patient_name='LA_RSPV_CAF_150115' )
         self.boxplot_per_algorithm(merged_df, algorithm_mod_name)
         self.classification_rotor_complexity_tocsv(df_summary_per_patient)
+        self.plot_individual_barplots_per_algorithm(df_dl, algorithm_ID=algorithm_ID)
 
 
 if __name__ == "__main__":
 
-    algorithm_list= ['OMAMI_no_filt_testing2_repeated',
-                    'OMAMI_VAE_no_filt_testing_repeated',
-                    'OMAMI_no_filt_Optuna_bs_fs_Optuna_repeated', 
-                    'OMAMI_VAE_Reduced_no_filt_Optuna_bs_fs_Optuna_repeated']
-    ReportMetrics(name= 'bs_fs_Optuna', algorithm_list=algorithm_list, test_id=0)()
+    algorithm_list= ['OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_attention',
+                     'OMAMI_no_filt_testing2_repeated_no_filt_l2_attention']
+    
+    for algorithm in algorithm_list:
+
+        ReportMetrics(name= 'att', algorithm_list=[algorithm], test_id=0)()

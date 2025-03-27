@@ -290,6 +290,7 @@ class Inference_Heartlab:
         # Signal to image-video transformation
         X_1channel_reshaped, bspms_before_interpol =bspm_to_images(X_1channel_pre, tank_el_position, from_12_5= self.from_12_5, custom_layout=True)
 
+        #Save 
         self.plot_interpol(X_1channel_reshaped, X_1channel_pre, bspms_before_interpol)
 
         X_1channel_in_batches=batch_generation(X_1channel_reshaped, batch_size=self.params["batch_size"], type_data="bspm")

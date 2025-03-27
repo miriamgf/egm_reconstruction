@@ -208,6 +208,15 @@ class EGMRenderer_BSP:
         self.actor = vtk.vtkActor()
         self.actor.SetMapper(self.mapper)
         self.actor.RotateZ(-90)  # Rota 30 grados hacia la derecha
+        self.actor.SetScale(2)
+
+        normals=vtk.vtkPolyDataNormals()
+        normals.SetInputData(self.mesh)
+        normals.ConsistencyOn()
+        normals.SplittingOff()
+        normals.Update()
+
+
 
         if self.view == "back":
             self.actor.RotateZ(180)  # Rota 30 grados hacia la derecha

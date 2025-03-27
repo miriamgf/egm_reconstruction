@@ -32,6 +32,8 @@ from scripts.evaluate_function import *
 from tools_.tools import corr_pearson_cols
 from tools_.tools_inference import *
 from tools_ import freq_phase_analysis as freq_pha
+from models.attention import LuongAttention
+
 
 os.environ["LIBGL_ALWAYS_SOFTWARE"] = "1"
 os.environ["MESA_LOADER_DRIVER_OVERRIDE"] = "llvmpipe"
@@ -43,7 +45,7 @@ import time
 # CONFIGURE
 #---------------------------------------------------------------------------------------------------------------------
 
-plot_BSP = False
+plot_BSP = True
 plot_Tikhonov = True
 plot_DL= True
 plot_correlation_DL = True
@@ -62,6 +64,7 @@ load_tik_array=True
 
 torso_num=2
 
+'''
 test_patients = [
             ["LA_PLAW_140711_arm"], ["LA_RSPV_CAF_150115"],
             ["Simulation_01_200212_001_  5"], ["Simulation_01_200212_001_ 10"],
@@ -71,12 +74,15 @@ test_patients = [
             ["Simulation_01_210119_001_001"], ["Simulation_01_210208_001_002"]
         ]
 '''
-test_patients = [["Simulation_01_200212_001_  5"],  
-                ["Simulation_01_210119_001_001"], 
-                ["Simulation_01_200428_001_010"],["Simulation_01_200212_001_ 10"]]
 
-test_patients=[["Simulation_01_200212_001_  5"]]
-'''
+
+
+test_patients = [["Simulation_01_200212_001_  5"],  
+                ["LA_RSPV_CAF_150115"], 
+                ["Simulation_01_210208_001_002"],
+                ["Simulation_01_200316_001_  4"]]
+
+
 try:
         print("Parsing bash params")
         parser = argparse.ArgumentParser(description="params")
@@ -257,9 +263,14 @@ for model_name in test_patients:
 
         # Inference
         try:
+                 
             model = load_model(weights_path)
         except:
-            model = load_model(weights_path, custom_objects={'SamplingLayer': SamplingLayer})
+            try:
+                model = load_model(weights_path, custom_objects={'SamplingLayer': SamplingLayer})
+            except:
+                model = load_model(weights_path,
+                                custom_objects={'LuongAttention': LuongAttention,'SamplingLayer': SamplingLayer})
 
 
         prediction = model.predict(

@@ -22,6 +22,7 @@ from models.multioutput_VAE import MultiOutput_VAE, SamplingLayer
 from models.multioutput_VAE_skip import MultiOutput_VAE_skip
 from models.multioutput_VAE_reduced import MultiOutput_VAE_Reduced
 from models.gen_vae import Gen_VAE
+from models.attention import BahdanauAttention, LuongAttention
 
 
 import tensorflow as tf
@@ -338,8 +339,18 @@ class TrainModel:
             model.save(self.experiment_dir+"/model_weights.h5")
         except:
 
-            model.model.save(self.experiment_dir+"/model_weights.h5")
-            model_loaded = load_model(self.experiment_dir + "/model_weights.h5", custom_objects={'SamplingLayer': SamplingLayer})
+            try:
+
+                model.model.save(self.experiment_dir+"/model_weights.h5")
+                model_loaded = load_model(self.experiment_dir + "/model_weights.h5",
+                            custom_objects={'LuongAttention': LuongAttention, 'SamplingLayer': SamplingLayer})
+            
+            except:
+
+                model.model.save(self.experiment_dir+"/model_weights.h5")
+                model_loaded = load_model(self.experiment_dir + "/model_weights.h5",
+                            custom_objects={ 'SamplingLayer': SamplingLayer})
+
         
   
         

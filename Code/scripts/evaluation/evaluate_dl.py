@@ -16,6 +16,7 @@ from scipy.stats import pearsonr, spearmanr
 from tools_.preprocess_data import Preprocess_Dataset
 from scripts.config import ParseHiperparams
 from models.multioutput_VAE import MultiOutput_VAE, SamplingLayer
+from models.attention import LuongAttention
 #from scripts.evaluation.tools_evaluate import normalize_array, downsampling
 import tools_.tools as tools
 from scripts.evaluation.metrics import Metrics
@@ -227,8 +228,15 @@ class EvaluateDL:
         try:
             model = load_model(self.weights_path)
         except:
-            model = load_model(self.weights_path, custom_objects={"SamplingLayer": SamplingLayer})
-            print('loading sampling layer')
+            try:
+                model = load_model(self.weights_path, 
+                                custom_objects={'LuongAttention': LuongAttention, 'SamplingLayer': SamplingLayer})
+                print('loading sampling layer')
+            except:
+                model = load_model(self.weights_path, 
+                custom_objects={'SamplingLayer': SamplingLayer})
+                print('loading sampling layer')
+
 
         # Inferencia
         try:

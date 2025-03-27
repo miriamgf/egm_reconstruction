@@ -60,7 +60,7 @@ params["SNR_white_noise"]=100
 params["filter_EGM"]=False
 params['optuna_optimization']=False
 print('Params to train: ', params)
-params["algorithm"]="OMAMI" #default
+params["algorithm"]="OMAMI_VAE" #default
 
 #["algorithm"]='OMAMI_VAE'
 if params["algorithm"]=='OMAMI':
@@ -167,11 +167,14 @@ try:
         params['cross_validation']=True
         params["fold"]=fold
         print('Cross val activated with fold: ', fold)
-except Exception as e:
+
+except SystemExit as e:
     print(e)
 
     algorithm = params["algorithm"]
     SNR_white_noise = 100
+    params['SNR_white_noise']=100
+    params['attention_layer']=True
 
     print('Failed in parsing bash params :( ')
     pass

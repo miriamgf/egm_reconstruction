@@ -248,7 +248,7 @@ def bspm_to_images(bspms, tank_el_position, from_12_5=False, custom_layout=True)
     plt.close()
     print('saved image at ', f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/inference_heartlab/interpolated_bspm_1d_{element}_bicubic.png")
     
-
+    #save bspm array
 
 
     return bspms_reshaped, bspms_before_interpol

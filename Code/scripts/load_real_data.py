@@ -6,6 +6,7 @@ class LoadExploreData:
     def __init__(self):
         self.path_to_data="/home/pdi/miriamgf/tesis/Autoencoders/Real_data/HEartLab/data_E18_F02_R02.mat"
         self.path_to_save="/home/pdi/miriamgf/tesis/Autoencoders/Real_data/HEartLab/data_E18_F02_R02_selection.mat"
+        self.path_to_save_geom="/home/pdi/miriamgf/tesis/Autoencoders/Real_data/HEartLab/tank_geom_E18_F02_R02_selection.mat"
     
     def load_and_select_fields(self):
         with h5py.File(self.path_to_data, "r") as f:
@@ -14,14 +15,15 @@ class LoadExploreData:
             dataset_raw=f["data"]["raw"]["electric"]
             dataset_ecgi=f["data"]["ECGi"]
             tank_el_position=dataset_ecgi['geometries']['tank_el_position']
+            #load geometries
+
+
 
             #Raw Signals
             signal_MEA1_RA=f["data"]["filtered"]["electric"]["MEA1"]
             signal_MEA3_LA=f["data"]["filtered"]["electric"]["MEA3"]
             signal_tank=f["data"]["filtered"]["electric"]["TANK"]
 
-
-        
             print("MEA1 (RA) signal shape:", signal_MEA1_RA.shape)
             print("MEA3 (LA) signal shape:", signal_MEA3_LA.shape)
             print("Tank signal shape:", signal_tank.shape)
@@ -96,8 +98,20 @@ class LoadExploreData:
                                                 'matrix_signal_tank':matrix_signal_tank
                                                })
             
+            #Geometry tank
+
+            geometry_tank=f["data"]["ECGi"]["geometries"]["tank"]
+            tank_faces=geometry_tank["faces"]
+            tank_vertices=geometry_tank["vertices"]
+
+            sio.savemat(self.path_to_save_geom, {'geometry_tank': geometry_tank,
+                                    'tank_faces': tank_faces,
+                                    'signal_tank': signal_tank, 
+                                    'tank_vertices': tank_vertices, 
+                                    })
             
-            print("Saved as .mat file in:", self.path_to_save)
+            
+            print("Saved as .mat file in:", self.path_to_save_geom)
 
     def run(self):
         self.load_and_select_fields()

@@ -1,17 +1,8 @@
 
-#echo "Saving logs at: output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_2D.log"
-#nohup python -u scripts/visualization/2d_plot.py --algorithm_ID 'OMAMI_VAE_no_filt_testing_repeated' > output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_2D.log 2>&1 
-#wait
 
 
-
-
-#echo "Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_2D.log"
-#nohup python -u scripts/visualization/2d_plot.py --algorithm_ID 'OMAMI_no_filt_testing2_repeated' > output/logs/plots/OMAMI_no_filt_testing2_repeated_2D.log 2>&1 
-#wait
-
-echo "Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_3D.log"
-nohup python -u scripts/visualization/3d_plot_egm_bpsm.py --algorithm_ID 'OMAMI_no_filt_testing2_repeated' > output/logs/plots/OMAMI_no_filt_testing2_repeated_3D.log 2>&1 
+echo "Saving logs at: output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_attention_3d.log"
+nohup python -u scripts/visualization/3d_plot_egm_bpsm.py --algorithm_ID 'OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_attention' > output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_attention_3d.log 2>&1 
 wait
 
 
