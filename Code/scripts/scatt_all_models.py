@@ -118,7 +118,7 @@ sinusal_groups = {
             "Simulation_01_200212_001_6", "Simulation_01_200212_001_5",
             "Simulation_01_210209_001_003", "Simulation_01_200316_001_9",
             "Simulation_01_210209_001_001", "Simulation_01_200428_001_006",
-            "Simulation_01_200316_001_5",
+            "Simulation_01_200316_001_5", "Simulation_01_200316_001_  1"
         }
  
 rotor_simple_groups = {
