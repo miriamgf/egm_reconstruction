@@ -19,11 +19,12 @@ from evaluate_function import evaluate_function_multioutput, evaluate_function_m
 from numpy import *
 from scipy.io import savemat
 import h5py
+from config import str_to_bool
 
 import tools_
 import tools_.tools
  
-
+from models.gen_vae import Gen_VAE
 from tools_.df_mapping import *
 from tools_.tools import *
 
@@ -72,21 +73,33 @@ print(type(patches_oclussion))
 #Run script IDE
 
 """
-
+#PRECONFIG
 params = ParseHiperparams().parse_default_hyperparams()
-
+params["split_mode"] = "stratified"
+params["oversampling"] = False
+params["classes_to_oversample"]= [0,1, 5]
+params["latent_dim"]=250
 
 try:
     print("parsing")
     parser = argparse.ArgumentParser(description="Noise params")
     parser.add_argument("--algorithm", type=str, help="experiment name", required=True)
-    parser.add_argument("--optuna", type=str, help="True or False", required=False)
+    parser.add_argument("--optuna", type=str_to_bool, help="True or False", required=False)
     parser.add_argument("--n_nodes", type=int, help="682, 1024", required=False)
+    parser.add_argument("--evaluation", type=str_to_bool, help="evaluation", required=False)
 
     args = parser.parse_args()
     algorithm = args.algorithm
     optuna = args.optuna
     n_nodes = args.n_nodes
+    evaluation = args.evaluation
+
+    if evaluation is not None:
+        evaluation = args.evaluation
+        print("Evaluation mode activated")
+    else:
+        evaluation = False
+
     params["algorithm"]=algorithm
     params["n_nodes_regression"]=n_nodes
 
@@ -95,6 +108,7 @@ try:
 
 except:
     algorithm = params["algorithm"]
+    evaluation=True
 
 print('Params to train: ', params)
 
@@ -106,17 +120,19 @@ unfold_code = 1
 
 experiment_name = algorithm
 
-experiment_name = f"{experiment_name}_mod_data"
+experiment_name = f"{experiment_name}_baseline_conv1D"
+
+params["experiment_name"] = experiment_name
 #experiment_name='pruebas interpol'
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data_short/"
+data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
 torsos_dir = "../../../../Labeled_torsos/"
 figs_dir = "output/figures/"
 models_dir = "output/model/"
 dict_var_dir = "output/variables/"
 dict_results_dir = "output/results/"
-experiment_dir = "output/experiments/experiments_VAE/" + experiment_name + "/"
+experiment_dir = "output/experiments/synthetic_generation/" + experiment_name + "/"
 
 
 if not os.path.exists(experiment_dir):
@@ -164,6 +180,7 @@ if params["fs"] == params["fs_sub"]:
 Transfer_model = False  # Transfer learning from sinusoids
 sinusoids = False
 
+
 # Load data
 (
     X_1channel,
@@ -174,17 +191,17 @@ sinusoids = False
     AF_models,
     all_model_names,
     transfer_matrices,
+    y_list
 ) = LoadDataset(
     params,
     directory=directory,
     data_type="1channelTensor",
     n_classes=params["n_classes"],
-    downsampling=False,
+    downsampling=False, #deprecated
     fs=params["fs"],
     norm=False,
     SR=True,
     n_batch=params["batch_size"],
-    sinusoid=sinusoids,
     SNR_em_noise=SNR_em_noise,
     SNR_white_noise=SNR_white_noise,
     patches_oclussion=patches_oclussion,
@@ -192,14 +209,7 @@ sinusoids = False
     inference=False,
 )()
 
-#mdic = {"egm": egm_tensor, "AF_models": AF_models, "all_model_names": all_model_names}
-#with h5py.File(experiment_dir + "/egm_names_all.mat", 'w') as f:
-    #for key, value in mdic.items():
-        #f.create_dataset(key, data=value)
 
-
-
-# Preprocess data
 (
     x_train,
     x_test,
@@ -228,20 +238,51 @@ sinusoids = False
     all_model_names,
     transfer_matrices,
     experiment_dir,
+    split_mode="stratified",
     norm_egm=True,
+    shuffle_patient= True, 
 )()
 
-#borrar
-'''
-y_test=y_val
-x_test=x_val
-AF_models_test=AF_models_val
-test_models=val_models
-'''
 
 params["algorithm"] = "gen_VAE"
 print("Algorithm selected:", params["algorithm"])
+if not evaluation:
+    params["n_epochs"] = 70
+    model, history = TrainModelGen(
+        params, y_train, y_test, y_val, y_train, y_test, y_val, models_dir, experiment_dir
+    )()
 
-model, history = TrainModelGen(
-    params, x_train, x_test, x_val, y_train, y_test, y_val, models_dir, experiment_dir
-)()
+if evaluation:
+    vae = Gen_VAE(
+        params=params,
+        input_shape_=y_train.shape[1:], 
+        n_nodes=2048,
+        latent_dim=params["latent_dim"],
+        tensorboard_logs=experiment_dir + "tb_logs/"
+    )
+
+    vae.model.load_weights(experiment_dir + "model_weights.h5")
+    decoder = vae.build_decoder_from_latent()
+
+
+
+    # Samplear del espacio latente
+    z = tf.random.normal((1, vae.latent_dim))  # 10 muestras aleatorias
+
+    # Generar señales sintéticas
+    synthetic = decoder.predict(z)
+    print(synthetic.shape)  # → (10, 2048)
+
+    plt.figure()
+    plt.subplot(1, 2, 1)
+    plt.title("Synthetic signal")
+    plt.imshow(synthetic[0, :, : ], aspect="auto")
+    plt.subplot(1, 2, 2)
+    plt.title("Real signal")
+    plt.imshow(y_train[0, :, :], aspect="auto")
+    plt.savefig(
+        experiment_dir + "synthetic_signal.png", dpi=300, bbox_inches="tight"
+    )
+    plt.close()
+
+

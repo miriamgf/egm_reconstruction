@@ -27,108 +27,79 @@ class Gen_VAE(Model):
 
         self.input_shape_ = input_shape_
         self.params = params
-        self.SEED=50
+        self.SEED=self.params["seed"]
         tf.random.set_seed(self.SEED)
         self.tensorboard_logs = tensorboard_logs
         self.file_writer = tf.summary.create_file_writer(self.tensorboard_logs)
 
-        self.dense5 = layers.Dense(256, activation='leaky_relu')
-
-
         # Define the layers as instance attributes
-        self.initializer = tf.keras.initializers.HeNormal()
+        initializer = tf.keras.initializers.HeNormal()
+
+        # Define encoder layers
+        
+        self.dense1 = layers.Flatten()
+        self.dense2 = layers.Dense(1024, activation='relu')
+        self.dense3 = layers.Dense(512, activation='relu')
+        self.dense4 = layers.Dense(256, activation='relu')
         self.latent_dim = latent_dim
 
         self.z_mean_dense = layers.Dense(latent_dim, name="z_mean")
         self.z_log_var_dense = layers.Dense(latent_dim, name="z_log_var")
         self.sampling_layer = SamplingLayer()
         #self.reshape_latent_space = layers.Reshape((self.params["batch_size"], 10, 10))
-     
+
+        self.dense5 = layers.Dense(256, activation='relu')
+        self.dense6 = layers.Dense(512, activation='relu')
+        self.dense7 = layers.Dense(1024, activation='relu')
+        self.dense8 = layers.Dense(2048, activation='sigmoid')
+        self.decoder_output = layers.Reshape(self.input_shape_)
         self.model, self.latent_space = self.assemble_full_model(input_shape_, n_nodes)
 
     def call(self, inputs, training=None, mask=None):
 
         # x = inputs[0]  # Assuming inputs is a tuple and you only need the first element
         outputs = self.model(inputs, training=training)
-        return outputs
-    
+        return outputs, self.latent_space
+
     def build_encoder_module(self, inputs, input_shape):
         """
-        Encoder using Conv1D layers to compress features across time.
-        Input shape: (batch, 400, 2048)
+        Encoder implementation
         """
-        x = layers.Conv1D(filters=1000, kernel_size=10, padding='same', activation='leaky_relu',
-                        kernel_initializer=self.initializer, 
-                        kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]),)(inputs)
-        x = layers.Conv1D(filters=512, kernel_size=10, padding='same', activation='leaky_relu',
-                           kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
         
-        x = layers.Conv1D(filters=256, kernel_size=10, padding='same', activation='leaky_relu',
-                          kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        x = layers.Conv1D(filters=128, kernel_size=10, padding='same', activation='leaky_relu', 
-                                      kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        x = layers.Conv1D(filters=self.params["latent_dim"], kernel_size=3, padding='same', activation='leaky_relu', 
-                          kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
+        
+        x = self.dense1(inputs)
+        x = self.dense2(x)
+        x = self.dense3(x)
+        x = self.dense4(x)
 
-        x = layers.GlobalAveragePooling1D()(x)  # Output shape: (batch, 128)
-
-        z_mean = self.z_mean_dense(x)  # Dense(latent_dim)
+        z_mean = self.z_mean_dense(x)
         z_log_var = self.z_log_var_dense(x)
         z = self.sampling_layer([z_mean, z_log_var])
         
+        #z = self.reshape_latent_space(z)
+
         return z, z_mean, z_log_var
 
-    def build_decoder_module(self, inputs):
-        """
-        Decoder that reconstructs the signal using Dense + Conv1D layers.
-        Input: (batch, latent_dim)
-        Output: (batch, 400, 2048)
-        """
-        x = layers.Dense(self.params["latent_dim"], activation='leaky_relu')(inputs)
-        x = layers.Dense(self.params["latent_dim"]*5, activation='leaky_relu')(x)
-
-        x = layers.Dense(self.params["batch_size"] * self.params["latent_dim"], activation='leaky_relu')(x)
-        x = layers.Reshape((self.params["batch_size"], self.params["latent_dim"]))(x)             # (batch, 400, 128)
-        x = layers.Conv1D(filters=256, kernel_size=10, padding='same', activation='leaky_relu', 
-                          kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        x = layers.Conv1D(filters=512, kernel_size=10, padding='same', activation='leaky_relu', 
-                          kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        x = layers.Conv1D(filters=1000, kernel_size=10, padding='same', activation='leaky_relu', 
-                    kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        x = layers.Conv1D(filters=2048, kernel_size=10, padding='same', activation='leaky_relu', 
-                          kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-
-        return x  
-
-    def build_decoder_from_latent(self):
-        """
-        Crea un modelo separado que decodifica vectores latentes z en señales (400, 2048).
-        Ideal para muestreo/generación desde el espacio latente.
-        """
-        latent_inputs = layers.Input(shape=(self.latent_dim,), name="z_input")  # (batch, latent_dim)
-
-        x = layers.Dense(self.params["latent_dim"], activation='leaky_relu')(latent_inputs)
-        x = layers.Dense(self.params["latent_dim"]*5, activation='leaky_relu')(latent_inputs)
-
-        x = layers.Dense(self.params["batch_size"] * self.params["latent_dim"], activation='leaky_relu')(x)
-        x = layers.Reshape((self.params["batch_size"], self.params["latent_dim"]))(x)             # (batch, 400, 128)
-        x = layers.Conv1D(filters=256, kernel_size=10, padding='same', activation='leaky_relu')(x)
-        x = layers.Conv1D(filters=512, kernel_size=10, padding='same', activation='leaky_relu')(x)
-        x = layers.Conv1D(filters=1000, kernel_size=10, padding='same', activation='leaky_relu', 
-            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        x = layers.Conv1D(filters=2048, kernel_size=10, padding='same', activation='leaky_relu')(x)
-
-        self.decoder_from_latent = tf.keras.Model(latent_inputs, x, name="decoder_from_latent")
-        return self.decoder_from_latent
-
-
+    def build_decoder_module(self, inputs, input_shape, latent_inputs):
+        '''
+        Decoder implementation
+        
+        '''
+        
+        # x = self.decoder_conv1(latent_inputs)
+        x = self.dense5(inputs)
+        x = self.dense6(x)
+        x = self.dense7(x)
+        x = self.dense8(x)
+        output = self.decoder_output(x)
+        return output
 
     def build_autoencoder_branch(self, inputs, input_shape):
         '''
         Build assamble between encoder and decoder
         '''
         latent_space, z_mean, z_log_var = self.build_encoder_module(inputs, input_shape)
-        decoded_output = self.build_decoder_module(latent_space)
+        decoded_output = self.build_decoder_module(inputs, input_shape, latent_space)
         return z_mean, z_log_var, latent_space, decoded_output
 
     def assemble_full_model(self, input_shape, n_nodes):
@@ -154,15 +125,27 @@ class Gen_VAE(Model):
             axis=raxis,
         )
 
-    def compute_loss_VAE(self, y_pred, y_true, z_mean, z_log_var):
-        mse_loss = tf.reduce_mean(tf.reduce_sum(tf.keras.losses.mean_squared_error(y_true, y_pred), axis=[1]))
+    def compute_loss_VAE(self, x, y):
+
+        # inputs = layers.Input(shape=self.input_shape)
+        z_mean, z_log_var, latent_space, autoencoder_output = (
+            self.build_autoencoder_branch(x, self.input_shape_)
+        )
+        mse_loss = tf.reduce_mean(
+            tf.reduce_sum(
+                tf.keras.losses.mean_squared_error(
+                    y, x
+                ),  # x es la salida y y es la etiqueta
+                axis=[1],  # Reducir todas las dimensiones excepto el batch
+            )
+        )
 
         logvar = tf.clip_by_value(z_log_var, -10.0, 10.0)
         kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(logvar + 1e-8))
-        kl_loss = tf.reduce_mean(tf.reduce_sum(kl_loss, axis=1))
-
+        kl_loss = tf.reduce_mean(tf.reduce_sum(kl_loss))
         total_loss = mse_loss + kl_loss
-        return total_loss, mse_loss, kl_loss
+
+        return total_loss, mse_loss, kl_loss, latent_space
 
     def train_step(self, data):
         """
@@ -173,38 +156,36 @@ class Gen_VAE(Model):
         x, y_true_autoencoder = data
 
         with tf.GradientTape() as tape:
-
+            # Forward pass through the model
             y_pred_autoencoder = self.model(x, training=True)
-
-            _, z_mean, z_log_var, _ = self.build_autoencoder_branch(x, self.input_shape_)
-
-
-            total_loss, mse_autoencoder, kl_loss = self.compute_loss_VAE(
-                y_pred_autoencoder, y_true_autoencoder, z_mean, z_log_var
+            # Compute loss for the autoencoder branch (e.g., VAE loss with reconstruction + KL divergence)
+            loss_autoencoder, mse_autoencoder, kl_loss, latent_space = (
+                self.compute_loss_VAE(y_pred_autoencoder, y_true_autoencoder)
             )
 
             # Total loss (you can adjust weights if one branch's loss should have more influence)
-            total_loss = total_loss  
+            total_loss = loss_autoencoder
         # Compute and apply gradients based on the total loss
 
-        gradients = tape.gradient(total_loss, self.trainable_variables)
+        gradients = tape.gradient(total_loss, self.model.trainable_variables)
         # Clip gradients to avoid exploding gradients (based on their global norm)
         clipped_gradients, global_norm = tf.clip_by_global_norm(
-            gradients, clip_norm=5.0
+            gradients, clip_norm=1.0
         )
-        self.optimizer.apply_gradients(zip(clipped_gradients, self.trainable_variables))
-
+        self.optimizer.apply_gradients(
+            zip(clipped_gradients, self.model.trainable_variables)
+        )
         step = int(self.optimizer.iterations)
         with self.file_writer.as_default():
             tf.summary.scalar("loss/total_loss", total_loss, step=step)
-            tf.summary.scalar("loss/loss_autoencoder", total_loss  , step=step)
+            tf.summary.scalar("loss/loss_autoencoder", loss_autoencoder, step=step)
             tf.summary.scalar("loss/mse_autoencoder", mse_autoencoder, step=step)
 
             # self.log_latent_space_image(latent_space, step)
 
         return {
             "total_loss": total_loss,
-            "loss_autoencoder": total_loss  ,
+            "loss_autoencoder": loss_autoencoder,
             "mse_autoencoder": mse_autoencoder,
         }
 
@@ -217,17 +198,20 @@ class Gen_VAE(Model):
 
         # Forward pass through the model without gradient tracking
         y_pred_autoencoder = self.model(x, training=False)
-        _, z_mean, z_log_var, _ = self.build_autoencoder_branch(x, self.input_shape_)
 
-        total_loss, mse_autoencoder, kl_loss = self.compute_loss_VAE(
-            y_pred_autoencoder, y_true_autoencoder, z_mean, z_log_var
+        # Compute loss for the autoencoder branch
+        loss_autoencoder, mse_autoencoder, kl_loss, latent_space = (
+            self.compute_loss_VAE(y_pred_autoencoder, y_true_autoencoder)
         )
         
+
+        # Total loss
+        total_loss = loss_autoencoder 
 
         # Return losses for tracking
         return {
             "total_loss": total_loss,
-            "loss_autoencoder": total_loss,
+            "loss_autoencoder": loss_autoencoder,
             "mse_autoencoder": mse_autoencoder,
         }
 

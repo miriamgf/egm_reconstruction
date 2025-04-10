@@ -103,11 +103,13 @@ class LoadExploreData:
             geometry_tank=f["data"]["ECGi"]["geometries"]["tank"]
             tank_faces=geometry_tank["faces"]
             tank_vertices=geometry_tank["vertices"]
+            tank_el_position=f["data"]["ECGi"]['geometries']['tank_el_position']
 
             sio.savemat(self.path_to_save_geom, {'geometry_tank': geometry_tank,
                                     'tank_faces': tank_faces,
                                     'signal_tank': signal_tank, 
                                     'tank_vertices': tank_vertices, 
+                                    'tank_el_position': tank_el_position
                                     })
             
             

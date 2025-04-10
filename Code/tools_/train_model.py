@@ -277,29 +277,69 @@ class TrainModel:
             print('Error: Model name not identified. Terminating training...')
             sys.exit()
 
+        '''
         try:
             print(model.model.summary())
         except:
             print(model.summary())
-                # Obtener el uso de memoria antes de cargar los datos
+        '''
+
+        print("Compilando modelo...")
         process = psutil.Process(os.getpid())
         mem_after_compiling = process.memory_info().rss / (1024 * 1024)  # en MB
         print(f"Uso de memoria tras compilar modelos: {mem_after_compiling:.2f} MB")
-        
-        
+        '''
         #converto to tensor
-        x_train = tf.convert_to_tensor(np.array(x_train))#, dtype=tf.float32)
-        y_train = tf.convert_to_tensor(np.array(y_train))#, dtype=tf.float32)
-        x_val = tf.convert_to_tensor(np.array(x_val))#, dtype=tf.float32)
-        y_val = tf.convert_to_tensor(np.array(y_val))#, dtype=tf.float32)
+        x_train = np.array(x_train)
+        y_train = np.array(y_train)
+        x_val = np.array(x_val)
+        y_val = np.array(y_val)
+        '''
+        # Debug: try generator
+   
+
+        def train_generator():
+            for x, y in zip(x_train, y_train):
+                x_batch = np.expand_dims(x, axis=0)  # (1, 400, 12, 32, 1)
+                y_batch = np.expand_dims(y, axis=0)  # (1, 400, 2048)
+                yield x_batch, (x_batch, y_batch)
+
+        train_dataset = tf.data.Dataset.from_generator(
+            train_generator,
+            output_signature=(
+                tf.TensorSpec(shape=(1, self.params["batch_size"], 12, 32, 1), dtype=tf.float32),
+                (
+                    tf.TensorSpec(shape=(1, self.params["batch_size"], 12, 32, 1), dtype=tf.float32),
+                    tf.TensorSpec(shape=(1, self.params["batch_size"], 2048), dtype=tf.float32)
+                )
+            )
+        )
+        def val_generator():
+            for x, y in zip(x_val, y_val):
+                yield np.expand_dims(x, 0), (np.expand_dims(x, 0), np.expand_dims(y, 0))
+
+        val_dataset = tf.data.Dataset.from_generator(
+            val_generator,
+            output_signature=(
+                tf.TensorSpec(shape=(1, self.params["batch_size"], 12, 32, 1), dtype=tf.float32),
+                (
+                    tf.TensorSpec(shape=(1, self.params["batch_size"], 12, 32, 1), dtype=tf.float32),
+                    tf.TensorSpec(shape=(1, self.params["batch_size"], 2048), dtype=tf.float32)
+                )
+            )
+        )
+
 
         #Convert to tf.Dataset format
+        '''
         train_dataset = tf.data.Dataset.from_tensor_slices((x_train, (x_train, y_train))) \
             .batch(self.params["num_batch_iter"], drop_remainder=False) \
             .prefetch(tf.data.AUTOTUNE)  # Precarga automáticamente
+ 
         val_dataset = tf.data.Dataset.from_tensor_slices((x_val, (x_val, y_val))) \
             .batch(self.params["num_batch_iter"], drop_remainder=False)  \
             .prefetch(tf.data.AUTOTUNE)  # Precarga automáticamente
+        '''
 
         try:
             model.build(input_shape=(None, *x_train.shape[1:]))  
@@ -307,7 +347,7 @@ class TrainModel:
         except Exception as e:
             print(f'Error al construir el modelo: {e}')
         
-        del x_train, y_train, x_val, y_val
+ 
 
         mem_after = process.memory_info().rss / (1024 * 1024)  # en MB
         print(f"Uso de memoria después de cargar los datos: {mem_after:.2f} MB")        
@@ -350,13 +390,10 @@ class TrainModel:
                 model.model.save(self.experiment_dir+"/model_weights.h5")
                 model_loaded = load_model(self.experiment_dir + "/model_weights.h5",
                             custom_objects={ 'SamplingLayer': SamplingLayer})
-
-        
-  
         
         history_serializable = {key: np.array(value).astype(float).tolist() for key, value in self.history.history.items()}
-
-        with open('history.json', 'w') as json_file:
+        path_history = self.experiment_dir + "history.json"
+        with open(path_history, 'w') as json_file:
             json.dump(history_serializable, json_file)
 
         #Learning curves
@@ -364,6 +401,7 @@ class TrainModel:
 
         #Close gpu log
         #log_gpu.terminate()
+        del x_train, y_train, x_val, y_val
         tf.keras.backend.clear_session()
         gc.collect()
 

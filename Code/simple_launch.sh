@@ -1,10 +1,22 @@
 #!/bin/bash
 
-# Ejecutar comandos de terminal automáticamente
 
-# Ejecutar cada comando en segundo plano y redirigir la salida a archivos de log
-
-echo "Saving training log at: output/logs/OMAMI_no_filt_testing2_repeated_l2.log" | tee -a "$log_file"
-nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --optuna false --filter_EGM false > output/logs/OMAMI_no_filt_testing2_repeated_l2.log 2>&1  &
+echo "Saving training log at: output/logs/OMAMI_stratified_no_oversampling.log" | tee -a "$log_file"
+nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI_VAE' --optuna false --filter_EGM false --split_mode 'stratified' --oversampling false  > output/logs/OMAMI_stratified_no_oversampling.log 2>&1  &
 wait
 
+echo "Saving training log at: output/logs/OMAMI_VAE_stratified_no_oversampling.log" | tee -a "$log_file"
+nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI_VAE' --optuna false --filter_EGM false --split_mode 'stratified' --oversampling false  > output/logs/OMAMI_VAE_stratified_no_oversampling.log 2>&1  &
+wait
+
+echo "Saving training log at: output/logs/OMAMI_stratified_oversampling.log" | tee -a "$log_file"
+nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --optuna false --filter_EGM false --split_mode 'stratified' --oversampling true  > output/logs/OMAMI_stratified_oversampling.log 2>&1  &
+wait
+
+echo "Saving training log at: output/logs/OMAMI_VAE_stratified_oversampling.log" | tee -a "$log_file"
+nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI_VAE' --optuna false --filter_EGM false --split_mode 'stratified' --oversampling true  > output/logs/OMAMI_VAE_stratified_oversampling.log 2>&1  &
+wait
+
+echo "Saving training log at: output/logs/OMAMI_VAE_gen.log" | tee -a "$log_file"
+nohup python -u scripts/generation_EGM.py --algorithm 'OMAMI_VAE' --optuna false --filter_EGM false > output/logs/OMAMI_VAE_gen.log 2>&1  &
+wait

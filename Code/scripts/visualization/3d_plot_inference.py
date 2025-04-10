@@ -9,6 +9,10 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.models import load_model
 import ast
 import argparse
+from scipy.interpolate import Rbf
+
+
+
 from tools_.preprocess_data import Preprocess_Dataset
 from scripts.visualization.utils.renderizer import EGMRenderer_BSP
 from scripts.config import ParseHiperparams
@@ -24,9 +28,6 @@ import tools_.tools as tools
 from scripts.evaluation.metrics import Metrics
 from tools_.tools_inference import postprocess_prediction
 import pandas as pd
-
-
-
 from scripts.Tikhonov.compute_tik import TikhonovReconstruction
 from scripts.evaluate_function import *
 from tools_.tools import corr_pearson_cols
@@ -52,6 +53,7 @@ torso_num=2
 
 plot_EGMs=False
 plot_tank=True
+interpolate_216=True
 
 #####################
 #Load reconstructions
@@ -91,13 +93,45 @@ elif plot_tank:
     tank_faces=mat_tank_data["tank_faces"] -1
     tank_vertices=mat_tank_data["tank_vertices"]
     signal_tank=mat_tank_data["signal_tank"]
+    tank_el_position=mat_tank_data["tank_el_position"][0] -1
+
+    vertices_el_position=tank_vertices[:, tank_el_position]
 
     #adapt to match structure
     faces=tank_faces.T
+    vertices=vertices_el_position.T
     vertices=tank_vertices.T
-    bspm_signal=signal_tank.T
-    
 
+    bspm_signal=signal_tank.T
+
+    scalars = np.zeros((tank_vertices.shape[1], 32001))
+    scalars[tank_el_position, :] = bspm_signal 
+
+    # Interpol 
+    all_vertices = tank_vertices.T
+    electrode_vertices = all_vertices[tank_el_position, :]
+
+    if interpolate_216:
+        interpolated_signals = np.zeros((all_vertices.shape[0],bspm_signal.shape[1] ))
+        # Recorremos cada instante temporal y precomputamos todo fuera del bucle
+        for t in range(bspm_signal.shape[1]):
+            values = bspm_signal[:, t]  # Valores en los 60 electrodos
+            rbf = Rbf(
+                electrode_vertices[:, 0],
+                electrode_vertices[:, 1],
+                electrode_vertices[:, 2],
+                values,
+                function='linear'  # o 'multiquadric', etc.
+            )
+            interpolated = rbf(
+                all_vertices[:, 0],
+                all_vertices[:, 1],
+                all_vertices[:, 2]
+            )
+            interpolated_signals[:, t] = np.clip(interpolated, -1, 1)  
+
+        bspm_signal=interpolated_signals
+        
     BSP_3D_PLOTTER(torso_num,
                 None,
                 None,

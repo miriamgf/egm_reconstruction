@@ -199,7 +199,7 @@ class BSP_3D_PLOTTER:
 
         renderer_var.renderer.AddActor2D(scalar_bar_var)
         renderer_label.renderer.AddActor2D(scalar_bar_label)
-
+    
         render_window = vtk.vtkRenderWindow()
         render_window.SetSize(1600, 600)
         render_window.AddRenderer(renderer_var.renderer)
@@ -217,9 +217,10 @@ class BSP_3D_PLOTTER:
         window_to_image_filter = vtk.vtkWindowToImageFilter()
         window_to_image_filter.SetInput(render_window)
 
-        fps = 10
+        fps = 5
         array_frames = []
-        for instant in range(0, self.duration, 50):
+        for instant in range(0, self.duration, 1):
+
             vtk_scalars_var = numpy_to_vtk(var_represent[:, instant], deep=True)
             vtk_scalars_label = numpy_to_vtk(var_represent_original[:, instant], deep=True)
 
@@ -228,6 +229,9 @@ class BSP_3D_PLOTTER:
 
             renderer_var.mesh.Modified()
             renderer_label.mesh.Modified()
+
+            
+
 
             render_window.Render()
             window_to_image_filter.Modified()

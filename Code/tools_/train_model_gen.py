@@ -2,7 +2,7 @@ import sys
 
 sys.path.append("../Code")
 import datetime
-
+import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from tensorflow import keras
@@ -15,6 +15,8 @@ from models.multioutput_VAE import MultiOutput_VAE
 from models.multioutput_VAE_skip import MultiOutput_VAE_skip
 from models.gen_vae import Gen_VAE
 from keras.callbacks import TensorBoard
+from keras.callbacks import TensorBoard, EarlyStopping, ReduceLROnPlateau
+from optuna.integration import TFKerasPruningCallback
 
 tf.random.set_seed(42)
 import datetime
@@ -105,6 +107,7 @@ class TrainModelGen:
         self.y_val = y_val
         self.models_dir = models_dir
         self.experiment_dir = experiment_dir
+        self.trial=None
 
     @tf.function(jit_compile=False)
     def train_main(self, x_train, x_test, x_val, y_train, y_test, y_val):
@@ -166,6 +169,8 @@ class TrainModelGen:
         #ssh -L 6006:localhost:6006 miriamgf@10.110.100.78 en terminal LOCAL
         #tensorboard --logdir=output/tensorboard/logs/
 
+        callbacks_list, optimizer = self.define_callbacks(x_train)
+
 
         # Choose algorithm {OMAMI, OMAMI_VAE, OMAMI_ski, OMAMI_VAE_ski}
 
@@ -177,6 +182,7 @@ class TrainModelGen:
                 input_shape_=y_train.shape[1:],
                 n_nodes=2048,
                 tensorboard_logs=self.experiment_dir + "tb_logs/",
+                latent_dim=self.params["latent_dim"]
             )
 
             print(model.model.summary())
@@ -188,17 +194,56 @@ class TrainModelGen:
             print(model.model.summary())
         except:
             print(model.summary())
+        
+        def train_generator():
+            for x in y_train:
+                x_batch = np.expand_dims(x, axis=0)  # (1, 400, 2048)
+                yield x_batch, x_batch  # input = output
+
+        def val_generator():
+            for x in y_train:
+                x_batch = np.expand_dims(x, axis=0)  # (1, 400, 2048)
+                yield x_batch, x_batch  # input = output
+
+        train_dataset = tf.data.Dataset.from_generator(
+            train_generator,
+                output_signature=(
+                    tf.TensorSpec(shape=(1, self.params["batch_size"], self.params["n_nodes_regression"]), dtype=tf.float32),
+                    tf.TensorSpec(shape=(1, self.params["batch_size"], self.params["n_nodes_regression"]), dtype=tf.float32)
+                )
+            )
+
+        val_dataset = tf.data.Dataset.from_generator(
+            val_generator,
+            output_signature=(
+                tf.TensorSpec(shape=(1, self.params["batch_size"], self.params["n_nodes_regression"]), dtype=tf.float32),
+                tf.TensorSpec(shape=(1, self.params["batch_size"], self.params["n_nodes_regression"]), dtype=tf.float32)
+            )
+        )
             
         # Train the model
         history = model.fit(
-            x=y_train,
-            y=y_train,
+            train_dataset,
+            validation_data=val_dataset,
             batch_size=1,
             epochs=self.params["n_epochs"],
-            validation_data=(y_val, y_val),
             callbacks=[early_stopping_callback, cp_callback, tensorboard_callback, lr_decay],
         )
-        
+
+        try:
+            print('saving model')
+            #Save model and history    
+            model.save(self.experiment_dir+"/model_weights.h5")
+        except:
+
+            try:
+
+                model.model.save(self.experiment_dir+"/model_weights.h5")
+            
+            except:
+
+                model.model.save(self.experiment_dir+"/model_weights.h5")
+                
         # Plot and save training and validation curves
         try:
             plt.figure()
@@ -249,7 +294,52 @@ class TrainModelGen:
 
     
         return model, history
+    
+    def define_callbacks(self, x_train):
+         # Callbacks
+        
+        cp_callback = tf.keras.callbacks.ModelCheckpoint(
+            filepath=self.experiment_dir+ "model_weights.h5",
+            save_weights_only=False,
+            verbose=1,
+            save_best_only=True,
+        )
 
+        number_of_steps = len(x_train) // self.params["num_batch_iter"]  # Steps por época
+        decay_steps = number_of_steps * 5  # Reducimos el LR cada 5 épocas (ajustable)
+        initial_learning_rate = self.params["learning_rate"]
+
+        #lr_schedule = keras.optimizers.schedules.ExponentialDecay(
+            #initial_learning_rate,
+            #decay_steps=decay_steps,  
+            #decay_rate=0.96,  
+            #staircase=True  
+        #)
+        #print('Applying lr decay every ', decay_steps, ' steps. Start at', initial_learning_rate)
+
+        lr_scheduler = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=4, min_lr=1e-6)
+
+        early_stopping_callback = tf.keras.callbacks.EarlyStopping(
+            monitor="val_loss", patience=self.params["early_stopping_patience"]
+        )
+        # Optimizer configuration
+        if self.params["algorithm"]=="OMAMI_VAE" or self.params["algorithm"]=="OMAMI_VAE_skip" or self.params["algorithm"]=="OMAMI_VAE_Reduced":
+            optimizer = Adam(learning_rate=initial_learning_rate, clipvalue=1.0) #probar clipnorm
+        else:
+            optimizer = Adam(learning_rate=initial_learning_rate)
+
+        tensorboard_callback = TensorBoard(log_dir='output/tensorboard/logs/'+self.params['experiment_name'], histogram_freq=1)
+
+        callbacks_list = [early_stopping_callback, tensorboard_callback, lr_scheduler ]
+        print(callbacks_list)
+        #ssh -L 6006:localhost:6006 miriamgf@10.110.100.78 en terminal LOCAL
+        #tensorboard --logdir=output/tensorboard/logs/ en terminal REMOTO
+
+        if self.trial is not None:
+            pruning_callback = TFKerasPruningCallback(self.trial, monitor="val_loss")
+            callbacks_list.append(pruning_callback)
+        
+        return callbacks_list, optimizer
     
 
     def __call__(self, verbose=False, all=False):

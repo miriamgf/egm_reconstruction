@@ -34,7 +34,6 @@ current = os.path.dirname(os.path.realpath(__file__))
 
 torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
 
-
 class LoadDataset:
     """
     The LoadDataset class loads signals from original format (.mat), performs basic preprocessing in EGMs
@@ -80,7 +79,7 @@ class LoadDataset:
         self.unfold_code = unfold_code
         self.inference = inference
 
-        self.SEED=self.params["seed"]
+        self.SEED=50
         random.seed(self.SEED)        
         np.random.seed(self.SEED)    
         np.random.seed(42)
@@ -150,6 +149,8 @@ class LoadDataset:
             all_model_names = ["Model {}".format(m) for m in range(n + 1)]
         print(len(all_model_names), "Models")
 
+        #Load annotations (class related to complexity and patterns)
+
         # % Load models
         X = []
         Y = []
@@ -202,8 +203,6 @@ class LoadDataset:
         print('Load - all_model_names', all_model_names)
         cont=0
         for model_name in all_model_names:
-
-
 
             if self.inference:
                 if model_name not in model_name:

@@ -269,7 +269,7 @@ class EGM_3D_PLOTTER:
             var_represent_original = y_label_n
 
         var_represent=y_reconstructed
-        var_represent_original=y_label
+        var_represent_original=y_label_n
 
         elevation_values_range = [270, 30]
 

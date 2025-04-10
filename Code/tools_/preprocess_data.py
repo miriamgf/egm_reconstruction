@@ -23,6 +23,7 @@ from scipy.io import savemat
 from tools_.noise_simulation import *
 from tools_.tools_1 import *
 from tools_.k_fold import KFold_Stratified
+from tools_.stratified_split import StratifiedSplit
 
 # from noise_simulation import *
 
@@ -56,7 +57,7 @@ class Preprocess_Dataset:
         dic_vars,
         Y,
         all_model_names,
-        transfer_matrices,experiment_dir, norm_egm=True, inference = False, shuffle_patient=False
+        transfer_matrices,experiment_dir,split_mode, norm_egm=True, inference = False, shuffle_patient=False
     ):
         self.params = params
         self.X_1channel = X_1channel
@@ -71,6 +72,7 @@ class Preprocess_Dataset:
         self.norm_egm=norm_egm
         self.inference =inference
         self.shuffle_patient=shuffle_patient
+        self.split_mode=split_mode
         try:
             self.SEED = self.params["seed"]
         except:
@@ -155,7 +157,6 @@ class Preprocess_Dataset:
             random_split=True,
             train_percentage=0.90,
             test_percentage=0.2,
-            deterministic=True,
         )
 
         print("TRAIN SHAPE:", x_train.shape, "models:", train_models)
@@ -413,7 +414,6 @@ class Preprocess_Dataset:
         random_split,
         train_percentage,
         test_percentage,
-        deterministic=True,
     ):
         """
         This function splits the input tensor into train, tets and validation
@@ -462,7 +462,7 @@ class Preprocess_Dataset:
         # Random
         if random_split:
 
-            if deterministic:
+            if self.split_mode=="deterministic":
                 if not self.params["cross_validation"]:
                     # Deterministic assignation
                     train_models_deterministic = [
@@ -558,7 +558,7 @@ class Preprocess_Dataset:
                     for model in val_models_deterministic:
                         file.write(model + "\n")
 
-            else:
+            elif self.split_mode=="random":
 
                 if caution_split:
                     train_models = random.sample(
@@ -580,6 +580,35 @@ class Preprocess_Dataset:
                     int(np.floor(self.AF_models[-1] * test_percentage)),
                 )
                 val_models = [x for x in aux_models if x not in test_models]
+            
+            elif self.split_mode=="stratified":
+                print("Stratified split...")
+                StratifiedSplit_obj = StratifiedSplit(classes_to_oversample=self.params["classes_to_oversample"], oversampling=self.params["oversampling"])
+                train_models_strat, test_models_strat, val_models_strat=StratifiedSplit_obj()
+
+                train_models, test_models, val_models = [], [], []
+                for elemento in train_models_strat:
+                    if elemento in self.all_model_names:
+                        train_models.append(self.all_model_names.index(elemento))
+
+                for elemento in test_models_strat:
+                    if elemento in self.all_model_names:
+                        test_models.append(self.all_model_names.index(elemento))
+
+                for elemento in val_models_strat:
+                    if elemento in self.all_model_names:
+                        val_models.append(self.all_model_names.index(elemento))
+                
+                #Save to dic
+                with open(self.experiment_dir+"train_models.txt", "w") as file:
+                    for model in train_models_strat:
+                        file.write(model + "\n")
+                with open(self.experiment_dir+"test_models.txt", "w") as file:
+                    for model in test_models_strat:
+                        file.write(model + "\n")
+                with open(self.experiment_dir+"val_models.txt", "w") as file:
+                    for model in val_models_strat:
+                        file.write(model + "\n")
 
 
             if self.shuffle_patient:

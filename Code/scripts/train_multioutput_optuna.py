@@ -26,6 +26,7 @@ import tensorflow as tf
 from keras import backend as K
 from tensorflow.keras.models import load_model
 
+from tools_.train_model import TrainModel
 from config import ParseHiperparams, GetMetadata
 from src.training.optuna_opt import OptunaOpt
 from config import str_to_bool
@@ -34,10 +35,10 @@ from tools_.load_dataset import LoadDataset
 from tools_.preprocess_data import Preprocess_Dataset
 from evaluate_function import evaluate_function_multioutput, evaluate_function_multioutput
 from tools_.preprocessing_compression import *
-from tools_.train_model import TrainModel
 import tools_.tools
 from tools_.df_mapping import *
 from tools_.tools import *
+
 
 
 # Clear GPU
@@ -60,7 +61,7 @@ params["SNR_white_noise"]=100
 params["filter_EGM"]=False
 params['optuna_optimization']=False
 print('Params to train: ', params)
-params["algorithm"]="OMAMI_VAE" #default
+params["algorithm"]="OMAMI" #default
 
 #["algorithm"]='OMAMI_VAE'
 if params["algorithm"]=='OMAMI':
@@ -87,10 +88,15 @@ try:
     parser.add_argument("--n_nodes", type=int, help="682, 1024", required=False)
     parser.add_argument("--fold", type=int, help="0, 1, 2, 3, 4", required=False)
     parser.add_argument("--filter_EGM", type=str_to_bool, help="True or False", required=False)
+
+    # Data Augmentation
     parser.add_argument("--shuffle_patient", type=str_to_bool, help="True or False", required=False)
     parser.add_argument("--time_masking", type=str_to_bool, help="True or False", required=False)
     parser.add_argument("--attention", type=str_to_bool, help="True or False", required=False)
 
+    # Stratified split
+    parser.add_argument("--split_mode", type=str, help="stratified or random", required=False)
+    parser.add_argument("--oversampling", type=str_to_bool, help="True or False", required=False)
 
     #Noise
     parser.add_argument('--SNR_em_noise', type=int, help='EM noise SNR', required=False)
@@ -110,6 +116,9 @@ try:
     SNR_white_noise=args.SNR_white_noise
     SNR_em_noise=args.SNR_em_noise
     attention=args.attention
+    split_mode=args.split_mode
+    oversampling=args.oversampling
+    
 
     params["algorithm"]=algorithm
 
@@ -132,6 +141,8 @@ try:
 
     params["n_nodes_regression"]=n_nodes
 
+    # Data Augmentation
+
     if shuffle_patient is not None:
         params["shuffle_patient"]=shuffle_patient
     else:
@@ -151,6 +162,19 @@ try:
         params["attention_layer"]=attention
     else:
         params["attention_layer"]=False
+
+    # Stratified split
+
+    if split_mode is not None:
+        params["split_mode"]=split_mode
+    else:
+        params["split_mode"]="deterministic"
+    if oversampling is not None:
+        params["oversampling"]=oversampling
+    else:
+        params["oversampling"]=False
+    
+    #Optuna
 
     if optuna:
         params["optuna_optimization"] = True
@@ -173,8 +197,8 @@ except SystemExit as e:
 
     algorithm = params["algorithm"]
     SNR_white_noise = 100
-    params['SNR_white_noise']=100
-    params['attention_layer']=True
+    params['SNR_white_noise']=20
+    params['attention_layer']=False
 
     print('Failed in parsing bash params :( ')
     pass
@@ -229,6 +253,22 @@ if params["attention_layer"]:
     experiment_name= experiment_name + "_attention"
 
 params["early_stopping_patience"] = 40
+
+
+params["split_mode"] = "stratified"
+params["oversampling"] = False
+params["classes_to_oversample"]= [0,1, 5]
+params["seed"]=3
+params["learning_rate"]=0.0001
+
+if params["split_mode"]=="stratified":
+    if params["oversampling"]:
+
+        experiment_name= experiment_name + "_strat_oversampling"
+    else:
+        experiment_name= experiment_name + "_strat"
+
+#experiment_name="TOY"
 print('Experiment name: ', experiment_name)
 params["experiment_name"]=experiment_name
 
@@ -409,8 +449,9 @@ plt.savefig('output/figures/input_output/before_norm.png')
     all_model_names,
     transfer_matrices,
     experiment_dir,
+    split_mode=params["split_mode"],
     norm_egm=True,
-    shuffle_patient= params["shuffle_patient"]
+    shuffle_patient= params["shuffle_patient"], 
 )()
 
 
