@@ -12,7 +12,7 @@ tf.config.experimental_run_functions_eagerly(
 tf.executing_eagerly()
 
 
-class Gen_VAE(Model):
+class Gen_VAE_3D(Model):
     """
     Used to generate synthetic EGMs using a trained VAE model.
     """
@@ -20,7 +20,7 @@ class Gen_VAE(Model):
     def __init__(
         self, params, input_shape_, n_nodes, latent_dim=128, tensorboard_logs=None
     ):
-        super(Gen_VAE, self).__init__()
+        super(Gen_VAE_3D, self).__init__()
 
         if not os.path.exists(tensorboard_logs):
             os.makedirs(tensorboard_logs)
@@ -31,9 +31,6 @@ class Gen_VAE(Model):
         tf.random.set_seed(self.SEED)
         self.tensorboard_logs = tensorboard_logs
         self.file_writer = tf.summary.create_file_writer(self.tensorboard_logs)
-
-        self.dense5 = layers.Dense(256, activation='leaky_relu')
-
 
         # Define the layers as instance attributes
         self.initializer = tf.keras.initializers.HeNormal()
@@ -54,72 +51,104 @@ class Gen_VAE(Model):
     
     def build_encoder_module(self, inputs, input_shape):
         """
-        Encoder using Conv1D layers to compress features across time.
-        Input shape: (batch, 400, 2048)
+        Encoder usando Conv3D para capturar patrones espacio-temporales.
+        Se espera que inputs tenga shape (batch, 400, 2048), que se reinterpreta como (400, 32, 64).
         """
-        x = layers.Conv1D(filters=1000, kernel_size=10, padding='same', activation='leaky_relu',
-                        kernel_initializer=self.initializer, 
-                        kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]),)(inputs)
-        x = layers.Conv1D(filters=512, kernel_size=10, padding='same', activation='leaky_relu',
-                           kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        
-        x = layers.Conv1D(filters=256, kernel_size=10, padding='same', activation='leaky_relu',
-                          kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        x = layers.Conv1D(filters=128, kernel_size=10, padding='same', activation='leaky_relu', 
-                                      kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        x = layers.Conv1D(filters=self.params["latent_dim"], kernel_size=3, padding='same', activation='leaky_relu', 
-                          kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
+        batch_size = tf.shape(inputs)[0]
 
-        x = layers.GlobalAveragePooling1D()(x)  # Output shape: (batch, 128)
+        # Reorganiza de (batch, 400, 2048) → (batch, 400, 32, 64, 1)
+        x = tf.reshape(inputs, (-1, 400, 32, 64, 1))
 
-        z_mean = self.z_mean_dense(x)  # Dense(latent_dim)
+        x = layers.Conv3D(
+            filters=32,
+            kernel_size=(5, 3, 3),
+            strides=(2, 2, 2),
+            padding='same',
+            activation='leaky_relu',
+            kernel_initializer=self.initializer,
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]),
+        )(x)
+
+        x = layers.Conv3D(
+            filters=64,
+            kernel_size=(3, 3, 3),
+            strides=(2, 2, 2),
+            padding='same',
+            activation='leaky_relu',
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]),
+        )(x)
+
+        x = layers.Conv3D(
+            filters=10,
+            kernel_size=(3, 3, 3),
+            strides=(2, 2, 2),
+            padding='same',
+            activation='leaky_relu',
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]),
+        )(x)
+
+        x = layers.Flatten()(x)
+        x = layers.Dense(256, activation='leaky_relu')(x)
+
+        z_mean = self.z_mean_dense(x)
         z_log_var = self.z_log_var_dense(x)
         z = self.sampling_layer([z_mean, z_log_var])
-        
+
         return z, z_mean, z_log_var
 
-    def build_decoder_module(self, inputs):
-        """
-        Decoder that reconstructs the signal using Dense + Conv1D layers.
-        Input: (batch, latent_dim)
-        Output: (batch, 400, 2048)
-        """
-        x = layers.Dense(self.params["latent_dim"], activation='leaky_relu')(inputs)
-        x = layers.Dense(self.params["latent_dim"]*5, activation='leaky_relu')(x)
 
-        x = layers.Dense(self.params["batch_size"] * self.params["latent_dim"], activation='leaky_relu')(x)
-        x = layers.Reshape((self.params["batch_size"], self.params["latent_dim"]))(x)             # (batch, 400, 128)
-        x = layers.Conv1D(filters=256, kernel_size=10, padding='same', activation='leaky_relu', 
-                          kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        x = layers.Conv1D(filters=512, kernel_size=10, padding='same', activation='leaky_relu', 
-                          kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        x = layers.Conv1D(filters=1000, kernel_size=10, padding='same', activation='leaky_relu', 
-                    kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        x = layers.Conv1D(filters=2048, kernel_size=10, padding='same', activation='leaky_relu', 
-                          kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
+    def build_decoder_module(self, z):
+        # Proyectar desde latente a volumen pequeño
+        x = layers.Dense(25 * 4 * 8 * 64)(z)
+        x = layers.LeakyReLU()(x)
+        x = layers.Reshape((25, 4, 8, 64))(x)  # (t, h, w, c)
 
-        return x  
+        # Upsample temporalmente de 25 → 400
+        x = layers.Conv3DTranspose(64, kernel_size=(4, 3, 3), strides=(2, 2, 2), padding='same')(x)  # (50, 8, 16)
+        x = layers.LeakyReLU()(x)
+        
+        x = layers.Conv3DTranspose(64, kernel_size=(4, 3, 3), strides=(2, 2, 2), padding='same')(x)  # (100, 16, 32)
+        x = layers.LeakyReLU()(x)
+
+        x = layers.Conv3DTranspose(32, kernel_size=(4, 2, 2), strides=(2, 2, 1), padding='same')(x)  # (200, 32, 32)
+        x = layers.LeakyReLU()(x)
+
+        x = layers.Conv3DTranspose(1, kernel_size=(4, 1, 2), strides=(2, 1, 2), padding='same')(x)   # (400, 32, 64, 1)
+
+        x = tf.squeeze(x, axis=-1)  # → [batch, 400, 32, 64]
+
+        return x
+
 
     def build_decoder_from_latent(self):
         """
         Crea un modelo separado que decodifica vectores latentes z en señales (400, 2048).
-        Ideal para muestreo/generación desde el espacio latente.
+        Adaptado para usar Conv3DTranspose en lugar de Conv1D.
         """
         latent_inputs = layers.Input(shape=(self.latent_dim,), name="z_input")  # (batch, latent_dim)
 
-        x = layers.Dense(self.params["latent_dim"], activation='leaky_relu')(latent_inputs)
-        x = layers.Dense(self.params["latent_dim"]*5, activation='leaky_relu')(x)
+        x = layers.Dense(25 * 4 * 8 * 64)(latent_inputs)
+        x = layers.LeakyReLU()(x)
+        x = layers.Reshape((25, 4, 8, 64))(x)  # (t, h, w, c)
 
-        x = layers.Dense(self.params["batch_size"] * self.params["latent_dim"], activation='leaky_relu')(x)
-        x = layers.Reshape((self.params["batch_size"], self.params["latent_dim"]))(x)             # (batch, 400, 128)
-        x = layers.Conv1D(filters=256, kernel_size=10, padding='same', activation='leaky_relu')(x)
-        x = layers.Conv1D(filters=512, kernel_size=10, padding='same', activation='leaky_relu')(x)
-        x = layers.Conv1D(filters=1000, kernel_size=10, padding='same', activation='leaky_relu', 
-            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        x = layers.Conv1D(filters=2048, kernel_size=10, padding='same', activation='leaky_relu')(x)
+        # Upsample temporalmente de 25 → 400
+        x = layers.Conv3DTranspose(64, kernel_size=(4, 3, 3), strides=(2, 2, 2), padding='same')(x)  # (50, 8, 16)
+        x = layers.LeakyReLU()(x)
+        
+        x = layers.Conv3DTranspose(64, kernel_size=(4, 3, 3), strides=(2, 2, 2), padding='same')(x)  # (100, 16, 32)
+        x = layers.LeakyReLU()(x)
+
+        x = layers.Conv3DTranspose(32, kernel_size=(4, 2, 2), strides=(2, 2, 1), padding='same')(x)  # (200, 32, 32)
+        x = layers.LeakyReLU()(x)
+
+        x = layers.Conv3DTranspose(1, kernel_size=(4, 1, 2), strides=(2, 1, 2), padding='same')(x)   # (400, 32, 64, 1)
+
+        x = tf.squeeze(x, axis=-1)  # → [batch, 400, 32, 64]
+
 
         self.decoder_from_latent = tf.keras.Model(latent_inputs, x, name="decoder_from_latent")
         return self.decoder_from_latent
+
 
 
 
@@ -190,7 +219,7 @@ class Gen_VAE(Model):
         gradients = tape.gradient(total_loss, self.trainable_variables)
         # Clip gradients to avoid exploding gradients (based on their global norm)
         clipped_gradients, global_norm = tf.clip_by_global_norm(
-            gradients, clip_norm=1.0
+            gradients, clip_norm=5.0
         )
         self.optimizer.apply_gradients(zip(clipped_gradients, self.trainable_variables))
 

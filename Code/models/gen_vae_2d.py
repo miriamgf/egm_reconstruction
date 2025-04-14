@@ -12,7 +12,7 @@ tf.config.experimental_run_functions_eagerly(
 tf.executing_eagerly()
 
 
-class Gen_VAE(Model):
+class Gen_VAE_2D(Model):
     """
     Used to generate synthetic EGMs using a trained VAE model.
     """
@@ -20,7 +20,7 @@ class Gen_VAE(Model):
     def __init__(
         self, params, input_shape_, n_nodes, latent_dim=128, tensorboard_logs=None
     ):
-        super(Gen_VAE, self).__init__()
+        super(Gen_VAE_2D, self).__init__()
 
         if not os.path.exists(tensorboard_logs):
             os.makedirs(tensorboard_logs)
@@ -31,8 +31,6 @@ class Gen_VAE(Model):
         tf.random.set_seed(self.SEED)
         self.tensorboard_logs = tensorboard_logs
         self.file_writer = tf.summary.create_file_writer(self.tensorboard_logs)
-
-        self.dense5 = layers.Dense(256, activation='leaky_relu')
 
 
         # Define the layers as instance attributes
@@ -45,6 +43,8 @@ class Gen_VAE(Model):
         #self.reshape_latent_space = layers.Reshape((self.params["batch_size"], 10, 10))
      
         self.model, self.latent_space = self.assemble_full_model(input_shape_, n_nodes)
+        self.beta = tf.Variable(0.0, trainable=False, dtype=tf.float32)  # Inicialmente 0 para el warm-up
+
 
     def call(self, inputs, training=None, mask=None):
 
@@ -54,82 +54,98 @@ class Gen_VAE(Model):
     
     def build_encoder_module(self, inputs, input_shape):
         """
-        Encoder using Conv1D layers to compress features across time.
-        Input shape: (batch, 400, 2048)
+        Encoder usando Conv2D para capturar patrones espacio-temporales.
+        Se espera que inputs tenga shape (batch, 400, 2048), que se reinterpreta como (400, 32, 64).
         """
-        x = layers.Conv1D(filters=1000, kernel_size=10, padding='same', activation='leaky_relu',
-                        kernel_initializer=self.initializer, 
-                        kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]),)(inputs)
-        x = layers.Conv1D(filters=512, kernel_size=10, padding='same', activation='leaky_relu',
-                           kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        
-        x = layers.Conv1D(filters=256, kernel_size=10, padding='same', activation='leaky_relu',
-                          kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        x = layers.Conv1D(filters=128, kernel_size=10, padding='same', activation='leaky_relu', 
-                                      kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        x = layers.Conv1D(filters=self.params["latent_dim"], kernel_size=3, padding='same', activation='leaky_relu', 
-                          kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
+        batch_size = tf.shape(inputs)[0]
 
-        x = layers.GlobalAveragePooling1D()(x)  # Output shape: (batch, 128)
+        # Reorganiza de (batch, 400, 2048) → (batch, 400, 32, 64, 1)
+        x = layers.Reshape((400, 2048, 1))(inputs)  
 
-        z_mean = self.z_mean_dense(x)  # Dense(latent_dim)
+        x = layers.Conv2D(
+            filters=32,
+            kernel_size=(5, 15),
+            strides=(2, 4),
+            padding='same',
+            activation='leaky_relu',
+            kernel_initializer=self.initializer,
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]),
+        )(x)
+
+        x = layers.Conv2D(
+            filters=64,
+            kernel_size=(5, 15),
+            strides=(2, 4),
+            padding='same',
+            activation='leaky_relu',
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]),
+        )(x)
+
+        x = layers.Conv2D(
+            filters=10,
+            kernel_size=(3, 5),
+            strides=(2, 2),
+            padding='same',
+            activation='leaky_relu',
+            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]),
+        )(x)
+
+        x = layers.Flatten()(x)
+        x = layers.Dense(self.latent_dim, activation='leaky_relu')(x)
+
+        z_mean = self.z_mean_dense(x)
         z_log_var = self.z_log_var_dense(x)
         z = self.sampling_layer([z_mean, z_log_var])
-        
+        #z = z + tf.random.normal(tf.shape(z), stddev=0.05)
+
         return z, z_mean, z_log_var
 
-    def build_decoder_module(self, inputs):
+
+    def build_decoder_module(self):
         """
-        Decoder that reconstructs the signal using Dense + Conv1D layers.
-        Input: (batch, latent_dim)
-        Output: (batch, 400, 2048)
+        Build decoder model from latent vector z to reconstructed signal.
         """
-        x = layers.Dense(self.params["latent_dim"], activation='leaky_relu')(inputs)
-        x = layers.Dense(self.params["latent_dim"]*5, activation='leaky_relu')(x)
+        latent_inputs = layers.Input(shape=(self.latent_dim,), name="decoder_input")
 
-        x = layers.Dense(self.params["batch_size"] * self.params["latent_dim"], activation='leaky_relu')(x)
-        x = layers.Reshape((self.params["batch_size"], self.params["latent_dim"]))(x)             # (batch, 400, 128)
-        x = layers.Conv1D(filters=256, kernel_size=10, padding='same', activation='leaky_relu', 
-                          kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        x = layers.Conv1D(filters=512, kernel_size=10, padding='same', activation='leaky_relu', 
-                          kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        x = layers.Conv1D(filters=1000, kernel_size=10, padding='same', activation='leaky_relu', 
-                    kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        x = layers.Conv1D(filters=2048, kernel_size=10, padding='same', activation='leaky_relu', 
-                          kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
+        x = layers.Dense(25 * 16 * 32)(latent_inputs)
+        x = layers.LeakyReLU()(x)
+        x = layers.Reshape((25, 16, 32))(x)
+        x = layers.Dropout(0.2)(x)
+        x = layers.Conv2DTranspose(64, (4, 4), strides=(2, 4), padding='same')(x)
+        x = layers.LeakyReLU()(x)
+        x = layers.Dropout(0.2)(x)
+        x = layers.Conv2DTranspose(32, (4, 4), strides=(2, 4), padding='same')(x)
+        x = layers.LeakyReLU()(x)
+        x= layers.Dropout(0.2)(x)
+        x = layers.Conv2DTranspose(32, (4, 4), strides=(2, 2), padding='same')(x)
+        x = layers.LeakyReLU()(x)
 
-        return x  
+        x = layers.Conv2DTranspose(1, (4, 4), strides=(2, 4), padding='same')(x)
+        x = tf.keras.activations.tanh(x)
+        x = tf.squeeze(x, axis=-1)
 
-    def build_decoder_from_latent(self):
-        """
-        Crea un modelo separado que decodifica vectores latentes z en señales (400, 2048).
-        Ideal para muestreo/generación desde el espacio latente.
-        """
-        latent_inputs = layers.Input(shape=(self.latent_dim,), name="z_input")  # (batch, latent_dim)
+        self.decoder = tf.keras.Model(latent_inputs, x, name="decoder")
 
-        x = layers.Dense(self.params["latent_dim"], activation='leaky_relu')(latent_inputs)
-        x = layers.Dense(self.params["latent_dim"]*5, activation='leaky_relu')(x)
+        return self.decoder
 
-        x = layers.Dense(self.params["batch_size"] * self.params["latent_dim"], activation='leaky_relu')(x)
-        x = layers.Reshape((self.params["batch_size"], self.params["latent_dim"]))(x)             # (batch, 400, 128)
-        x = layers.Conv1D(filters=256, kernel_size=10, padding='same', activation='leaky_relu')(x)
-        x = layers.Conv1D(filters=512, kernel_size=10, padding='same', activation='leaky_relu')(x)
-        x = layers.Conv1D(filters=1000, kernel_size=10, padding='same', activation='leaky_relu', 
-            kernel_regularizer=tf.keras.regularizers.l2(self.params["l2_reg"]))(x)
-        x = layers.Conv1D(filters=2048, kernel_size=10, padding='same', activation='leaky_relu')(x)
-
-        self.decoder_from_latent = tf.keras.Model(latent_inputs, x, name="decoder_from_latent")
-        return self.decoder_from_latent
-
-
+    def decode_from_latent(self, z):
+        if not hasattr(self, 'decoder'):
+            self.build_decoder_module()
+        return self.decoder(z)
 
     def build_autoencoder_branch(self, inputs, input_shape):
         '''
         Build assamble between encoder and decoder
         '''
-        latent_space, z_mean, z_log_var = self.build_encoder_module(inputs, input_shape)
-        decoded_output = self.build_decoder_module(latent_space)
-        return z_mean, z_log_var, latent_space, decoded_output
+
+        z, z_mean, z_log_var = self.build_encoder_module(inputs, input_shape)
+
+        # Usa el modelo decoder entrenable
+        if not hasattr(self, 'decoder'):
+            self.build_decoder_module()
+
+        decoded_output = self.decoder(z)
+        return z_mean, z_log_var, z, decoded_output
 
     def assemble_full_model(self, input_shape, n_nodes):
         """
@@ -155,13 +171,18 @@ class Gen_VAE(Model):
         )
 
     def compute_loss_VAE(self, y_pred, y_true, z_mean, z_log_var):
+
         mse_loss = tf.reduce_mean(tf.reduce_sum(tf.keras.losses.mean_squared_error(y_true, y_pred), axis=[1]))
 
+        grad_loss = self.temporal_gradient_loss(y_true, y_pred)
+        corr_loss=self.negative_corr_loss(y_true, y_pred)
         logvar = tf.clip_by_value(z_log_var, -10.0, 10.0)
         kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(logvar + 1e-8))
         kl_loss = tf.reduce_mean(tf.reduce_sum(kl_loss, axis=1))
 
-        total_loss = mse_loss + kl_loss
+        beta = self.beta
+
+        total_loss = mse_loss + beta * kl_loss + 0.5 * corr_loss + 0.3*grad_loss
         return total_loss, mse_loss, kl_loss
 
     def train_step(self, data):
@@ -190,7 +211,7 @@ class Gen_VAE(Model):
         gradients = tape.gradient(total_loss, self.trainable_variables)
         # Clip gradients to avoid exploding gradients (based on their global norm)
         clipped_gradients, global_norm = tf.clip_by_global_norm(
-            gradients, clip_norm=1.0
+            gradients, clip_norm=5.0
         )
         self.optimizer.apply_gradients(zip(clipped_gradients, self.trainable_variables))
 
@@ -199,6 +220,10 @@ class Gen_VAE(Model):
             tf.summary.scalar("loss/total_loss", total_loss, step=step)
             tf.summary.scalar("loss/loss_autoencoder", total_loss  , step=step)
             tf.summary.scalar("loss/mse_autoencoder", mse_autoencoder, step=step)
+            tf.summary.scalar("loss/kl_loss", kl_loss, step=step)
+        
+        tf.print("KL loss:", kl_loss)
+
 
             # self.log_latent_space_image(latent_space, step)
 
@@ -206,6 +231,8 @@ class Gen_VAE(Model):
             "total_loss": total_loss,
             "loss_autoencoder": total_loss  ,
             "mse_autoencoder": mse_autoencoder,
+            "kl_loss": kl_loss  
+
         }
 
     def test_step(self, data):
@@ -229,6 +256,8 @@ class Gen_VAE(Model):
             "total_loss": total_loss,
             "loss_autoencoder": total_loss,
             "mse_autoencoder": mse_autoencoder,
+            "kl_loss": kl_loss  
+
         }
 
     def log_latent_space_image(self, latent_space, step):
@@ -284,6 +313,33 @@ class Gen_VAE(Model):
             image = tf.image.decode_image(image)
             image = tf.expand_dims(image, axis=0)
             tf.summary.image("Latent Space - Signal (channels 0-5)", image, step=step)
+
+    def negative_corr_loss(self, y_true, y_pred):
+        # Centramos las señales: restamos la media por canal
+        mu_x = tf.reduce_mean(y_true, axis=1, keepdims=True)  # (batch, 1, channels)
+        mu_y = tf.reduce_mean(y_pred, axis=1, keepdims=True)
+
+        x = y_true - mu_x  # (batch, time, channels)
+        y = y_pred - mu_y
+
+        # Numerador de la correlación: producto punto temporal
+        num = tf.reduce_sum(x * y, axis=1)  # (batch, channels)
+
+        # Denominador: norma de cada señal (por canal)
+        den = tf.sqrt(tf.reduce_sum(tf.square(x), axis=1) * tf.reduce_sum(tf.square(y), axis=1))  # (batch, channels)
+
+        # Correlación por canal
+        corr = num / (den + 1e-8)  # (batch, channels)
+
+        # Pérdida: 1 - correlación promedio sobre canales y batch
+        return 1.0 - tf.reduce_mean(corr)
+    
+    def temporal_gradient_loss(y_true, y_pred):
+        dy_true = y_true[:, 1:, :] - y_true[:, :-1, :]
+        dy_pred = y_pred[:, 1:, :] - y_pred[:, :-1, :]
+        return tf.reduce_mean(tf.abs(dy_true - dy_pred))
+
+
 
 
 class SamplingLayer(tf.keras.layers.Layer):

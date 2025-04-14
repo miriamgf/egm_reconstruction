@@ -25,8 +25,14 @@ import tools_
 import tools_.tools
  
 from models.gen_vae import Gen_VAE
+from models.gen_vae_2d import Gen_VAE_2D
+from models.gen_vae_2d_skip import Gen_VAE_2D_Skip
+
+
 from tools_.df_mapping import *
 from tools_.tools import *
+from tools_.tools_1 import normalize_array
+
 
 tf.random.set_seed(42)
 import argparse
@@ -79,6 +85,9 @@ params["split_mode"] = "stratified"
 params["oversampling"] = False
 params["classes_to_oversample"]= [0,1, 5]
 params["latent_dim"]=250
+params['early_stopping_patience']=50
+params["beta_warmup_epochs"]= 20
+
 
 try:
     print("parsing")
@@ -120,7 +129,7 @@ unfold_code = 1
 
 experiment_name = algorithm
 
-experiment_name = f"{experiment_name}_baseline_conv1D"
+experiment_name = f"{experiment_name}_baseline_conv2D_annealing"
 
 params["experiment_name"] = experiment_name
 #experiment_name='pruebas interpol'
@@ -207,6 +216,7 @@ sinusoids = False
     patches_oclussion=patches_oclussion,
     unfold_code=unfold_code,
     inference=False,
+    all_classes=False
 )()
 
 
@@ -238,14 +248,23 @@ sinusoids = False
     all_model_names,
     transfer_matrices,
     experiment_dir,
-    split_mode="stratified",
+    split_mode="random",
     norm_egm=True,
     shuffle_patient= True, 
 )()
 
 
-params["algorithm"] = "gen_VAE"
+params["algorithm"] = "gen_VAE_2D_warmup"
 print("Algorithm selected:", params["algorithm"])
+
+if params["algorithm"] == "gen_VAE_3D":
+
+    y_train=y_train.reshape(y_train.shape[0], y_train.shape[1], 32, 64)
+    y_val=y_val.reshape(y_val.shape[0], y_val.shape[1], 32, 64)
+    y_test=y_test.reshape(y_test.shape[0], y_test.shape[1], 32, 64)
+
+evaluation = True
+
 if not evaluation:
     params["n_epochs"] = 70
     model, history = TrainModelGen(
@@ -253,36 +272,419 @@ if not evaluation:
     )()
 
 if evaluation:
-    vae = Gen_VAE(
+    vae = Gen_VAE_2D(
         params=params,
-        input_shape_=y_train.shape[1:], 
+        input_shape_=y_test.shape[1:], 
         n_nodes=2048,
         latent_dim=params["latent_dim"],
         tensorboard_logs=experiment_dir + "tb_logs/"
     )
 
     vae.model.load_weights(experiment_dir + "model_weights.h5")
-    decoder = vae.build_decoder_from_latent()
 
-
+    x_real= y_test[:, :, :]
 
     # Samplear del espacio latente
-    z = tf.random.normal((1, vae.latent_dim))  # 10 muestras aleatorias
+    random_sampling = True
+    guided_sampling = True
+    reconstruction = True
+    interpol = True
+    manifold = True
 
-    # Generar señales sintéticas
-    synthetic = decoder.predict(z)
-    print(synthetic.shape)  # → (10, 2048)
+    if random_sampling: 
+
+        z = tf.random.normal((1, vae.latent_dim))  # 1 muestras aleatorias
+
+        synthetic = vae.decode_from_latent(z)
+
+        synthetic=np.array(synthetic)
+        synthetic = synthetic.squeeze()
+        synthetic_norm = np.zeros(synthetic.shape)
+        for i in range(synthetic.shape[1]):
+            synthetic_norm[ :, i] = normalize_array(synthetic[ :, i], axis_n=0, high=1.0, low=-1.0)
+        
+        plt.figure()
+        plt.subplot(2, 1, 1)
+        plt.title("Synthetic signal")
+        plt.imshow(synthetic_norm[:, : ], aspect="auto")
+        plt.subplot(2, 1, 2)
+        plt.title("Real signal")
+        plt.imshow(y_train[0, :, :], aspect="auto")
+        plt.savefig(
+            experiment_dir + "synthetic_signal_random_sampling.png", dpi=300, bbox_inches="tight"
+        )
+        print(experiment_dir + "synthetic_signal_random_sampling.png")
+        plt.close()
+
+        #signal
+        plt.figure()
+        plt.subplot(2, 1, 1)
+        plt.title("Synthetic signal")
+        plt.plot(synthetic[0:400, 0 ])
+        plt.subplot(2, 1, 2)
+        plt.title("Real signal")
+        plt.plot(y_train[0,0:400, 0 ])
+        plt.savefig(
+            experiment_dir + "random_sampling_1D.png", dpi=300, bbox_inches="tight"
+        )
+        print(experiment_dir + "random_sampling_1D.png")
+        plt.close()
+
+        plt.figure()
+        plt.hist(z.numpy().flatten(), bins=100)
+        plt.title("Distribución de z_mean")
+        plt.savefig(
+            experiment_dir + "histogram_rand.png", dpi=300, bbox_inches="tight"
+        )
+        plt.close()
+
+
+
+    if guided_sampling:
+
+        z, z_mean_train, _ = vae.build_encoder_module(x_real, vae.input_shape_)
+
+        mu = np.mean(z_mean_train, axis=0)
+        sigma = np.std(z_mean_train, axis=0)
+
+        z = np.random.normal(loc=mu, scale=sigma, size=(10, params["latent_dim"]))
+
+        synthetica = vae.decode_from_latent(z)
+
+        for example in range(0,10):
+            one_synthetic = synthetica[example, :, :]
+
+            synthetic=np.array(one_synthetic)
+            synthetic = synthetic.squeeze()
+            synthetic_norm = np.zeros(synthetic.shape)
+            for i in range(synthetic.shape[1]):
+                synthetic_norm[ :, i] = normalize_array(synthetic[ :, i], axis_n=0, high=1.0, low=-1.0)
+
+            plt.figure()
+            plt.subplot(2, 1, 1)
+            plt.title("Synthetic signal")
+            plt.imshow(synthetic_norm[:, : ], aspect="auto")
+            plt.subplot(2, 1, 2)
+            plt.title("Real signal")
+            plt.imshow(y_train[0, :, :], aspect="auto")
+            plt.savefig(
+                experiment_dir + f"synthetic_signal_guided_sampling_{example}.png", dpi=300, bbox_inches="tight"
+            )
+            print(experiment_dir + f"synthetic_signal_guided_sampling_{example}.png")
+            plt.close()
+
+            #signal
+            plt.figure()
+            plt.subplot(2, 1, 1)
+            plt.title("Synthetic signal")
+            plt.plot(synthetic[0:400, 0 ])
+            plt.subplot(2, 1, 2)
+            plt.title("Real signal")
+            plt.plot(y_train[0,0:400, 0 ])
+            plt.savefig(
+                experiment_dir + f"guided_sampling_1D_{example}.png", dpi=300, bbox_inches="tight"
+            )
+            print(experiment_dir + f"guided_sampling_1D_{example}.png")
+            plt.close()
+
+        plt.figure()
+        plt.hist(z_mean_train.numpy().flatten(), bins=100)
+        plt.title("Distribución de z_mean")
+        plt.savefig(
+            experiment_dir + "histogram_guided.png", dpi=300, bbox_inches="tight"
+        )
+        plt.close()
+
+        plt.figure(figsize=(8, 6))
+        plt.scatter(z_mean_train[:, 0], z_mean_train[:, 1], alpha=0.5)
+        plt.title("Distribución del espacio latente (2D)")
+        plt.xlabel("z1")
+        plt.ylabel("z2")
+        plt.grid(True)
+        plt.savefig(experiment_dir + "latent_space_guided.png", dpi=300, bbox_inches="tight")
+
+        from sklearn.decomposition import PCA
+        import matplotlib.pyplot as plt
+
+        # Reducimos a 2D
+        pca = PCA(n_components=2)
+        z_proj = pca.fit_transform(z_mean_train)  # (10, 2)
+
+        # Visualización
+        plt.figure(figsize=(6, 6))
+        plt.scatter(z_proj[:, 0], z_proj[:, 1], c='blue')
+        plt.title("PCA del espacio latente (z_mean)")
+        plt.xlabel("PC1")
+        plt.ylabel("PC2")
+        plt.grid(True)
+        plt.savefig(experiment_dir+'pca_guided.png')
+
+    if reconstruction == False:
+
+        x_real_one_batch= np.expand_dims(x_real[0, :, :], axis=0)
+
+        z, z_mean_train, _= vae.build_encoder_module(x_real_one_batch, vae.input_shape_)
+
+        synthetic = vae.decode_from_latent(z_mean_train)
+
+        synthetic=np.array(synthetic)
+        synthetic = synthetic.squeeze()
+        synthetic_norm = np.zeros(synthetic.shape)
+        for i in range(synthetic.shape[1]):
+            synthetic_norm[ :, i] = normalize_array(synthetic[ :, i], axis_n=0, high=1.0, low=-1.0)
+
+        plt.figure()
+        plt.subplot(2, 1, 1)
+        plt.title("Synthetic signal")
+        plt.imshow(synthetic_norm[:, : ], aspect="auto")
+        plt.subplot(2, 1, 2)
+        plt.title("Real signal")
+        plt.imshow(y_train[0, :, :], aspect="auto")
+        plt.savefig(
+            experiment_dir + "synthetic_signal_reconstruction.png", dpi=300, bbox_inches="tight"
+        )
+        print(experiment_dir + "synthetic_signal_reconstruction.png")
+        plt.close()
+
+        #signal
+        plt.figure()
+        plt.subplot(2, 1, 1)
+        plt.title("Synthetic signal")
+        plt.plot(synthetic[0:100, 0 ])
+        plt.subplot(2, 1, 2)
+        plt.title("Real signal")
+        plt.plot(y_train[0,0:400, 0 ])
+        plt.savefig(
+            experiment_dir + "reconstruction_1D.png", dpi=300, bbox_inches="tight"
+        )
+        print(experiment_dir + "reconstruction_1D.png")
+        plt.close()
+
+        plt.figure()
+        plt.hist(z_mean_train.numpy().flatten(), bins=100)
+        plt.title("Distribución de z_mean")
+        plt.savefig(
+            experiment_dir + "histogram_rec.png", dpi=300, bbox_inches="tight"
+        )
+        plt.close()
+
+        plt.figure(figsize=(8, 6))
+        plt.scatter(z_mean_train[:, 0], z_mean_train[:, 1], alpha=0.5)
+        plt.title("Distribución del espacio latente (2D)")
+        plt.xlabel("z1")
+        plt.ylabel("z2")
+        plt.grid(True)
+        plt.savefig(experiment_dir + "latent_space_rec.png", dpi=300, bbox_inches="tight")
+
+    if interpol == False:
+
+        x_real_1= np.expand_dims(x_real[0, :, :], axis=0)
+        x_real_2= np.expand_dims(x_real[9, :, :], axis=0)
+
+        z1, z_mean_train1, _ = vae.build_encoder_module(x_real_1, vae.input_shape_)
+        z2, z_mean_train2, _ = vae.build_encoder_module(x_real_2, vae.input_shape_)
+
+        alpha=0.1
+
+        z_interp = (1-alpha) * z1 + alpha * z2
+
+
+        synthetic = vae.decode_from_latent(z_interp)
+
+        synthetic=np.array(synthetic)
+        synthetic = synthetic.squeeze()
+        synthetic_norm = np.zeros(synthetic.shape)
+        for i in range(synthetic.shape[1]):
+            synthetic_norm[ :, i] = normalize_array(synthetic[ :, i], axis_n=0, high=1.0, low=-1.0)
+
+        plt.figure()
+        plt.subplot(2, 1, 1)
+        plt.title("Synthetic signal")
+        plt.imshow(synthetic_norm[:, : ], aspect="auto")
+        plt.subplot(2, 1, 2)
+        plt.title("Real signal")
+        plt.imshow(y_train[0, :, :], aspect="auto")
+        plt.savefig(
+            experiment_dir + "synthetic_signal_interp.png", dpi=300, bbox_inches="tight"
+        )
+        print(experiment_dir + "synthetic_signal_interp.png")
+        plt.close()
+
+        #signal
+        plt.figure()
+        plt.subplot(2, 1, 1)
+        plt.title("Synthetic signal")
+        plt.plot(synthetic[0:400, 0 ])
+        plt.subplot(2, 1, 2)
+        plt.title("Real signal")
+        plt.plot(y_train[0,0:400, 0 ])
+        plt.savefig(
+            experiment_dir + "interp_1D.png", dpi=300, bbox_inches="tight"
+        )
+        print(experiment_dir + "interp_1D.png")
+        plt.close()
+    
+    if manifold:
+
+        z, z_mean_train, _ = vae.build_encoder_module(x_real, vae.input_shape_)
+
+        idx = np.random.choice(len(z_mean_train), size=10)
+        z_mean_train = np.array(z_mean_train)
+        z_base = z_mean_train[idx]
+        z_sample = z_base + np.random.normal(scale=0.01, size=z_base.shape)
+
+        synthetica = vae.decode_from_latent(z_sample)
+
+        for example in range(0,10):
+
+            one_synthetic = synthetica[example, :, :]
+
+            synthetic=np.array(one_synthetic)
+            synthetic = synthetic.squeeze()
+            synthetic_norm = np.zeros(synthetic.shape)
+            for i in range(synthetic.shape[1]):
+                synthetic_norm[ :, i] = normalize_array(synthetic[ :, i], axis_n=0, high=1.0, low=-1.0)
+
+            plt.figure()
+            plt.subplot(2, 1, 1)
+            plt.title("Synthetic signal")
+            plt.imshow(synthetic_norm[:, : ], aspect="auto")
+            plt.subplot(2, 1, 2)
+            plt.title("Real signal")
+            im1=plt.imshow(y_train[0, :, :], aspect="auto")
+            plt.colorbar(im1, orientation='vertical', fraction=0.046, pad=0.04)  # ← Añade barra lateral
+
+            plt.savefig(
+                experiment_dir + f"synthetic_signal_guided_sampling_{example}.png", dpi=300, bbox_inches="tight"
+            )
+            print(experiment_dir + f"synthetic_signal_guided_sampling_{example}.png")
+            plt.close()
+
+            #signal
+            plt.figure()
+            plt.subplot(2, 1, 1)
+            plt.title("Synthetic signal")
+            plt.plot(synthetic[0:400, 0 ])
+            plt.subplot(2, 1, 2)
+            plt.title("Real signal")
+            plt.plot(y_train[0,0:400, 0 ])
+            plt.savefig(
+                experiment_dir + f"manifold_1D_{example}.png", dpi=300, bbox_inches="tight"
+            )
+            print(experiment_dir + f"manifold_1D_{example}.png")
+            plt.close()
+
+
+        
+
+
+    
+    #if interpollate_latent_space:
+
+
+    '''
+    plt.figure()
+    plt.subplot(2, 1, 1)
+    plt.title("Synthetic signal")
+    plt.plot(synthetic[0:200, 0 ])
+    plt.subplot(2, 1, 2)
+    plt.title("Real signal")
+    plt.plot(y_train[0,0:200, 0 ])
+    plt.savefig(
+        experiment_dir + "synthetic_signal_1D.png", dpi=300, bbox_inches="tight"
+    )
+    plt.close()
+    '''
+
+    x_sample = y_train[:1]  # Una muestra
+    reconstructed = vae.model.predict(x_sample)
+    x_sample = y_train[:100]  # Una muestra
+
+    # Prediction
+    plt.figure(figsize=(12, 6))
+
+    plt.subplot(1, 2, 1)
+    plt.imshow(x_sample[0], aspect='auto', cmap='viridis')
+    plt.title("Entrada Original")
+
+    plt.subplot(1, 2, 2)
+    plt.imshow(reconstructed[0], aspect='auto', cmap='viridis')
+    plt.title("Reconstrucción")
+
+    plt.tight_layout()
+    plt.savefig(
+        experiment_dir + "prediction.png", dpi=300, bbox_inches="tight"
+    )
+    plt.close()
 
     plt.figure()
-    plt.subplot(1, 2, 1)
+    plt.subplot(2, 1, 1)
     plt.title("Synthetic signal")
-    plt.imshow(synthetic[0, :, : ], aspect="auto")
-    plt.subplot(1, 2, 2)
+    plt.plot(reconstructed[0, 0:400, 0 ])
+    plt.subplot(2, 1, 2)
     plt.title("Real signal")
-    plt.imshow(y_train[0, :, :], aspect="auto")
+    plt.plot(y_train[0,0:400, 0 ])
     plt.savefig(
-        experiment_dir + "synthetic_signal.png", dpi=300, bbox_inches="tight"
+        experiment_dir + f"reconstruction_1D_{example}.png", dpi=300, bbox_inches="tight"
+    )
+    print(experiment_dir + f"reconstruction_1D_{example}.png")
+    plt.close()
+    
+
+    #Plot multiple inputs samples
+    plt.figure(figsize=(12, 6))
+
+    plt.subplot(2, 5, 1)
+    plt.imshow(x_sample[0], aspect='auto', cmap='viridis')
+    plt.title("Entrada Original")
+
+    plt.subplot(2, 5, 2)
+    plt.imshow(x_sample[1], aspect='auto', cmap='viridis')
+    plt.title("Entrada Original")
+
+    plt.subplot(2, 5, 3)
+    plt.imshow(x_sample[2], aspect='auto', cmap='viridis')
+    plt.title("Entrada Original")
+
+    plt.subplot(2, 5, 4)
+    plt.imshow(x_sample[3], aspect='auto', cmap='viridis')
+    plt.title("Entrada Original")
+    
+    plt.subplot(2, 5, 5)
+    plt.imshow(x_sample[4], aspect='auto', cmap='viridis')
+    plt.title("Entrada Original")
+
+    plt.subplot(2, 5, 6)
+    plt.imshow(x_sample[5], aspect='auto', cmap='viridis')
+    plt.title("Entrada Original")
+
+    plt.tight_layout()
+    plt.savefig(
+        experiment_dir + "examples_train.png", dpi=300, bbox_inches="tight"
     )
     plt.close()
 
 
+    # Si tienes etiquetas (por ejemplo, para clases), puedes colorear por clase
+
+
+
+
+
+    # Interpolación en el espacio latente
+    z_1 = tf.random.normal((1, vae.latent_dim))
+    z_2 = tf.random.normal((1, vae.latent_dim))
+
+    alphas = np.linspace(0, 1, 10)
+    interpolations = [(1 - alpha) * z_1 + alpha * z_2 for alpha in alphas]
+    generated = [vae.decode_from_latent(z) for z in interpolations]
+
+    plt.figure()
+    # Visualiza
+    for i, sample in enumerate(generated):
+        plt.imshow(sample[0], aspect='auto')
+        plt.title(f"Alpha {alphas[i]:.2f}")
+        plt.savefig(
+        experiment_dir + f"interpolations_{i}.png", dpi=300, bbox_inches="tight"
+    )
+        plt.show()

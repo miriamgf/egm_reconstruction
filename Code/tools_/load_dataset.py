@@ -22,6 +22,8 @@ from scipy import signal
 from scipy import signal as sigproc
 from scipy.io import loadmat
 import json
+from tools_.stratified_split import StratifiedSplit
+
 
 #import numba
 
@@ -60,6 +62,7 @@ class LoadDataset:
         directory=directory,
         unfold_code=1,
         inference=True,
+        all_classes=True,
     ):
         self.params = params
         self.data_type = data_type
@@ -78,6 +81,7 @@ class LoadDataset:
         self.directory = directory
         self.unfold_code = unfold_code
         self.inference = inference
+        self.all_classes = all_classes
 
         self.SEED=50
         random.seed(self.SEED)        
@@ -134,20 +138,25 @@ class LoadDataset:
         """
 
         # % Check models in directory
-        all_model_names = []
+        if self.all_classes:
+            all_model_names = []
 
-        for subdir, dirs, files in os.walk(self.directory):
-            if subdir != self.directory:
-                model_name = subdir.split("/")[-1]
-                if "Sinusal" in model_name and self.SR == False:
-                    continue
-                else:
-                    all_model_names.append(model_name)
+            for subdir, dirs, files in os.walk(self.directory):
+                if subdir != self.directory:
+                    model_name = subdir.split("/")[-1]
+                    if "Sinusal" in model_name and self.SR == False:
+                        continue
+                    else:
+                        all_model_names.append(model_name)
 
-        if self.sinusoid:
-            n = 80  # NUmber of sinusoid models generated
-            all_model_names = ["Model {}".format(m) for m in range(n + 1)]
-        print(len(all_model_names), "Models")
+            if self.sinusoid:
+                n = 80  # NUmber of sinusoid models generated
+                all_model_names = ["Model {}".format(m) for m in range(n + 1)]
+            print(len(all_model_names), "Models")
+        else:
+            StratifiedSplit_obj = StratifiedSplit(classes_to_oversample=self.params["classes_to_oversample"], oversampling=self.params["oversampling"])
+            all_model_names_csv = StratifiedSplit_obj.load_process_annotations(select_classes=4)
+            all_model_names=list(all_model_names_csv["Simulation_Name"])
 
         #Load annotations (class related to complexity and patterns)
 

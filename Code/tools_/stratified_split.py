@@ -15,7 +15,7 @@ class StratifiedSplit:
         self.classes_to_oversample=classes_to_oversample
         self.classes_to_strat=[0,1,2,3,4,5]
 
-    def load_process_annotations(self):
+    def load_process_annotations(self, select_classes=None):
         """
         Load annotation from a given path.
         """
@@ -25,7 +25,10 @@ class StratifiedSplit:
         #Discard patients from discard_classes
         if len(self.discard_classes)>0:
             df_annotation_complexity = df_annotation_complexity[~df_annotation_complexity['Complexity'].isin(self.discard_classes)]
-        
+        if select_classes is not None:
+            df_annotation_complexity = df_annotation_complexity[df_annotation_complexity['Complexity'].isin([select_classes])]
+        # Select only patients with complexity in classes_to_strat
+    
         return df_annotation_complexity
     
     def create_stratified_groups(self, df_annotation_complexity_selected):
@@ -99,5 +102,5 @@ class StratifiedSplit:
         
 
 if __name__ == "__main__":
-    stratified_split = StratifiedSplit()
+    stratified_split = StratifiedSplit(classes_to_oversample=1, oversampling=True)
     df_annotation_complexity_selected=stratified_split()

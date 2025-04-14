@@ -9,6 +9,9 @@ from tensorflow import keras
 
 from keras.optimizers import Adam
 
+from models.gen_vae_2d import Gen_VAE_2D
+from models.gen_vae_2d_skip import Gen_VAE_2D_Skip
+from models.gen_vae_3d import Gen_VAE_3D
 from models.multioutput import MultiOutput
 from models.multioutput_skip import MultiOutput_skip
 from models.multioutput_VAE import MultiOutput_VAE
@@ -159,11 +162,11 @@ class TrainModelGen:
 
         if self.params["algorithm"] == "OMAMI" or self.params["algorithm"] == "OMAMI_ski":
             early_stopping_callback = tf.keras.callbacks.EarlyStopping(
-                monitor="val_loss", patience=20
+                monitor="val_loss", patience=self.params["early_stopping_patience"]
             )
         else:
             early_stopping_callback = tf.keras.callbacks.EarlyStopping(
-                monitor="val_total_loss", patience=20
+                monitor="val_total_loss", patience=self.params["early_stopping_patience"]
             )
         tensorboard_callback = TensorBoard(log_dir='output/tensorboard/logs/'+self.params['algorithm'], histogram_freq=1)
         #ssh -L 6006:localhost:6006 miriamgf@10.110.100.78 en terminal LOCAL
@@ -178,6 +181,71 @@ class TrainModelGen:
 
             # Create an instance of your model
             model = Gen_VAE(
+                self.params,
+                input_shape_=y_train.shape[1:],
+                n_nodes=2048,
+                tensorboard_logs=self.experiment_dir + "tb_logs/",
+                latent_dim=self.params["latent_dim"]
+            )
+
+            print(model.model.summary())
+
+            # Compile the model
+            model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
+        
+        if self.params["algorithm"] == "gen_VAE_3D":
+
+            # Create an instance of your model
+            model = Gen_VAE_3D(
+                self.params,
+                input_shape_=y_train.shape[1:],
+                n_nodes=2048,
+                tensorboard_logs=self.experiment_dir + "tb_logs/",
+                latent_dim=self.params["latent_dim"]
+            )
+
+            print(model.model.summary())
+
+            # Compile the model
+            model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
+        
+        if self.params["algorithm"] == "gen_VAE_2D":
+
+            # Create an instance of your model
+            model = Gen_VAE_2D(
+                self.params,
+                input_shape_=y_train.shape[1:],
+                n_nodes=2048,
+                tensorboard_logs=self.experiment_dir + "tb_logs/",
+                latent_dim=self.params["latent_dim"]
+            )
+
+            print(model.model.summary())
+
+            # Compile the model
+            model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
+        
+        if self.params["algorithm"] == "gen_VAE_2D_warmup":
+
+            model = Gen_VAE_2D(
+                self.params,
+                input_shape_=y_train.shape[1:],
+                n_nodes=2048,
+                tensorboard_logs=self.experiment_dir + "tb_logs/",
+                latent_dim=self.params["latent_dim"]
+            )
+
+            print(model.model.summary())
+
+            # Compile the model
+            model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
+
+
+
+        if self.params["algorithm"] == "gen_VAE_2D_skip":
+
+            # Create an instance of your model
+            model = Gen_VAE_2D_Skip(
                 self.params,
                 input_shape_=y_train.shape[1:],
                 n_nodes=2048,
@@ -208,27 +276,42 @@ class TrainModelGen:
         train_dataset = tf.data.Dataset.from_generator(
             train_generator,
                 output_signature=(
-                    tf.TensorSpec(shape=(1, self.params["batch_size"], self.params["n_nodes_regression"]), dtype=tf.float32),
-                    tf.TensorSpec(shape=(1, self.params["batch_size"], self.params["n_nodes_regression"]), dtype=tf.float32)
+                    tf.TensorSpec(shape=(1, self.params["batch_size"], 2048), dtype=tf.float32),
+                    tf.TensorSpec(shape=(1, self.params["batch_size"], 2048), dtype=tf.float32)
                 )
             )
 
         val_dataset = tf.data.Dataset.from_generator(
             val_generator,
             output_signature=(
-                tf.TensorSpec(shape=(1, self.params["batch_size"], self.params["n_nodes_regression"]), dtype=tf.float32),
-                tf.TensorSpec(shape=(1, self.params["batch_size"], self.params["n_nodes_regression"]), dtype=tf.float32)
+                tf.TensorSpec(shape=(1, self.params["batch_size"], 2048), dtype=tf.float32),
+                tf.TensorSpec(shape=(1, self.params["batch_size"], 2048), dtype=tf.float32)
             )
         )
+
+        if self.params["algorithm"] == "OMAMI_gen_VAE_warmup":
+            for epoch in range(1, self.params["n_epochs"] + 1):
+                new_beta = min(epoch / self.params["beta_warmup_epochs"], 1.0)  # crecimiento lineal
+                model.beta.assign(new_beta)
+                print(f"[Epoch {epoch}] β = {model.beta.numpy():.3f}")
+                
+                history = model.fit(
+                    train_dataset,
+                    validation_data=val_dataset,
+                    batch_size=1,
+                    epochs=1,
+                    callbacks=[early_stopping_callback, cp_callback, tensorboard_callback, lr_decay],
+                )
+        else:
             
-        # Train the model
-        history = model.fit(
-            train_dataset,
-            validation_data=val_dataset,
-            batch_size=1,
-            epochs=self.params["n_epochs"],
-            callbacks=[early_stopping_callback, cp_callback, tensorboard_callback, lr_decay],
-        )
+            # Train the model
+            history = model.fit(
+                train_dataset,
+                validation_data=val_dataset,
+                batch_size=1,
+                epochs=self.params["n_epochs"],
+                callbacks=[early_stopping_callback, cp_callback, tensorboard_callback, lr_decay],
+            )
 
         try:
             print('saving model')

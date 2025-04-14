@@ -155,8 +155,8 @@ class Preprocess_Dataset:
         ) = self.train_test_val_split_Autoencoder(
             BSPM_Models=self.X_1channel,
             random_split=True,
-            train_percentage=0.90,
-            test_percentage=0.2,
+            train_percentage=0.8,
+            test_percentage=0.1,
         )
 
         print("TRAIN SHAPE:", x_train.shape, "models:", train_models)
@@ -437,7 +437,7 @@ class Preprocess_Dataset:
             BSPM_train, BSPM_test, BSPM_val  -> Tensor BSP Models in train, test and val
 
         """
-        caution_split = True  # Split in train and test taking into account the high corr between selected models in 'set_models'
+        caution_split = False  # Split in train and test taking into account the high corr between selected models in 'set_models'
 
         if caution_split:
             # Select indices of highly correlated signals
