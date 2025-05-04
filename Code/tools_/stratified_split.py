@@ -6,10 +6,10 @@ from collections import Counter
 
 
 class StratifiedSplit:
-    def __init__(self,classes_to_oversample, oversampling=True):
+    def __init__(self,classes_to_oversample, discard_classes=[], oversampling=True):
 
         self.annotation_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/annotations.csv"
-        self.discard_classes = []
+        self.discard_classes = discard_classes
         self.oversampling=oversampling
         self.oversampling_rate=10
         self.classes_to_oversample=classes_to_oversample
@@ -26,8 +26,9 @@ class StratifiedSplit:
         if len(self.discard_classes)>0:
             df_annotation_complexity = df_annotation_complexity[~df_annotation_complexity['Complexity'].isin(self.discard_classes)]
         if select_classes is not None:
-            df_annotation_complexity = df_annotation_complexity[df_annotation_complexity['Complexity'].isin([select_classes])]
-        # Select only patients with complexity in classes_to_strat
+            df_annotation_complexity = df_annotation_complexity[df_annotation_complexity['Complexity'].isin(select_classes)]
+
+                    # Select only patients with complexity in classes_to_strat
     
         return df_annotation_complexity
     

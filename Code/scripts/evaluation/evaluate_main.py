@@ -33,7 +33,8 @@ try:
 
     print(algorithm_ID, evaluate_dl, evaluate_tik)
 
-except:
+except Exception as e:
+    print(f"Error parsing arguments: {e}")
     algorithm_ID = "OMAMI_no_filt_testing2_repeated"
     evaluate_dl=False
     evaluate_tik=True
@@ -50,7 +51,7 @@ test_patients = [
 
 
 
-experiment_ID_list=[["OMAMI_no_filt_testing2_repeated"], ["OMAMI_VAE_no_filt_testing_repeated"]]#,["OMAMI_repeated"], ["OMAMI_VAE_Optuna_1"], ['OMAMI_no_filt'], ['OMAMI_VAE_no_filt']]
+#experiment_ID_list=[["OMAMI_no_filt_testing2_repeated"], ["OMAMI_VAE_no_filt_testing_repeated"]]#,["OMAMI_repeated"], ["OMAMI_VAE_Optuna_1"], ['OMAMI_no_filt'], ['OMAMI_VAE_no_filt']]
 
 
 # DL -->  284 /12 = 23.666 seconds per patient (all the pipeline)

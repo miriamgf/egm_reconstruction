@@ -97,6 +97,8 @@ try:
     # Stratified split
     parser.add_argument("--split_mode", type=str, help="stratified or random", required=False)
     parser.add_argument("--oversampling", type=str_to_bool, help="True or False", required=False)
+    parser.add_argument("--discard_classes", type=str_to_bool, help="True or False", required=False)
+
 
     #Noise
     parser.add_argument('--SNR_em_noise', type=int, help='EM noise SNR', required=False)
@@ -118,6 +120,7 @@ try:
     attention=args.attention
     split_mode=args.split_mode
     oversampling=args.oversampling
+    discard_classes=args.discard_classes
     
 
     params["algorithm"]=algorithm
@@ -164,6 +167,16 @@ try:
         params["attention_layer"]=False
 
     # Stratified split
+
+    if discard_classes is not None:
+        params["discard_classes"]=[0, 1, 3, 5]
+        params["classes_to_oversample"]= [4]
+        
+
+    else:
+        params["discard_classes"]=[]
+        params["classes_to_oversample"]= [0,1, 5]
+
 
     if split_mode is not None:
         params["split_mode"]=split_mode
@@ -254,19 +267,14 @@ if params["attention_layer"]:
 
 params["early_stopping_patience"] = 40
 
+if len(params["discard_classes"])>0:
+    experiment_name= experiment_name + "_strat_2_class_overs"
+else:
+    experiment_name= experiment_name + "_strat_5_class_overs"
 
-params["split_mode"] = "stratified"
-params["oversampling"] = False
-params["classes_to_oversample"]= [0,1, 5]
-params["seed"]=3
-params["learning_rate"]=0.0001
+print(params)
+print('Experiment name: ', experiment_name)
 
-if params["split_mode"]=="stratified":
-    if params["oversampling"]:
-
-        experiment_name= experiment_name + "_strat_oversampling"
-    else:
-        experiment_name= experiment_name + "_strat"
 
 #experiment_name="TOY"
 print('Experiment name: ', experiment_name)
@@ -345,7 +353,8 @@ sinusoids = False
     AF_models,
     all_model_names,
     transfer_matrices,
-    y_list
+    y_list, 
+    class_complexity_list
 ) = LoadDataset(
     params,
     directory=directory,
@@ -435,6 +444,7 @@ plt.savefig('output/figures/input_output/before_norm.png')
     AF_models_train,
     AF_models_test,
     AF_models_val,
+    class_complexity_list_train, class_complexity_list_test, class_complexity_list_val,
     train_models,
     test_models,
     val_models,
@@ -443,6 +453,7 @@ plt.savefig('output/figures/input_output/before_norm.png')
     X_1channel,
     egm_tensor,
     AF_models,
+    class_complexity_list,
     Y_model,
     dic_vars,
     Y,

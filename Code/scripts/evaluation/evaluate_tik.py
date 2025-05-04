@@ -150,6 +150,7 @@ class EvaluateTikhonov:
             X_1channel_single,
             egm_single,
             list(AF_models_single),
+            None,
             Y_model,
             dic_vars,
             Y,
@@ -157,7 +158,8 @@ class EvaluateTikhonov:
             transfer_matrices,
             self.experiment_dir,
             norm_egm=True,
-            inference=True
+            inference=True, 
+            split_mode="deterministic"
         )()
         self.divisible_rows = (X_1channel.shape[0] // self.n_batch) * self.n_batch
 

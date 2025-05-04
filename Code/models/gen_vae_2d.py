@@ -119,7 +119,6 @@ class Gen_VAE_2D(Model):
         x= layers.Dropout(0.2)(x)
         x = layers.Conv2DTranspose(32, (4, 4), strides=(2, 2), padding='same')(x)
         x = layers.LeakyReLU()(x)
-
         x = layers.Conv2DTranspose(1, (4, 4), strides=(2, 4), padding='same')(x)
         x = tf.keras.activations.tanh(x)
         x = tf.squeeze(x, axis=-1)
@@ -182,7 +181,7 @@ class Gen_VAE_2D(Model):
 
         beta = self.beta
 
-        total_loss = mse_loss + beta * kl_loss + 0.5 * corr_loss + 0.3*grad_loss
+        total_loss = mse_loss + beta * kl_loss + 0.5 * corr_loss #+ 0.3*grad_loss
         return total_loss, mse_loss, kl_loss
 
     def train_step(self, data):
@@ -334,7 +333,7 @@ class Gen_VAE_2D(Model):
         # Pérdida: 1 - correlación promedio sobre canales y batch
         return 1.0 - tf.reduce_mean(corr)
     
-    def temporal_gradient_loss(y_true, y_pred):
+    def temporal_gradient_loss(self,y_true, y_pred):
         dy_true = y_true[:, 1:, :] - y_true[:, :-1, :]
         dy_pred = y_pred[:, 1:, :] - y_pred[:, :-1, :]
         return tf.reduce_mean(tf.abs(dy_true - dy_pred))

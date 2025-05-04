@@ -53,6 +53,7 @@ class Preprocess_Dataset:
         X_1channel,
         egm_tensor,
         AF_models,
+        class_complexity_list,
         Y_model,
         dic_vars,
         Y,
@@ -63,6 +64,7 @@ class Preprocess_Dataset:
         self.X_1channel = X_1channel
         self.egm_tensor = egm_tensor
         self.AF_models = AF_models
+        self.class_complexity_list = class_complexity_list
         self.Y_model = Y_model
         self.dic_vars = dic_vars
         self.Y = Y
@@ -93,13 +95,14 @@ class Preprocess_Dataset:
         """
 
         # Downsampling and truncate
-        self.X_1channel, self.egm_tensor, self.AF_models, self.Y_model = (
+        self.X_1channel, self.egm_tensor, self.AF_models, self.class_complexity_list, self.Y_model = (
             self.preprocess_compression(
                 fs_sub=self.params["fs_sub"],
                 batch_size=self.params["batch_size"],
                 downsampling=True,
             )
         )
+
 
         # Normalize BSPS and EGM
         self.X_1channel = normalize_by_models(self.X_1channel, self.Y_model)
@@ -125,17 +128,6 @@ class Preprocess_Dataset:
         os.makedirs("output/figures/input_output/", exist_ok=True)
         plt.savefig("output/figures/input_output/norm.png")
 
-        new_items = {
-            "Original_X_1channel": self.X_1channel,
-            "Y": self.Y,
-            "Y_model": self.Y_model,
-            "egm_tensor": self.egm_tensor,
-            "AF_models": self.AF_models,
-            "all_model_names": self.all_model_names,
-            "transfer_matrices": self.transfer_matrices,
-            "X_1channel_norm": self.X_1channel,
-        }
-        self.dic_vars.update(new_items)
 
         # Train/Test/Val Split
         print("Splitting...")
@@ -149,6 +141,9 @@ class Preprocess_Dataset:
             AF_models_train,
             AF_models_test,
             AF_models_val,
+            class_complexity_list_train,
+            class_complexity_list_test,
+            class_complexity_list_val,
             BSPM_train,
             BSPM_test,
             BSPM_val,
@@ -163,34 +158,27 @@ class Preprocess_Dataset:
         print("TEST SHAPE:", x_test.shape, "models:", test_models)
         print("VAL SHAPE:", x_val.shape, "models:", val_models)
 
-        new_items = {
-            "x_train_raw": x_train,
-            "x_test_raw": x_test,
-            "x_val_raw": x_val,
-            "train_models": train_models,
-            "BSPM_train": BSPM_train,
-            "BSPM_test": BSPM_test,
-            "BSPM_val": BSPM_val,
-            "test_models": test_models,
-            "AF_models_train": AF_models_train,
-            "AF_models_test": AF_models_test,
-            "AF_models_val": AF_models_val,
-        }
-        self.dic_vars.update(new_items)
 
         x_train, x_test, x_val = self.preprocessing_autoencoder_input(
             x_train, x_test, x_val, self.params["batch_size"]
         )
+        
 
         new_items = {"x_train": x_train, "x_test": x_test, "x_val": x_val}
         self.dic_vars.update(new_items)
 
-        y_train, y_test, y_val = self.preprocessing_y(
+        y_train, y_test, y_val, class_complexity_list_train, class_complexity_list_test, class_complexity_list_val = self.preprocessing_y(
             train_models,
             test_models,
             val_models,
+            class_complexity_list_train,
+            class_complexity_list_test,
+            class_complexity_list_val,
             self.params["batch_size"],
+
         )
+
+        #
        
         '''
         plt.figure()
@@ -215,9 +203,11 @@ class Preprocess_Dataset:
             AF_models_train,
             AF_models_test,
             AF_models_val,
+            class_complexity_list_train, class_complexity_list_test, class_complexity_list_val,
             train_models,
             test_models,
             val_models,
+
         )
 
     def preprocess_compression(
@@ -241,6 +231,7 @@ class Preprocess_Dataset:
         new_egm_tensor = []
         new_AF_models = []
         new_Y_model = []
+        new_class_complexity_list = []
 
         for AF_model_i in np.unique(self.AF_models):
 
@@ -255,6 +246,12 @@ class Preprocess_Dataset:
             ]
             Y_model_from_model_i = self.Y_model[np.where(self.AF_models == AF_model_i)]
 
+            if self.class_complexity_list is not None:
+                class_complexity_list_i = np.array(self.class_complexity_list)[
+                    np.where(self.AF_models == AF_model_i)
+                ]
+
+
             if downsampling:
                 # X_1channel_sub = signal.resample_poly(self.X_1channel, fs_sub, 500, axis=0)
                 # egm_tensor_sub = signal.resample_poly(self.egm_tensor, fs_sub, 500, axis=0)
@@ -264,6 +261,9 @@ class Preprocess_Dataset:
                 X_1channel_sub = X_1channel_from_model_i[::downsampling_factor]
                 egm_tensor_sub = egm_tensor_from_model_i[::downsampling_factor]
                 AF_models_sub = AF_models_from_model_i[::downsampling_factor]
+                if self.class_complexity_list is not None:
+                    class_complexity_list_sub = class_complexity_list_i[::downsampling_factor]
+
                 Y_model_sub = Y_model_from_model_i[::downsampling_factor]
 
             X_1channel_sub = self.truncate_length_by_batch_size(
@@ -275,17 +275,27 @@ class Preprocess_Dataset:
             AF_models_sub = self.truncate_length_by_batch_size(
                 batch_size, AF_models_sub
             )
+
+            if self.class_complexity_list is not None:
+                class_complexity_list_sub = self.truncate_length_by_batch_size(
+                    batch_size, class_complexity_list_sub
+                )
+
             Y_model_sub = self.truncate_length_by_batch_size(batch_size, Y_model_sub)
 
             new_X_1channel.extend(X_1channel_sub)
             new_egm_tensor.extend(egm_tensor_sub)
             new_AF_models.extend(AF_models_sub)
+            if self.class_complexity_list is not None:
+                new_class_complexity_list.extend(class_complexity_list_sub)
             new_Y_model.extend(Y_model_sub)
+
 
         return (
             np.array(new_X_1channel),
             np.array(new_egm_tensor),
             list(new_AF_models),
+            list(new_class_complexity_list),
             np.array(new_Y_model),
         )
 
@@ -357,6 +367,9 @@ class Preprocess_Dataset:
         train_models,
         test_models,
         val_models,
+        class_complexity_list_train,
+        class_complexity_list_test,
+        class_complexity_list_val,
         n_batch
     ):
         
@@ -404,9 +417,29 @@ class Preprocess_Dataset:
             (int(len(y_val_subsample) / n_batch), n_batch, y_val_subsample.shape[1]),
         )
 
+        class_complexity_list_train = reshape(
+            class_complexity_list_train,
+            (
+                int(len(class_complexity_list_train) / n_batch),
+                n_batch
+            ))
+        class_complexity_list_test = reshape(
+            class_complexity_list_test,
+            (
+                int(len(class_complexity_list_test) / n_batch),
+                n_batch
+            ))
+        class_complexity_list_val = reshape(
+            class_complexity_list_val,
+            (
+                int(len(class_complexity_list_val) / n_batch),
+                n_batch
+            ))
+
+
         
 
-        return y_train, y_test, y_val
+        return y_train, y_test, y_val, class_complexity_list_train, class_complexity_list_test, class_complexity_list_val
 
     def train_test_val_split_Autoencoder(
         self,
@@ -583,7 +616,9 @@ class Preprocess_Dataset:
             
             elif self.split_mode=="stratified":
                 print("Stratified split...")
-                StratifiedSplit_obj = StratifiedSplit(classes_to_oversample=self.params["classes_to_oversample"], oversampling=self.params["oversampling"])
+                StratifiedSplit_obj = StratifiedSplit(classes_to_oversample=self.params["classes_to_oversample"],
+                                                      discard_classes=self.params["discard_classes"],
+                                                       oversampling=self.params["oversampling"])
                 train_models_strat, test_models_strat, val_models_strat=StratifiedSplit_obj()
 
                 train_models, test_models, val_models = [], [], []
@@ -636,6 +671,10 @@ class Preprocess_Dataset:
             AF_models_test = AF_models_arr[np.in1d(self.AF_models, test_models)]
             AF_models_val = AF_models_arr[np.in1d(self.AF_models, val_models)]
 
+            class_complexity_list_arr = np.array(self.class_complexity_list)
+            class_complexity_list_train = class_complexity_list_arr[np.in1d(self.AF_models, train_models)]
+            class_complexity_list_test = class_complexity_list_arr[np.in1d(self.AF_models, test_models)]
+            class_complexity_list_val = class_complexity_list_arr[np.in1d(self.AF_models, val_models)]
         else:
 
             x_train = self.X_1channel[
@@ -663,6 +702,9 @@ class Preprocess_Dataset:
             AF_models_train,
             AF_models_test,
             AF_models_val,
+            class_complexity_list_train,
+            class_complexity_list_test,
+            class_complexity_list_val,
             BSPM_train,
             BSPM_test,
             BSPM_val,

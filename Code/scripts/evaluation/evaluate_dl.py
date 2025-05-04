@@ -183,6 +183,7 @@ class EvaluateDL:
             X_1channel_single,
             egm_single,
             list(AF_models_single),
+            None,
             Y_model,
             dic_vars,
             Y,
@@ -190,8 +191,11 @@ class EvaluateDL:
             transfer_matrices,
             self.experiment_dir,
             norm_egm=True,
-            inference=True
-        )()
+            inference=True,
+            split_mode="deterministic")()
+        
+        
+        
 
         rows = X_1channel.shape[0]
         n_batch=self.params["batch_size"]

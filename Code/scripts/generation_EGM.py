@@ -13,6 +13,11 @@ import matplotlib.pyplot as plt
 #import mlflow
 import scipy
 import tensorflow as tf
+from sklearn.decomposition import PCA
+
+
+
+
 import tools_
 import tools_.oclusion
 from evaluate_function import evaluate_function_multioutput, evaluate_function_multioutput
@@ -87,6 +92,7 @@ params["classes_to_oversample"]= [0,1, 5]
 params["latent_dim"]=250
 params['early_stopping_patience']=50
 params["beta_warmup_epochs"]= 20
+params["select_classes"]= [3, 4]
 
 
 try:
@@ -126,10 +132,11 @@ SNR_white_noise = 100
 patches_oclussion = "PT"
 experiment_number = 0
 unfold_code = 1
-
 experiment_name = algorithm
 
-experiment_name = f"{experiment_name}_baseline_conv2D_annealing"
+#experiment_name = f"{experiment_name}_baseline_conv2D_annealing_class_2_3_4"
+experiment_name="OMAMI_VAE_baseline_conv2D_annealing_time_loss/"
+
 
 params["experiment_name"] = experiment_name
 #experiment_name='pruebas interpol'
@@ -200,7 +207,8 @@ sinusoids = False
     AF_models,
     all_model_names,
     transfer_matrices,
-    y_list
+    y_list, 
+    class_complexity_list
 ) = LoadDataset(
     params,
     directory=directory,
@@ -234,6 +242,9 @@ sinusoids = False
     AF_models_train,
     AF_models_test,
     AF_models_val,
+    class_complexity_list_train,
+    class_complexity_list_test,
+    class_complexity_list_val,
     train_models,
     test_models,
     val_models,
@@ -242,6 +253,7 @@ sinusoids = False
     X_1channel,
     egm_tensor,
     AF_models,
+    class_complexity_list,
     Y_model,
     dic_vars,
     Y,
@@ -252,6 +264,10 @@ sinusoids = False
     norm_egm=True,
     shuffle_patient= True, 
 )()
+
+class_complexity_list_train=class_complexity_list_train[:, 0]
+class_complexity_list_test=class_complexity_list_test[:, 0]
+class_complexity_list_val=class_complexity_list_val[:, 0]
 
 
 params["algorithm"] = "gen_VAE_2D_warmup"
@@ -266,7 +282,7 @@ if params["algorithm"] == "gen_VAE_3D":
 evaluation = True
 
 if not evaluation:
-    params["n_epochs"] = 70
+    params["n_epochs"] = 90
     model, history = TrainModelGen(
         params, y_train, y_test, y_val, y_train, y_test, y_val, models_dir, experiment_dir
     )()
@@ -280,9 +296,39 @@ if evaluation:
         tensorboard_logs=experiment_dir + "tb_logs/"
     )
 
-    vae.model.load_weights(experiment_dir + "model_weights.h5")
+    model_name="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/synthetic_generation/OMAMI_VAE_baseline_conv2D_annealing_time_loss/"
+    vae.model.load_weights(model_name + "model_weights.h5")
 
-    x_real= y_test[:, :, :]
+    x_real= y_train[:, :, :]
+    batch_classes=class_complexity_list_train.astype(np.int32)
+
+    class_labels = {
+    4: "Sinusal",
+    3: "AF"}
+
+    # Latent exploration 
+    z, z_mean_train, _ = vae.build_encoder_module(x_real, vae.input_shape_)
+    pca = PCA(n_components=2)
+    z_proj = pca.fit_transform(z_mean_train)  
+
+    plt.figure(figsize=(6, 6))
+    for class_id in np.unique(batch_classes):
+        mask = batch_classes == class_id
+        plt.scatter(
+            z_proj[mask, 0], z_proj[mask, 1],
+            label=class_labels.get(class_id, f"Clase {class_id}"),
+            alpha=0.7
+        )
+
+    plt.title("z_mean (PCA)")
+    plt.xlabel("PC1")
+    plt.ylabel("PC2")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(experiment_dir + 'pca_guided_by_class_named.png')
+    print(experiment_dir + 'pca_guided_by_class_named.png')
+    plt.close()
 
     # Samplear del espacio latente
     random_sampling = True
@@ -316,19 +362,20 @@ if evaluation:
         print(experiment_dir + "synthetic_signal_random_sampling.png")
         plt.close()
 
-        #signal
-        plt.figure()
-        plt.subplot(2, 1, 1)
-        plt.title("Synthetic signal")
-        plt.plot(synthetic[0:400, 0 ])
-        plt.subplot(2, 1, 2)
-        plt.title("Real signal")
-        plt.plot(y_train[0,0:400, 0 ])
-        plt.savefig(
-            experiment_dir + "random_sampling_1D.png", dpi=300, bbox_inches="tight"
-        )
-        print(experiment_dir + "random_sampling_1D.png")
-        plt.close()
+        for node in range(0, 2047, 100):
+
+            plt.figure()
+            plt.subplot(2, 1, 1)
+            plt.title("Synthetic signal")
+            plt.plot(synthetic[0:400, node])
+            plt.subplot(2, 1, 2)
+            plt.title("Real signal")
+            plt.plot(y_train[0,0:400, node ])
+            plt.savefig(
+                experiment_dir + f"random_sampling_1D_{node}.png", dpi=300, bbox_inches="tight"
+            )
+            print(experiment_dir + f"random_sampling_1D_{node}.png")
+            plt.close()
 
         plt.figure()
         plt.hist(z.numpy().flatten(), bins=100)
@@ -360,12 +407,14 @@ if evaluation:
             for i in range(synthetic.shape[1]):
                 synthetic_norm[ :, i] = normalize_array(synthetic[ :, i], axis_n=0, high=1.0, low=-1.0)
 
-            plt.figure()
+            plt.figure(tight_layout=True)
             plt.subplot(2, 1, 1)
             plt.title("Synthetic signal")
             plt.imshow(synthetic_norm[:, : ], aspect="auto")
             plt.subplot(2, 1, 2)
             plt.title("Real signal")
+            plt.xlabel("Number of nodes of EGM signals")
+            plt.ylabel("Number of time samples")
             plt.imshow(y_train[0, :, :], aspect="auto")
             plt.savefig(
                 experiment_dir + f"synthetic_signal_guided_sampling_{example}.png", dpi=300, bbox_inches="tight"
@@ -373,19 +422,20 @@ if evaluation:
             print(experiment_dir + f"synthetic_signal_guided_sampling_{example}.png")
             plt.close()
 
-            #signal
-            plt.figure()
-            plt.subplot(2, 1, 1)
-            plt.title("Synthetic signal")
-            plt.plot(synthetic[0:400, 0 ])
-            plt.subplot(2, 1, 2)
-            plt.title("Real signal")
-            plt.plot(y_train[0,0:400, 0 ])
-            plt.savefig(
-                experiment_dir + f"guided_sampling_1D_{example}.png", dpi=300, bbox_inches="tight"
-            )
-            print(experiment_dir + f"guided_sampling_1D_{example}.png")
-            plt.close()
+            for node in range(0, 2047, 100):
+
+                plt.figure()
+                plt.subplot(2, 1, 1)
+                plt.title("Synthetic signal")
+                plt.plot(synthetic[0:400, node])
+                plt.subplot(2, 1, 2)
+                plt.title("Real signal")
+                plt.plot(y_train[0,0:400, node ])
+                plt.savefig(
+                    experiment_dir + f"guided_sampling_1D_{example}_{node}.png", dpi=300, bbox_inches="tight"
+                )
+                print(experiment_dir + f"guided_sampling_1D_{example}_{node}.png")
+                plt.close()
 
         plt.figure()
         plt.hist(z_mean_train.numpy().flatten(), bins=100)
@@ -406,18 +456,18 @@ if evaluation:
         from sklearn.decomposition import PCA
         import matplotlib.pyplot as plt
 
-        # Reducimos a 2D
-        pca = PCA(n_components=2)
-        z_proj = pca.fit_transform(z_mean_train)  # (10, 2)
 
-        # Visualización
+        # PCA
+        pca = PCA(n_components=2)
+        z_proj = pca.fit_transform(z_mean_train)  # (333, 2)
+
+        # Visualización con color por clase
         plt.figure(figsize=(6, 6))
-        plt.scatter(z_proj[:, 0], z_proj[:, 1], c='blue')
+        scatter = plt.scatter(z_proj[:, 0], z_proj[:, 1], c=batch_classes, cmap='viridis', alpha=0.8)
         plt.title("PCA del espacio latente (z_mean)")
         plt.xlabel("PC1")
         plt.ylabel("PC2")
         plt.grid(True)
-        plt.savefig(experiment_dir+'pca_guided.png')
 
     if reconstruction == False:
 
@@ -688,3 +738,22 @@ if evaluation:
         experiment_dir + f"interpolations_{i}.png", dpi=300, bbox_inches="tight"
     )
         plt.show()
+
+    #Evaluation
+    reconstructed = vae.model.predict(y_test)
+    mse = tf.reduce_mean(tf.keras.losses.mean_squared_error(y_test, reconstructed)).numpy()
+    print("Mean Squared Error (MSE):", mse)
+
+    # Encode test set
+    z, z_mean_train, z_log_var = vae.build_encoder_module(y_test, vae.input_shape_)
+
+    # Clip log var for numerical stability
+    logvar = tf.clip_by_value(z_log_var, -10.0, 10.0)
+
+    # Compute KL loss per sample
+    kl_loss_per_sample = -0.5 * tf.reduce_sum(1 + logvar - tf.square(z_mean_train) - tf.exp(logvar), axis=1)
+
+    # Mean KL over all samples
+    kl_loss_mean = tf.reduce_mean(kl_loss_per_sample).numpy()
+
+    print(f"KL loss (test set): {kl_loss_mean:.6f}")

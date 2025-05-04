@@ -153,10 +153,15 @@ class LoadDataset:
                 n = 80  # NUmber of sinusoid models generated
                 all_model_names = ["Model {}".format(m) for m in range(n + 1)]
             print(len(all_model_names), "Models")
+            all_model_classes=np.zeros(len(all_model_names))
+
         else:
+
             StratifiedSplit_obj = StratifiedSplit(classes_to_oversample=self.params["classes_to_oversample"], oversampling=self.params["oversampling"])
-            all_model_names_csv = StratifiedSplit_obj.load_process_annotations(select_classes=4)
+            all_model_names_csv = StratifiedSplit_obj.load_process_annotations(select_classes=self.params["select_classes"])
             all_model_names=list(all_model_names_csv["Simulation_Name"])
+            all_model_classes=list(all_model_names_csv["Complexity"])
+
 
         #Load annotations (class related to complexity and patterns)
 
@@ -169,6 +174,7 @@ class LoadDataset:
         length_list = []
         AF_models = []
         y_list = []
+        class_complexity_list=[]
 
         # Load corrected transfer matrices
         transfer_matrices = self.load_transfer(ten_leads=False, bsps_set=False)
@@ -211,7 +217,9 @@ class LoadDataset:
 
         print('Load - all_model_names', all_model_names)
         cont=0
-        for model_name in all_model_names:
+
+            
+        for model_name, model_class in zip(all_model_names, all_model_classes): 
 
             if self.inference:
                 if model_name not in model_name:
@@ -322,21 +330,12 @@ class LoadDataset:
                     # Interpolate
                     tensor_model = interpolate_2D_array(tensor_model)
 
-                    
-
-                    # Truncate length to be divisible by the batch size
-                    # tensor_model, length_list, x_sub = truncate_length_bsps(self.n_batch, tensor_model, length_list, x_sub)
 
                     X.extend(tensor_model)
                     egm_tensor.extend(x_sub.T)
 
-                    # plt.figure(figsize=(20, 7))
-                    # plt.plot(x_sub[0, 0:2000])
-                    # plt.plot(tensors_model[0:2000, 0, 0])
-                    # plt.title(model_name)
-                    # plt.savefig(model_name)
 
-                    # plt.savefig('output/figures/input_output/saving_truncate.png')
+
 
                 else:
                     X.extend(bsps_64.T)
@@ -351,6 +350,10 @@ class LoadDataset:
                     AF_model_i_array = np.full(len(tensor_model), AF_model_i)
                     AF_models.extend(AF_model_i_array)
 
+                    # Class complexity
+                    class_complexity=np.ones(len(tensor_model))*model_class
+                    class_complexity_list.extend(class_complexity)
+
                 n_model += 1
 
             AF_model_i += 1
@@ -364,7 +367,8 @@ class LoadDataset:
             AF_models,
             all_model_names,
             transfer_matrices,
-            y_list
+            y_list, 
+            class_complexity_list
         )
 
     def load_transfer(self, ten_leads=False, bsps_set=False):
