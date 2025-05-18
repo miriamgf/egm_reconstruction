@@ -20,19 +20,36 @@ for i in range(len(bsps_all_models)):
     bsps_64 = bsps_all_models[i]
 
 
-       
-min_length = float('inf')  
+    
+filtered_models = []  # Lista para almacenar los modelos procesados
 
-# We look for the minimum length of the nodes to trimmed all the models
-for model in bsps_64_all_models:  
-    for node in model:  
-        node_length = len(node)  
-        min_length = min(min_length, node_length) 
+for model in bsps_64_all_models:
+    new_model = []  # Lista para almacenar los nodos filtrados y recortados
+    
+    for node in model:
+        original_length = len(node)  # Longitud original del nodo
 
-trimmed_models = [
-    [node[:min_length] for node in model]  
-    for model in bsps_64_all_models
-]
+        # Descartar los nodos menores de 2000 samples
+        if original_length < 2000:
+            continue  # No agregar este nodo a new_model
+
+        # Recortar nodos entre 2001 y 2500 samples a 2000
+        if 2001 <= original_length <= 2500:
+            node = node[:2000]
+
+        # Recortar nodos entre 4001 y 4501 samples a 4000
+        elif 4001 <= original_length <= 4501:
+            node = node[:4000]
+
+        # Agregar el nodo procesado a la lista del modelo
+        new_model.append(node)
+
+    # Solo agregar el modelo si aún tiene nodos después del filtrado
+    if len(new_model) > 0:
+        filtered_models.append(new_model)
+    else:
+        continue
+
 
 
 bsps_64_mod1 = []
@@ -44,38 +61,31 @@ bsps_64_mod6 = []
 bsps_64_mod7 = []
 bsps_64_mod8 = []
 bsps_64_mod9 = []
-bsps_64_mod10 = []
-bsps_64_mod11 = []
-bsps_64_mod12 = []
 
-for i in range(len(trimmed_models)):
+
+for i in range(len(filtered_models)):
     if i==0:
-        bsps_64_mod1.append(trimmed_models[i])
+        bsps_64_mod1.append(filtered_models[i])
     elif i==1:
-        bsps_64_mod2.append(trimmed_models[i])
+        bsps_64_mod2.append(filtered_models[i])
     elif i==2:
-        bsps_64_mod3.append(trimmed_models[i])
+        bsps_64_mod3.append(filtered_models[i])
     elif i==3:
-        bsps_64_mod4.append(trimmed_models[i])
+        bsps_64_mod4.append(filtered_models[i])
     elif i==4:
-        bsps_64_mod5.append(trimmed_models[i])
+        bsps_64_mod5.append(filtered_models[i])
     elif i==5:
-        bsps_64_mod6.append(trimmed_models[i])
+        bsps_64_mod6.append(filtered_models[i])
     elif i==6:
-        bsps_64_mod7.append(trimmed_models[i])
+        bsps_64_mod7.append(filtered_models[i])
     elif i==7:
-        bsps_64_mod8.append(trimmed_models[i])
+        bsps_64_mod8.append(filtered_models[i])
     elif i==8:
-        bsps_64_mod9.append(trimmed_models[i])
-    elif i==9:
-        bsps_64_mod10.append(trimmed_models[i])
-    elif i==10:
-        bsps_64_mod11.append(trimmed_models[i])
-    elif i==11:
-        bsps_64_mod12.append(trimmed_models[i])
+        bsps_64_mod9.append(filtered_models[i])
 
-bsps_64_models_trimmed = trimmed_models
-print("All models have been trimmed to the minimum length - var: **bsps_64_models_trimmed** ")
+
+bsps_64_filtered_models = filtered_models
+print("All models have been trimmed to the minimum length - var: **bsps_64_filtered_models** ")
 
 J = 4
 Q = (16,1)
@@ -83,7 +93,7 @@ ws_coeff_all_mods = []  # list to store the wavelet scattering coefficients for 
 
 models_name = ['Simulation_01_210209_001_002', 'LA_RSPV_CAF_150115', 'Simulation_01_200428_001_001', 'Simulation_01_201223_001_002', 'Simulation_01_190619_001_004', 'Simulation_01_190502_001_004', 'RA_RAFW_140807', 'RA_RAA_141230', 'Simulation_01_200316_001_  1', 'TwoRotors_181219', 'RA_RAFW_SAF_140730', 'Simulation_01_200212_001_  4']
 # Aplicar wavelet scattering a los todos los nodos de los 2 modelos (simple y complex)
-for model, name_model in zip(bsps_64_models_trimmed, models_name):
+for model, name_model in zip(bsps_64_filtered_models, models_name):
     print(f"\nModel: {name_model}")
     print("Samples of every node:", len(model[0]), "samples")
 
