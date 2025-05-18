@@ -53,7 +53,8 @@ import time
 # %% Path Models
 current = os.path.dirname(os.path.realpath(__file__))
 torsos_dir = "../../../Labeled_torsos/"
-directory = "../../Data_short/"
+#directory = "../../Data_short/"
+directory = "../../DATA_USE/"
 #torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
 torsos_dir = "../../Labeled_torsos/"
 
@@ -600,7 +601,7 @@ def load_transfer(ten_leads=False, bsps_set=False):
     Returns:
         MTransfer: Transfer matrix for atria and torso models
     """
-
+    
     all_torsos_names = []
     for subdir, dirs, files in os.walk(torsos_dir):
         for file in files:
