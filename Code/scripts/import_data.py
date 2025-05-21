@@ -31,35 +31,42 @@ print("how many models", len(egms_values)) # 64 nodes
 print()
 print("Egms models LOADED - var: **egms_all_models**, **egms_values** ")
 
-noisy_egms = []
-for i in range(len(egms_values)):
-    egms = egms_values[i]
-    egms_noisy, _ = addwhitenoise(egms.T, SNR = 20, fs=500)
-    egms_noisy = egms_noisy.T 
-    print(egms_noisy.shape)
-    noisy_egms.append(egms_noisy)
-print(len(noisy_egms))
+# DE MOMENTO QUITAR FILTRADO Y RUIDO
+# noisy_egms = []
+# for i in range(len(egms_values)):
+#     egms = egms_values[i]
+#     egms_noisy, _ = addwhitenoise(egms.T, SNR = 20, fs=500)
+#     egms_noisy = egms_noisy.T 
+#     print(egms_noisy.shape)
+#     noisy_egms.append(egms_noisy)
+# print(len(noisy_egms))
 
 #ECG FILTERING AND NORMALIZATION
 egms_filtered_norm = []
 
-for i in range(len(noisy_egms)):
+for i in range(len(egms_values)):
+#for i in range(len(noisy_egms)):
     #ECG FILTERING
-    egms = noisy_egms[i]
-    egms_filt = ECG_filtering(egms.T, 500, order = 2, f_low=3, f_high=60)
+    #egms = noisy_egms[i]
+    egms = egms_values[i]
+    #egms_filt = ECG_filtering(egms.T, 500, order = 2, f_low=3, f_high=60)
 
     print("Original EGM shape:", egms.shape)        # Debe ser (n_nodes, time)
     print("Transposed for filtering:", egms.T.shape)  # Debe ser (time, n_nodes)
 
+    egms = egms.T
     #NORMLIZE EGMS
     high = 1
     low = -1
+    mins = np.min(egms, axis=0)
+    maxs = np.max(egms, axis=0)
 
-    mins = np.min(egms_filt, axis=0)
-    maxs = np.max(egms_filt, axis=0)
+    #mins = np.min(egms_filt, axis=0)
+    #maxs = np.max(egms_filt, axis=0)
     rng = maxs - mins
 
-    norm_egms = high - (((high - low) * (maxs - egms_filt)) / rng)
+    norm_egms = high - (((high - low) * (maxs - egms)) / rng)
+    #norm_egms = high - (((high - low) * (maxs - egms_filt)) / rng)
     
     norm_egms = norm_egms.T #para que queden otra vez (2048 x samples of time)
     egms_filtered_norm.append(norm_egms)
@@ -72,33 +79,33 @@ import random
 import matplotlib
 import matplotlib.pyplot as plt
 
-# node = 100
-# random_indices = random.sample(range(len(egms_values)), 3)
-# fig, axs = plt.subplots(3, 1, figsize=(15, 10))
+node = 100
+random_indices = random.sample(range(len(egms_values)), 3)
+fig, axs = plt.subplots(3, 1, figsize=(15, 10))
 
-# for i, idx in enumerate(random_indices):
-#     axs[i].plot(egms_values[idx][node])
-#     axs[i].set_title(f'Original EGM Model {idx}')
-#     axs[i].set_xlabel('Samples of time')
-#     axs[i].set_ylabel('Amplitude')
+for i, idx in enumerate(random_indices):
+    axs[i].plot(egms_values[idx][node])
+    axs[i].set_title(f'Original EGM Model {idx}')
+    axs[i].set_xlabel('Samples of time')
+    axs[i].set_ylabel('Amplitude')
 
-# plt.tight_layout()
-# plt.savefig('original_models_subplot.png')  # Guarda la imagen con 3 subplots
-# plt.close()
+plt.tight_layout()
+plt.savefig('original_models_subplot.png')  # Guarda la imagen con 3 subplots
+plt.close()
 
 
-# random_ind = random.sample(range(len(egms_filtered_norm)), 3)
-# fig, axs = plt.subplots(3, 1, figsize=(15, 10))
+random_ind = random.sample(range(len(egms_filtered_norm)), 3)
+fig, axs = plt.subplots(3, 1, figsize=(15, 10))
 
-# for i, idx in enumerate(random_ind):
-#     axs[i].plot(egms_filtered_norm[idx][node, :]) 
-#     axs[i].set_title(f'Filtered EGM Model {idx}')  
-#     axs[i].set_xlabel('Samples of time')
-#     axs[i].set_ylabel('Amplitude')
+for i, idx in enumerate(random_ind):
+    axs[i].plot(egms_filtered_norm[idx][node, :]) 
+    axs[i].set_title(f'Filtered EGM Model {idx}')  
+    axs[i].set_xlabel('Samples of time')
+    axs[i].set_ylabel('Amplitude')
 
-# plt.tight_layout()
-# plt.savefig('filtered_models_subplot.png')
-# plt.show()
+plt.tight_layout()
+plt.savefig('filtered_models_subplot.png')
+plt.show()
 
 
 # LOADING TRANSFER MATRICES AND COMPUTING THE FORWARD PROBLEM
