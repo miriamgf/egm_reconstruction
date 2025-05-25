@@ -145,6 +145,7 @@ try:
     params["n_nodes_regression"]=n_nodes
 
     # Data Augmentation
+    params["split_mode"] = "stratified"
 
     if shuffle_patient is not None:
         params["shuffle_patient"]=shuffle_patient
@@ -171,6 +172,7 @@ try:
     if discard_classes is not None:
         params["discard_classes"]=[0, 1, 3, 5]
         params["classes_to_oversample"]= [4]
+        split_mode=params["split_mode"]
         
 
     else:
@@ -266,7 +268,7 @@ if params["attention_layer"]:
     experiment_name= experiment_name + "_attention"
 
 params["early_stopping_patience"] = 40
-
+params["discard_classes"] = [1, 3, 5]
 if len(params["discard_classes"])>0:
     experiment_name= experiment_name + "_strat_2_class_overs"
 else:
@@ -283,7 +285,7 @@ params["experiment_name"]=experiment_name
 
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
+data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data_short/"
 torsos_dir = "../../../../Labeled_torsos/"
 figs_dir = "output/figures/"
 models_dir = "output/model/"
@@ -466,6 +468,8 @@ plt.savefig('output/figures/input_output/before_norm.png')
 )()
 
 
+plt.figure()
+plt.plot()
 
 print('################ CHECKING DISTRIBUTION AFTER PREPROCESSING ################')
 

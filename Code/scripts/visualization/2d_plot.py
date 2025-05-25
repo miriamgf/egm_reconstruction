@@ -20,12 +20,15 @@ from scripts.Tikhonov.compute_tik import TikhonovReconstruction
 from scripts.evaluation.metrics import Metrics
 from models.attention import LuongAttention
 from models.multioutput_VAE import  SamplingLayer
+from tools_.stratified_split import StratifiedSplit
+
 from scripts.evaluate_function import *
 from tools_.tools_inference import *
 import seaborn as sns
 from scipy.signal import spectrogram
 import tools_.tools as tools
 from tools_.tools_inference import normalize_array
+experiment_dir = f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/"
 
 
 class Visualize2D:
@@ -161,15 +164,18 @@ class Visualize2D:
             X_1channel_single,
             egm_single,
             list(AF_models_single),
+            None,
             Y_model,
             dic_vars,
             Y,
             all_model_names,
             transfer_matrices,
             experiment_dir,
+            split_mode=params["split_mode"],
             norm_egm=True,
             inference=True
         )()
+
 
         #batch gen
         rows = X_1channel.shape[0]
@@ -484,6 +490,8 @@ if __name__ == "__main__":
             ["Simulation_01_200428_001_008"], ["Simulation_01_200428_001_010"],
             ["Simulation_01_210119_001_001"], ["Simulation_01_210208_001_002"]
         ]
+    
+
 
     try:
         print("Parsing bash params")
@@ -499,6 +507,17 @@ if __name__ == "__main__":
     
     except:
         experiment_ID_list=[['OMAMI_no_filt_testing2_repeated_no_filt_l2_tm']]
+    
+    stratified_split=True
+    
+    if stratified_split:
+        experiment_dir=f"{experiment_dir}{algorithm_ID}"
+        StratifiedSplit_obj = StratifiedSplit(classes_to_oversample=None,
+                                                discard_classes=None,
+                                                oversampling=None)
+    print("Stratified split")
+    test_patients = StratifiedSplit_obj.get_test_for_inference(experiment_dir)
+    test_patients = [[patient] for patient in test_patients]
 
     vis = Visualize2D(test_patients, experiment_ID_list, list_metrics)
     vis.run_all()

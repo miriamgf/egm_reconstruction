@@ -1,25 +1,16 @@
-
-
-# Esperar 7 horas (7 * 60 * 60 segundos)
-
-#
-
-#echo "output/logs/evaluation/OMAMI_VAE_no_filt.log"
-#nohup python -u scripts/evaluation/evaluate_main.py --algorithm_ID 'OMAMI_VAE_no_filt' --ev_DL true --ev_TIK true > output/logs/evaluation/OMAMI_VAE_no_filt.log 2>&1 &
-#wait
-
-#echo "output/logs/evaluation/OMAMI_VAE_no_filt_testing.log"
-#nohup python -u scripts/evaluation/evaluate_main.py --algorithm_ID 'OMAMI_VAE_no_filt_testing_repeated' --ev_DL true --ev_TIK true > output/logs/evaluation/OMAMI_VAE_no_filt_testing.log 2>&1 
-#wait
-
-#echo "output/logs/evaluation/OMAMI_no_filt_testing2.log"
-#nohup python -u scripts/evaluation/evaluate_main.py --algorithm_ID 'OMAMI_no_filt_testing2_repeated' --ev_DL true --ev_TIK true > output/logs/evaluation/OMAMI_no_filt_testing2.log 2>&1 &
-#wait
-
 #!/bin/bash
 
-#!/bin/bash
+PYTHON_BIN="/home/profes/miriamgf/anaconda3/envs/research3/bin/python"
+echo "Usando Python: $PYTHON_BIN"
 
 
-echo "output/logs/evaluation/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs.log"
-nohup python -u scripts/evaluation/evaluate_main.py --algorithm_ID 'OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs' --ev_DL true --ev_TIK true > output/logs/evaluation/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs.log 2>&1
+# Evaluación 4
+LOG4="output/logs/evaluation/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_5_class_overs.log"
+echo "Ejecutando Evaluación 4"
+echo "Log: $LOG4"
+nohup $PYTHON_BIN -u scripts/evaluation/evaluate_main.py \
+  --algorithm_ID 'OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_5_class_overs' \
+  --ev_DL true \
+  --stratified_split true \
+  --ev_TIK true \
+  > "$LOG4" 2>&1

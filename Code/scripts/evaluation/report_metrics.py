@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import matplotlib.patches as mpatches  # Para arreglar la leyenda
 import seaborn as sns
+pd.set_option('display.max_columns', None)
 
 
 class ReportMetrics():
@@ -21,7 +22,7 @@ class ReportMetrics():
     
     
     '''
-    def __init__(self,  algorithm_list=None, test_id=0, name='default'):
+    def __init__(self,  algorithm_list=None, test_id=0, name='default', stratified=False):
         self.path_experiments= "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/"
 
         if algorithm_list is None:
@@ -37,9 +38,22 @@ class ReportMetrics():
         os.makedirs(self.path_to_save_summary, exist_ok=True)
         self.name=name
         self.test_id=test_id
+        self.stratified=stratified
+        if self.stratified:
+            self.class_df = "/home/profes/miriamgf/tesis/Autoencoders/Data/annotations.csv"
+    
+    def load_class_df(self):
+        '''
+        This function loads the class df for stratified evaluation
+        '''
+        # Load
+        df_annotation_complexity= pd.read_csv(self.class_df, delimiter=';')
+        df_annotation_complexity.rename(columns={'Simulation_Name': 'name'}, inplace=True)
 
-
-
+        # Select only patients with complexity in classes_to_strat
+        df_annotation_complexity.head()
+        return df_annotation_complexity
+    
     def load_evaluation_dataframes(self, algorithm_ID):
 
         '''
@@ -68,17 +82,79 @@ class ReportMetrics():
         df_tik_filt.columns = df_tik_filt.columns.str.replace('_', '', regex=True)  # Elimina los guiones bajos
         '''
         try:
-            csv_tik_no_filt=f"{self.path_experiments}{self.algorithm_ID_tik_no_filt}/metrics_tik_{self.test_id}.csv"
+            csv_tik_no_filt=f"{self.path_experiments}{self.algorithm_ID_tik_no_filt}/metrics_tik.csv"
             df_tik_no_filt = pd.read_csv(csv_tik_no_filt)
 
         except:
-            csv_tik_no_filt=f"{self.path_experiments}{self.algorithm_ID_tik_no_filt}/metrics_tik.csv"
+            csv_tik_no_filt=f"{self.path_experiments}{self.algorithm_ID_tik_no_filt}/metrics_tik_0.csv"
             df_tik_no_filt = pd.read_csv(csv_tik_no_filt)
 
         df_tik_no_filt = pd.read_csv(csv_tik_no_filt)
         df_tik_no_filt.columns = df_tik_no_filt.columns.str.replace('_', '', regex=True)  # Elimina los guiones bajos
 
         return df_dl, df_tik_no_filt, df_dl_or
+    
+    def summary_per_algorithm_stratified_tocsv(self, merged_df, df_dl, df_groups, algorithm_mod_name):
+        """
+        Compute mean ± std of metrics per algorithm, stratified by group/class.
+        Saves one CSV per group.
+        """
+
+        # Merge with group information
+        df_with_groups = pd.merge(merged_df, df_groups, on='name')  # Ajusta el 'on' si el identificador es otro
+
+
+        # Extraer nombres únicos de métricas
+        metric_names = list(set(col.split("_OMAMI")[0] for col in merged_df.columns if "_OMAMI" in col))
+
+        for group, group_df in df_with_groups.groupby("Complexity"):
+            metrics_summary = {}
+
+            for algorithm in algorithm_mod_name:
+                
+                metric_values = {}
+                for metric in metric_names:
+                    algorithm_cols = [col for col in group_df.columns if metric in col and algorithm in col]
+                    if len(algorithm_cols)==0:
+                        raise ValueError(f"Algorithm columns not found for {algorithm} and {metric}") 
+                    if algorithm_cols:
+
+                        std_value = group_df[algorithm_cols].std(numeric_only=True).mean()
+
+                        if pd.isna(std_value):
+                            # Si la desviación estándar es NaN, asignar 0
+                            metric_values[metric] = {
+                                "Mean": group_df[algorithm_cols].mean(numeric_only=True).mean(),
+                                "Std": 0
+                            }
+
+                        else:
+                            metric_values[metric] = {
+                                "Mean": group_df[algorithm_cols].mean(numeric_only=True).mean(),
+                                "Std": group_df[algorithm_cols].std(numeric_only=True).mean()
+                            }
+
+                metrics_summary[algorithm] = pd.DataFrame(metric_values).T
+
+            summary_df = pd.concat(metrics_summary, axis=1).T
+            df_formatted = summary_df.copy()
+
+            if isinstance(df_formatted.index, pd.MultiIndex):
+                df_mean = np.round(df_formatted.xs('Mean', level=1), 4)
+                df_std = np.round(df_formatted.xs('Std', level=1), 2)
+                df_result = df_mean.astype(str) + " ± " + df_std.astype(str)
+            else:
+                print(f"Error: El DataFrame para el grupo {group} no tiene un MultiIndex.")
+
+            # Reordenar columnas como df_dl
+            #common_columns = [col for col in df_dl.columns if col in df_result.columns]
+            #df_result = df_result[common_columns]
+
+            # Guardar resultado
+            path = f"{self.path_to_save_summary}/group_{group}_results_{self.name}.csv"
+            df_result.to_csv(path, index=True)
+            print(f"CSV saved for group {group} at: {path}")
+
     
     def summary_per_algorithm_tocsv(self,merged_df,df_dl,algorithm_mod_name):
         '''
@@ -133,8 +209,8 @@ class ReportMetrics():
             print("Error: El DataFrame no tiene un MultiIndex con niveles (algoritmo, estadística).")
 
         #reorder columns
-        common_columns = [col for col in df_dl.columns if col in df_result.columns]
-        df_result = df_result[common_columns]
+        #common_columns = [col for col in df_dl.columns if col in df_result.columns]
+        #df_result = df_result[common_columns]
 
         path=f"{self.path_to_save_summary}/global_results_{self.name}.csv"
         df_result.to_csv(path, index=True)
@@ -494,7 +570,7 @@ class ReportMetrics():
 
         # Add here Tikhonov variations names
         #algorithm_mod_name+=['ZotFilt']
-        algorithm_mod_name+=['ZotNoFilt']
+        #algorithm_mod_name+=['ZotNoFilt']
         '''
         #Add ZOT results
         df = df_tik_filt.add_suffix(f"_ZotFilt")
@@ -505,14 +581,22 @@ class ReportMetrics():
         #Save merged
         merged_df.to_csv(f"{self.path_to_save_summary}merged_df_{self.name}.csv")
 
-        df = df_tik_no_filt.add_suffix(f"_ZotNoFilt")
-        df.rename(columns={f'name_ZotNoFilt': 'name'}, inplace=True)
-        merged_df = pd.merge(merged_df, df, on='name', how='outer') # DL AND TIKHONOV
+        #df = df_tik_no_filt.add_suffix(f"_ZotNoFilt")
+        #df.rename(columns={f'name_ZotNoFilt': 'name'}, inplace=True)
+        #merged_df = pd.merge(merged_df, df, on='name', how='outer') # DL AND TIKHONOV
         #df_tik_merged = pd.merge(df_filt, df, on='name', how='outer') #ONLY TIKHONOV
-
-        self.boxplot_per_patient(merged_df_dl, df_tik_no_filt)
-        self.summary_per_algorithm_tocsv(merged_df,df_dl_or,algorithm_mod_name)
+        
+        #Save metric summaries
+        if self.stratified:
+            df_groups = self.load_class_df()
+            self.summary_per_algorithm_stratified_tocsv(merged_df, df_dl, df_groups, algorithm_mod_name)
+        
+        # Save global results
+        self.summary_per_algorithm_tocsv(merged_df,df_dl,algorithm_mod_name)
         df_summary_per_patient=self.summary_per_patient_tocsv(merged_df)
+
+        #Figures
+        #self.boxplot_per_patient(merged_df_dl, df_tik_no_filt)
         self.barplot_algorithm(merged_df,algorithm_mod_name, patient_name='LA_RSPV_CAF_150115' )
         self.boxplot_per_algorithm(merged_df, algorithm_mod_name)
         self.classification_rotor_complexity_tocsv(df_summary_per_patient)
@@ -521,9 +605,14 @@ class ReportMetrics():
 
 if __name__ == "__main__":
 
-    algorithm_list= ['OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_attention',
-                     'OMAMI_no_filt_testing2_repeated_no_filt_l2_attention']
+    algorithm_list= ['OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs',
+                     'OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_2_class_overs', 
+                     'OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_2_class_overs',
+                     'OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_5_class_overs']
     
     for algorithm in algorithm_list:
 
-        ReportMetrics(name= 'att', algorithm_list=[algorithm], test_id=0)()
+        ReportMetrics(name= 'stratified_evaluation',
+                    algorithm_list=[algorithm],
+                    test_id='_str_test', 
+                    stratified=True)()

@@ -33,10 +33,14 @@ from tools_.tools import corr_pearson_cols
 from tools_.tools_inference import *
 from tools_ import freq_phase_analysis as freq_pha
 from models.attention import LuongAttention
+from tools_.stratified_split import StratifiedSplit
 
 
 os.environ["LIBGL_ALWAYS_SOFTWARE"] = "1"
 os.environ["MESA_LOADER_DRIVER_OVERRIDE"] = "llvmpipe"
+
+experiment_dir = f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/"
+
 
 import time
 
@@ -45,19 +49,19 @@ import time
 # CONFIGURE
 #---------------------------------------------------------------------------------------------------------------------
 
-plot_BSP = True
-plot_Tikhonov = True
+plot_BSP = False
+plot_Tikhonov = False
 plot_DL= True
 plot_correlation_DL = True
-plot_correlation_tik = True
+plot_correlation_tik = False
 plot_rmse_DL = True
-plot_rmse_tik = True
+plot_rmse_tik = False
 plot_coherence_DL = True
-plot_coherence_tik = True
+plot_coherence_tik = False
 plot_DTW_DL = True
-plot_DTW_tik = True
+plot_DTW_tik = False
 
-plot_DF_maps_DL = False
+plot_DF_maps_DL = True
 plot_DF_maps_tik = False
 
 load_tik_array=True
@@ -83,6 +87,8 @@ test_patients = [["Simulation_01_200212_001_  5"],
                 ["Simulation_01_200316_001_  4"]]
 
 
+
+
 try:
         print("Parsing bash params")
         parser = argparse.ArgumentParser(description="params")
@@ -96,10 +102,22 @@ try:
         print(algorithm_ID)
     
 except:
-        experiment_ID_list=[["OMAMI_no_filt_testing2_repeated"]]
+        
+        experiment_ID_list=[["OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_2_class_overs"]]
+        algorithm_ID=experiment_ID_list[0][0]
+stratified_split=True
+
+if stratified_split:
+    experiment_dir=f"{experiment_dir}{algorithm_ID}"
+    StratifiedSplit_obj = StratifiedSplit(classes_to_oversample=None,
+                                            discard_classes=None,
+                                            oversampling=None)
+print("Stratified split")
+test_patients = StratifiedSplit_obj.get_test_for_inference(experiment_dir)
+test_patients = [[patient] for patient in test_patients]
 
 
-testing_id=0
+testing_id="_str_test"
 start = time.time()
 cont=0
 
@@ -224,12 +242,14 @@ for model_name in test_patients:
             X_1channel_single,
             egm_single,
             list(AF_models_single),
+            None,
             Y_model,
             dic_vars,
             Y,
             all_model_names,
             transfer_matrices,
             experiment_dir,
+            split_mode=params["split_mode"],
             norm_egm=True,
             inference=True
         )()

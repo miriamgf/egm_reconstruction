@@ -42,6 +42,11 @@ test_patients = [
             "Simulation_01_210119_001_001", "Simulation_01_210208_001_002"
         ]
 
+test_patients = [
+           
+            "Simulation_01_200316_001_  3"
+        ]
+
 class EvaluateDL:
 
 
@@ -192,7 +197,7 @@ class EvaluateDL:
             self.experiment_dir,
             norm_egm=True,
             inference=True,
-            split_mode="deterministic")()
+            split_mode=self.params['split_mode'])()
         
         
         
@@ -349,6 +354,8 @@ class EvaluateDL:
         for cont, patient in enumerate(self.test_patients, start=1):
             
             X_1channel, egm_tensor, Y_model, _, _, _ = self.load_and_process_patient(patient, cont)
+
+            
             prediction, y_label = self.run_inference(X_1channel, egm_tensor, Y_model)
             prediction=self.postprocess_data_DL(prediction)
             MetricsObj = Metrics(algorithm_ID=self.algorithm_ID, model_name=patient, tik=False)

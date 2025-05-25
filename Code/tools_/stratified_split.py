@@ -6,7 +6,7 @@ from collections import Counter
 
 
 class StratifiedSplit:
-    def __init__(self,classes_to_oversample, discard_classes=[], oversampling=True):
+    def __init__(self,classes_to_oversample=[], discard_classes=[], oversampling=True):
 
         self.annotation_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/annotations.csv"
         self.discard_classes = discard_classes
@@ -82,6 +82,16 @@ class StratifiedSplit:
         print("val_patients: ", val_patients)
 
         return train_patients, test_patients, val_patients
+    
+    def get_test_for_inference(self, experiment_dir):
+        """
+        Get the test patients for inference from the original experiment dir.
+        """
+        path= experiment_dir + "/test_models.txt"
+        with open(path, "r") as f:
+            test_models_strat = [line.strip() for line in f if line.strip()]
+
+        return test_models_strat
     
 
 
