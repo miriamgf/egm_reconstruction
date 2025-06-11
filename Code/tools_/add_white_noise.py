@@ -129,7 +129,7 @@ def ECG_filtering(signal, fs, f_low=3, f_high=30, model="SR"):
     return proc_ECG_EGM
 
 
-def addwhitenoise(signal, fs=50, SNR=20, model="AF", seed="N"):
+def addwhitenoise(signal, fs=50, SNR=20, model="AF", seed="N", plot_figure='False'):
     """
     Add gaussian white noise. We assume constant noise power in all electrodes.
 
@@ -159,12 +159,20 @@ def addwhitenoise(signal, fs=50, SNR=20, model="AF", seed="N"):
 
     noisy_EGM = noise + signal
     
-    plt.figure()
-    plt.plot(noise[:, 0, 0], label = 'noise')
-    plt.plot(signal[:, 0, 0], label = 'signal')
-    plt.plot(noisy_EGM[:, 0, 0], label='noisy')
-    plt.legend()
-    plt.savefig('/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/Noise_module/white_noise.png')
+    if plot_figure=='True':
+        plt.figure()
+
+        if noise.ndim == 3:
+            plt.plot(noise[:, 0, 0], label='noise')
+            plt.plot(signal[:, 0, 0], label='signal')
+            plt.plot(noisy_EGM[:, 0, 0], label='noisy')
+        else:
+            plt.plot(noise[0, :], label='noise')
+            plt.plot(signal[0, :], label='signal')
+            plt.plot(noisy_EGM[0, :], label='noisy')
+
+        plt.legend()
+        plt.savefig('/home/alumnos/mburgosc/tfg/egm_reconstruction/Code/output/white_noise.png')
 
 
 

@@ -20,6 +20,9 @@ from tools import addwhitenoise
 directory = "../../Data_short/"
 #data_short_dir = "/home/alumnos/mburgosc/tfg/egm_reconstruction/Data_short"
 data_short_dir = "/home/alumnos/mburgosc/tfg/egm_reconstruction/DATA_USE"
+data_short_dir = "/home/alumnos/mburgosc/tfg/egm_reconstruction/Data"
+
+
 egms_all_models = load_egms_df(data_short_dir)
 egms_values = egms_all_models["AF_signal"].tolist()
 print("models_names" , egms_all_models["id"].tolist())
@@ -43,6 +46,7 @@ print("Egms models LOADED - var: **egms_all_models**, **egms_values** ")
 
 #ECG FILTERING AND NORMALIZATION
 egms_filtered_norm = []
+filtered_model_names = []
 
 for i in range(len(egms_values)):
 #for i in range(len(noisy_egms)):
@@ -50,6 +54,11 @@ for i in range(len(egms_values)):
     #egms = noisy_egms[i]
     egms = egms_values[i]
     #egms_filt = ECG_filtering(egms.T, 500, order = 2, f_low=3, f_high=60)
+    if egms.shape[1] < 2000:
+        print(f"Descartando modelo {i} por tener menos de 2000 muestras: {egms.shape[1]}")
+        continue  # Saltar este modelo
+
+    filtered_model_names.append(models_names[i])
 
     print("Original EGM shape:", egms.shape)        # Debe ser (n_nodes, time)
     print("Transposed for filtering:", egms.T.shape)  # Debe ser (time, n_nodes)
@@ -116,6 +125,8 @@ print(len(transfer_matrices))
 
 bsps_all_models = []
 bsps_64_all_models = []
+bsps_64_all_models_names = []
+
 for i in range(len(egms_filtered_norm)):
     for matrix in transfer_matrices:
 
@@ -123,6 +134,7 @@ for i in range(len(egms_filtered_norm)):
         bsps_all_models.append(y_f)
         bsps_64 = y_f[matrix[1].ravel(),:]
         bsps_64_all_models.append(bsps_64)
+        bsps_64_all_models_names.append(filtered_model_names[i])
 
 print("Transfer matrices LOADED - var: **transfer_matrices** ")
 print("BSPS Models LOADED - var: **bsps_all_models** ")
