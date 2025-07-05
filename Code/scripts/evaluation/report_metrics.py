@@ -69,7 +69,7 @@ class ReportMetrics():
             df_dl = pd.read_csv(csv_dl)
 
         except:
-            csv_dl=f"{self.path_experiments}{algorithm_ID}/metrics_dl.csv"
+            csv_dl=f"{self.path_experiments}{algorithm_ID}/metrics_dl__str_test.csv"
             df_dl = pd.read_csv(csv_dl)
 
         df_dl = df_dl.sort_values(by='Correlation', ascending=False)
@@ -348,6 +348,7 @@ class ReportMetrics():
 
         metrics = ['Correlation', 'RMSE', 'PeakdetectorRecall', 'PeakdetectorPrecision', 'DTW', 'Coherence']
         algorithms = algorithm_mod_name
+        algorithms.append('Zot')  # Añadir ZOT como un algoritmo más
 
         # Reorganizar el DataFrame al formato largo
         long_df = merged_df.melt(
@@ -571,21 +572,16 @@ class ReportMetrics():
         # Add here Tikhonov variations names
         #algorithm_mod_name+=['ZotFilt']
         #algorithm_mod_name+=['ZotNoFilt']
-        '''
+        
         #Add ZOT results
-        df = df_tik_filt.add_suffix(f"_ZotFilt")
+        df = df_tik_no_filt.add_suffix(f"_Zot")
         df_filt = df
-        df.rename(columns={f'name_ZotFilt': 'name'}, inplace=True)
+        df.rename(columns={f'name_Zot': 'name'}, inplace=True)
         merged_df = pd.merge(merged_df, df, on='name', how='outer')
-        '''
+        
         #Save merged
         merged_df.to_csv(f"{self.path_to_save_summary}merged_df_{self.name}.csv")
 
-        #df = df_tik_no_filt.add_suffix(f"_ZotNoFilt")
-        #df.rename(columns={f'name_ZotNoFilt': 'name'}, inplace=True)
-        #merged_df = pd.merge(merged_df, df, on='name', how='outer') # DL AND TIKHONOV
-        #df_tik_merged = pd.merge(df_filt, df, on='name', how='outer') #ONLY TIKHONOV
-        
         #Save metric summaries
         if self.stratified:
             df_groups = self.load_class_df()
@@ -605,14 +601,22 @@ class ReportMetrics():
 
 if __name__ == "__main__":
 
-    algorithm_list= ['OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs',
-                     'OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_2_class_overs', 
-                     'OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_2_class_overs',
-                     'OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_5_class_overs']
+    '''algorithm_list= ["OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_5_class_overs",
+                    "OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_2_class_overs",
+                    "OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_tm_strat_2_class_overs_det",
+                    "OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_tm_strat_2_class_overs",
+                    "OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs",
+                    "OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_2_class_overs",
+                    "OMAMI_no_filt_testing2_repeated_no_filt_l2_tm_strat_2_class_overs_det",
+                    "OMAMI_no_filt_testing2_repeated_no_filt_l2_tm_strat_2_class_overs",
+                    ]'''
+    
+    algorithm_list= ["OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_2_class_overs_det"]
+
     
     for algorithm in algorithm_list:
 
         ReportMetrics(name= 'stratified_evaluation',
                     algorithm_list=[algorithm],
-                    test_id='_str_test', 
+                    test_id='0', 
                     stratified=True)()

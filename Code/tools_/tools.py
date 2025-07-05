@@ -1804,7 +1804,7 @@ def interpolate_reconstruction(estimate_egms_reshaped, method="bilinear"):
     return interpol
 
 
-def array_to_dic_by_models(dic, model_list, AF_models, all_model_names):
+def array_to_dic_by_models(model_list, AF_models, all_model_names):
     """
     This function rearranges sub-realizations corresponding to originally different AF Models
     into separate fields with its corresponding name in a dictionary

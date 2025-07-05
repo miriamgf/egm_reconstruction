@@ -52,16 +52,16 @@ import time
 plot_BSP = False
 plot_Tikhonov = False
 plot_DL= True
-plot_correlation_DL = True
+plot_correlation_DL = False
 plot_correlation_tik = False
-plot_rmse_DL = True
+plot_rmse_DL = False
 plot_rmse_tik = False
-plot_coherence_DL = True
+plot_coherence_DL = False
 plot_coherence_tik = False
-plot_DTW_DL = True
+plot_DTW_DL = False
 plot_DTW_tik = False
 
-plot_DF_maps_DL = True
+plot_DF_maps_DL = False
 plot_DF_maps_tik = False
 
 load_tik_array=True
@@ -81,11 +81,7 @@ test_patients = [
 
 
 
-test_patients = [["Simulation_01_200212_001_  5"],  
-                ["LA_RSPV_CAF_150115"], 
-                ["Simulation_01_210208_001_002"],
-                ["Simulation_01_200316_001_  4"]]
-
+test_patients = [["Simulation_01_200428_001_007"], ["Simulation_01_200316_001_ 10"]]
 
 
 
@@ -393,7 +389,7 @@ for model_name in test_patients:
             _, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
 
             print("Plotting DL reconstruction")
-            EGM_3d_object.plot_3d_mesh_prediction(prediction, y_label, faces_heart, vertices_heart)
+            EGM_3d_object.plot_3d_mesh_prediction(prediction, y_label, faces_heart, vertices_heart, normalize=False)
 
 
 

@@ -145,7 +145,10 @@ try:
     params["n_nodes_regression"]=n_nodes
 
     # Data Augmentation
-    params["split_mode"] = "stratified"
+    if split_mode is not None:
+        params["split_mode"]=split_mode
+    else:
+        params["split_mode"] = "deterministic"
 
     if shuffle_patient is not None:
         params["shuffle_patient"]=shuffle_patient
@@ -169,7 +172,7 @@ try:
 
     # Stratified split
 
-    if discard_classes is not None:
+    if discard_classes:
         params["discard_classes"]=[0, 1, 3, 5]
         params["classes_to_oversample"]= [4]
         split_mode=params["split_mode"]
@@ -183,7 +186,7 @@ try:
     if split_mode is not None:
         params["split_mode"]=split_mode
     else:
-        params["split_mode"]="deterministic"
+        params["split_mode"]="stratified"
     if oversampling is not None:
         params["oversampling"]=oversampling
     else:
@@ -252,6 +255,12 @@ try:
 except:
     params["time_masking"]=False
 
+try:
+    print(params['split_mode'])
+except:
+    params['split_mode']="deterministic"
+
+
 experiment_name = experiment_name + "_l2"
 params["l2_reg"]=0.001
 
@@ -268,11 +277,15 @@ if params["attention_layer"]:
     experiment_name= experiment_name + "_attention"
 
 params["early_stopping_patience"] = 40
-params["discard_classes"] = [1, 3, 5]
 if len(params["discard_classes"])>0:
     experiment_name= experiment_name + "_strat_2_class_overs"
 else:
     experiment_name= experiment_name + "_strat_5_class_overs"
+
+if params['split_mode'] == "deterministic":
+    experiment_name= experiment_name + "_det"
+else:
+    pass
 
 print(params)
 print('Experiment name: ', experiment_name)
@@ -282,10 +295,9 @@ print('Experiment name: ', experiment_name)
 print('Experiment name: ', experiment_name)
 params["experiment_name"]=experiment_name
 
-
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data_short/"
+data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
 torsos_dir = "../../../../Labeled_torsos/"
 figs_dir = "output/figures/"
 models_dir = "output/model/"
@@ -534,7 +546,7 @@ except:
         pred_train = model.predict(x_train, batch_size=params["num_batch_iter"])
 
 
-
+'''
 print('Evaluating...)')
 results_autoencoder, results_regressor = evaluate_function_multioutput(
     x_train, y_train, x_test, y_test, pred_train, pred_test, model, batch_size=1
@@ -811,42 +823,25 @@ new_correlation_array = interpolate_fun(
     correlation_array, len(correlation_array), y_train.shape[2]
 )
 new_rmse_array = interpolate_fun(rmse_array, len(rmse_array), y_train.shape[2])
-
+'''
 # %%
 # Save the model names in train, test and val
 test_model_name = [all_model_names[index] for index in AF_models_test]
 val_model_name = [all_model_names[index] for index in AF_models_val]
 train_model_name = [all_model_names[index] for index in AF_models_train]
 
-mdic = {"reconstruction": test_estimation, "label": label}
+#mdic = {"reconstruction": test_estimation, "label": label}
 
-dic_by_models = array_to_dic_by_models(
-    mdic, test_models, AF_models_test, all_model_names
-)
 
 
 variables = {
-    "RMSEmean": rmse_mean,
-    "RMSEstd": rmse_std,
-    "Corrmean": corr_mean,
-    "corrstd": corr_std,
-    "test_corr_models": test_models_corr,
-    "dtwmean": dtw_mean,
-    "dtwstd": dtw_std,
-    "corrbynodes": new_correlation_array,
-    "rmsenodes": new_rmse_array,
     "test_model_name": np.unique(test_model_name),
     "train_model_name": np.unique(train_model_name),
     "val_model_name": np.unique(val_model_name),
 }
 
-
-savemat(
-    experiment_dir + "/reconstructions_by_model_" + experiment_name + ".mat",
-    dic_by_models,
-)
-dic_latent_space_test = {"Latent_space_test": pred_test_autoencoder}
-savemat(experiment_dir + "/autoencoder.mat", dic_latent_space_test)
+#dic_latent_space_test = {"Latent_space_test": pred_test_autoencoder}
+#savemat(experiment_dir + "/autoencoder.mat", dic_latent_space_test)
 
 
 # Write dictionary string representation to text file
@@ -866,6 +861,7 @@ with open(file_name, "w") as f:
     model.summary(print_fn=lambda x: f.write(x + "\n"))
 
 # Save results to csv and export
+'''
 results_Autoencoder = pd.DataFrame.from_dict(
     results_autoencoder, orient="index", columns=["Autoencoder"]
 )
@@ -877,7 +873,7 @@ global_results.to_csv(experiment_dir + "/Results_MO.csv")
 
 
 global_results.round(3)
-
+'''
 # Save dictionaries into pickle and .mat
 
 #with open(dict_var_dir + "variables_MO.pkl", "wb") as fp:

@@ -1,0 +1,74 @@
+DataConfig loaded: {'n_epochs': 30, 'batch_size': 400, 'fs_sub': 200, 'num_batch_iter': 1, 'algorithm': 'OMAMI_VAE', 'filter_EGM': True, 'load_best_hiperparams': True, 'set_gpu': 0, 'cross_validation': False, 'fold': 0, 'rnn_layers': 1, 'dropout': 0.5, 'learning_rate': 0.001, 'early_stopping_patience': 10, 'beta1': 0.11, 'beta2': 0.99, 'mlflow_tracking': True, 'n_nodes_regression': 2048, 'use_generator': False, 'parallelism': False, 'fs': 500, 'n_classes': 3, 'inference_pretrained_model': False, 'optimizer': 'adam', 'loss_weight_1': 1.0, 'loss_weight_2': 10.0, 'l2_reg': 0.1, 'LSTM_units': 30, '3D_depth': 10, 'latent_dim': 2, 'optuna_optimization': False, 'n_trials': 70, 'optuna_parameters': {'sampler_algorithm': ['tpe'], 'batch_size': ['grid', [50, 100, 150, 200, 250, 300, 350, 400]], 'fs_sub': ['grid', [50, 100, 150, 200, 250, 300, 350, 400]]}}
+2025-05-15 13:59:07.032304: I tensorflow/core/util/port.cc:113] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+2025-05-15 13:59:07.061898: E external/local_xla/xla/stream_executor/cuda/cuda_dnn.cc:9261] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2025-05-15 13:59:07.061927: E external/local_xla/xla/stream_executor/cuda/cuda_fft.cc:607] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2025-05-15 13:59:07.062563: E external/local_xla/xla/stream_executor/cuda/cuda_blas.cc:1515] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2025-05-15 13:59:07.067098: I tensorflow/core/platform/cpu_feature_guard.cc:182] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: SSE4.1 SSE4.2 AVX AVX2 AVX512F AVX512_VNNI AVX512_BF16 AVX_VNNI AMX_TILE AMX_INT8 AMX_BF16 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+WARNING:tensorflow:From /home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/../Code/models/multioutput_VAE.py:11: experimental_run_functions_eagerly (from tensorflow.python.eager.polymorphic_function.eager_function_run) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use `tf.config.run_functions_eagerly` instead of the experimental version.
+2025-05-15 13:59:08.347901: E external/local_xla/xla/stream_executor/cuda/cuda_driver.cc:274] failed call to cuInit: CUDA_ERROR_COMPAT_NOT_SUPPORTED_ON_DEVICE: forward compatibility was attempted on non supported HW
+2025-05-15 13:59:08.347933: I external/local_xla/xla/stream_executor/cuda/cuda_diagnostics.cc:129] retrieving CUDA diagnostic information for host: balanis
+2025-05-15 13:59:08.347938: I external/local_xla/xla/stream_executor/cuda/cuda_diagnostics.cc:136] hostname: balanis
+2025-05-15 13:59:08.348034: I external/local_xla/xla/stream_executor/cuda/cuda_diagnostics.cc:159] libcuda reported version is: 550.144.3
+2025-05-15 13:59:08.348046: I external/local_xla/xla/stream_executor/cuda/cuda_diagnostics.cc:163] kernel reported version is: 550.120.0
+2025-05-15 13:59:08.348050: E external/local_xla/xla/stream_executor/cuda/cuda_diagnostics.cc:244] kernel version 550.120.0 does not match DSO version 550.144.3 -- cannot find working devices in this configuration
+WARNING:tensorflow:Mixed precision compatibility check (mixed_float16): WARNING
+The dtype policy mixed_float16 may run slowly because this machine does not have a GPU. Only Nvidia GPUs with compute capability of at least 7.0 run quickly with mixed_float16.
+If you will use compatible GPU(s) not attached to this host, e.g. by running a multi-worker model, you can ignore this warning. This message will only be logged once
+Parsing bash params
+OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_2_class_overs True None
+Stratified split
+Evaluating DL
+LOADING PATIENT 1/10
+68 Models
+Loading model Simulation_01_190619_001_002 ......
+Not filtering EGM
+Saving logs at: output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_2_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_2_class_overs_2D.log
+Saving logs at: output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_5_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_5_class_overs_2D.log
+Saving logs at: output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_2_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_2_class_overs_3D.log
+Killed
+Saving logs at: output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_5_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_2_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_5_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_2_class_overs_3D.log
+./launch_plot.sh: 14: Syntax error: newline unexpected
+Saving logs at: output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_5_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_2_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_5_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_2_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_5_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_2_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_5_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_2_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_2_class_overs_2D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs_2D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_2_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_2_class_overs_2D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs_2D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_2_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_2_class_overs_2D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs_2D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_2_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_2_class_overs_2D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs_2D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_2_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_2_class_overs_2D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs_2D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_2_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_2_class_overs_2D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs_2D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_2_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs_3D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_2_class_overs_2D.log
+Saving logs at: output/logs/plots/OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs_2D.log
