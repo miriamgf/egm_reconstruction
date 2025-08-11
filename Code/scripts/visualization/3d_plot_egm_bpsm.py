@@ -10,6 +10,7 @@ from tensorflow.keras.models import load_model
 import ast
 import argparse
 from tools_.preprocess_data import Preprocess_Dataset
+from tools_.activation_times_mapping import compute_activation_times, extract_latido
 from scripts.visualization.utils.renderizer import EGMRenderer_BSP
 from scripts.config import ParseHiperparams
 from tools_.load_dataset import LoadDataset_BSPS
@@ -24,6 +25,7 @@ import tools_.tools as tools
 from scripts.evaluation.metrics import Metrics
 from tools_.tools_inference import postprocess_prediction
 import pandas as pd
+import time
 
 
 
@@ -42,8 +44,6 @@ os.environ["MESA_LOADER_DRIVER_OVERRIDE"] = "llvmpipe"
 experiment_dir = f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/"
 
 
-import time
-
 
 #---------------------------------------------------------------------------------------------------------------------
 # CONFIGURE
@@ -51,37 +51,29 @@ import time
 
 plot_BSP = False
 plot_Tikhonov = False
-plot_DL= True
-plot_correlation_DL = False
+plot_DL= False
+plot_correlation_DL = True
 plot_correlation_tik = False
-plot_rmse_DL = False
+plot_rmse_DL = True
 plot_rmse_tik = False
 plot_coherence_DL = False
 plot_coherence_tik = False
 plot_DTW_DL = False
 plot_DTW_tik = False
 
-plot_DF_maps_DL = False
+plot_DF_maps_DL = True
 plot_DF_maps_tik = False
 
-load_tik_array=True
+plot_AT_DL = False #compute activation times for BSPM signals
+plot_AT_tik = False #compute activation times for Tikhonov signals
+
+
+load_tik_array=True #load precomputed tikhonov array or compute it from scratch
 
 torso_num=2
 
-'''
-test_patients = [
-            ["LA_PLAW_140711_arm"], ["LA_RSPV_CAF_150115"],
-            ["Simulation_01_200212_001_  5"], ["Simulation_01_200212_001_ 10"],
-            ["Simulation_01_200316_001_  3"], ["Simulation_01_200316_001_  4"],
-            ["Simulation_01_200316_001_  8"], ["Simulation_01_200428_001_004"],
-            ["Simulation_01_200428_001_008"], ["Simulation_01_200428_001_010"],
-            ["Simulation_01_210119_001_001"], ["Simulation_01_210208_001_002"]
-        ]
-'''
-
-
-
-test_patients = [["Simulation_01_200428_001_007"], ["Simulation_01_200316_001_ 10"]]
+test_patients = [["Simulation_01_190619_001_002"]]
+#test_patients = [["Simulation_01_200316_001_ 10"]]
 
 
 
@@ -99,7 +91,7 @@ try:
     
 except:
         
-        experiment_ID_list=[["OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_2_class_overs"]]
+        experiment_ID_list=[['OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_5_class_overs']]
         algorithm_ID=experiment_ID_list[0][0]
 stratified_split=True
 
@@ -109,8 +101,8 @@ if stratified_split:
                                             discard_classes=None,
                                             oversampling=None)
 print("Stratified split")
-test_patients = StratifiedSplit_obj.get_test_for_inference(experiment_dir)
-test_patients = [[patient] for patient in test_patients]
+#test_patients = StratifiedSplit_obj.get_test_for_inference(experiment_dir)
+#test_patients = [[patient] for patient in test_patients]
 
 
 testing_id="_str_test"
@@ -467,9 +459,9 @@ for model_name in test_patients:
             _, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
 
             # Usar el método del objeto para plotear
-            DFMapObject.plot_3d_mesh_df(
-                df_reconstructed, df_label,  vertices_heart,faces_heart, np.min(df_reconstructed), np.max(df_reconstructed)
-            )
+            #DFMapObject.plot_3d_mesh_df(
+                #df_reconstructed, df_label,  vertices_heart,faces_heart, np.min(df_reconstructed), np.max(df_reconstructed)
+            #)
 
             DFMapObject.plot_3d_mesh_phase(
                 phase_rec, phase_label, vertices_heart,faces_heart, np.min(phase_label), np.max(phase_label)
@@ -774,6 +766,34 @@ for model_name in test_patients:
         end_ = time.time()
         print('Execution time one test example : ', end_-start_, 'min')
         #sys.exit()
+
+        #Activation Times
+        #---------------------------------------------------------------------------------------------------------------------------------------
+        #---------------------------------------------------------------------------------------------------------------------------------------                
+        if plot_AT_DL:
+
+            print("Plotting Activation Times for DL")
+            # Compute activation times
+            latido = extract_latido(prediction.T, fs=100, latido_index=1, window_ms=300)
+
+            activation_times = compute_activation_times(latido, fs)
+
+            EGM_3d_object=EGM_3D_PLOTTER(model_name,
+                        model_path_DL,
+                        geom_path_CF,
+                        output_directory,
+                        labels_mode=False,
+                        tikhonov=False,
+                        time=time_duration)
+
+            _, _, faces_heart, vertices_heart=EGM_3d_object.load_geometry_and_egm()
+
+            print("Plotting DL reconstruction")
+            EGM_3d_object.plot_3d_AT(activation_times, activation_times,
+                                                faces_heart,
+                                                vertices_heart,
+                                                normalize=False, 
+                                                name="activation_times_DL")
 
             
 end = time.time()
