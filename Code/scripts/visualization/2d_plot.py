@@ -335,27 +335,39 @@ class Visualize2D:
 
     def plot_time_series(self, best_nodes, prediction, egm, tik_rec, bspm):
         """Genera y guarda gráficas de series temporales para los mejores nodos."""
+        fs=100
+
+        fontsize_title = 14
+        fontsize_labels = 14
+        fontsize_legend = 14
+
+        prediction = prediction[0:399, :]
+        tik_rec = tik_rec[0:399, :] if tik_rec is not None else None
+        egm = egm[0:399, :]
+
         for metric, node_num in best_nodes.items():
             if node_num is None:
                 continue
             time_axis = np.arange(prediction.shape[0]) / self.fs
-            fig, axs = plt.subplots(3, 1, figsize=(12, 6), tight_layout=True)
-            axs[0].plot(time_axis, prediction[:, node_num], label='Predicted', color="blue")
-            axs[0].plot(time_axis, egm[:, node_num], label='Real', color="red")
-            axs[0].set_title(f"AI Prediction | Node {node_num} | {metric}")
-            axs[0].legend()
+            fig, axs = plt.subplots(2, 1, figsize=(12, 6), tight_layout=True)
+            axs[0].plot(time_axis, prediction[:, node_num], label='Predicted', color="blue", linewidth=2)
+            axs[0].plot(time_axis, egm[:, node_num], label='Real', color="red", linewidth=2)
+            axs[0].set_title(f"Deep Model Prediction vs. Ground Truth - Node {node_num}", fontsize=fontsize_title, fontweight='bold')
+            axs[0].set_ylabel("Amplitude", fontsize=fontsize_labels, fontweight='bold')
+            axs[0].set_xlabel("Time (s)", fontsize=fontsize_labels, fontweight='bold')
+            axs[0].legend(loc='upper left', bbox_to_anchor=(1.02, 1), borderaxespad=0.)
 
             if tik_rec is not None:
-                axs[1].plot(time_axis, tik_rec[:, node_num], label='Predicted', color="green")
-                axs[1].plot(time_axis, egm[:, node_num], label='Real', color="red")
-                axs[1].set_title(f"ZOT Prediction | Node {node_num} | {metric}")
-                axs[1].legend()
+                axs[1].plot(time_axis, tik_rec[:, node_num], label='Predicted', color="green", linewidth=2)
+                axs[1].plot(time_axis, egm[:, node_num], label='Real', color="red", linewidth=2)
+                axs[1].set_title(f"ZOT Model Prediction - Node {node_num}", fontsize=13, fontweight='bold')
+                axs[1].set_ylabel("Amplitude", fontsize=fontsize_labels, fontweight='bold')
+                axs[1].set_xlabel("Time (s)", fontsize=fontsize_labels, fontweight='bold')
+                axs[1].legend(loc='upper left', bbox_to_anchor=(1.02, 1), borderaxespad=0.)
 
 
-            axs[2].plot(time_axis, bspm[:, :3], label='BSPM')
-            axs[2].set_title(f"BSPM | Node {node_num}")
 
-            self.save_figure(fig, f"time_series_best_{metric}2.png")
+            self.save_figure(fig, f"time_series_best_{metric}_new.png")
             #print(f"Figure saved at time_series_best_{metric}.png")
     #Welch 
 
@@ -475,22 +487,10 @@ class Visualize2D:
 
 if __name__ == "__main__":
 
-    list_metrics= [["Correlation"], ["RMSE"], ["DTW"], ["Coherence"], ["PeakDet"]]
+    list_metrics= [["DTW"],["Correlation"], ["RMSE"], ["Coherence"],  ["PeakDet"]]
     #list_metrics= [["Correlation"]], ["RMSE"]#, ["DTW"], ["Coherence"], ["PeakDet"]]
-
-    test_patients = [["Simulation_01_200212_001_  5"],  
-                ["Simulation_01_210119_001_001"], 
-                ["Simulation_01_200428_001_010"],["Simulation_01_200212_001_ 10"]]
     
-    test_patients = [
-            ["LA_PLAW_140711_arm"], ["LA_RSPV_CAF_150115"],
-           ["Simulation_01_200212_001_  5"], ["Simulation_01_200212_001_ 10"],
-            ["Simulation_01_200316_001_  3"], ["Simulation_01_200316_001_  4"],
-            ["Simulation_01_200316_001_  8"], ["Simulation_01_200428_001_004"],
-            ["Simulation_01_200428_001_008"], ["Simulation_01_200428_001_010"],
-            ["Simulation_01_210119_001_001"], ["Simulation_01_210208_001_002"]
-        ]
-    
+    test_patients = [["Simulation_01_200428_001_007"], ["Simulation_01_200316_001_ 10"]]
 
 
     try:
@@ -506,8 +506,8 @@ if __name__ == "__main__":
         print(algorithm_ID)
     
     except:
-        experiment_ID_list=[['OMAMI_no_filt_testing2_repeated_no_filt_l2_tm']]
-    
+        experiment_ID_list=[['OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_5_class_overs']]
+        algorithm_ID = "OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_5_class_overs"
     stratified_split=True
     
     if stratified_split:
@@ -516,8 +516,8 @@ if __name__ == "__main__":
                                                 discard_classes=None,
                                                 oversampling=None)
     print("Stratified split")
-    test_patients = StratifiedSplit_obj.get_test_for_inference(experiment_dir)
-    test_patients = [[patient] for patient in test_patients]
+    #test_patients = StratifiedSplit_obj.get_test_for_inference(experiment_dir)
+    #test_patients = [[patient] for patient in test_patients]
 
     vis = Visualize2D(test_patients, experiment_ID_list, list_metrics)
     vis.run_all()

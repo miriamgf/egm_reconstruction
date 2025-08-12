@@ -187,10 +187,6 @@ class METRIC_3D_PLOTTER:
             renderer_var.renderer.SetBackground(1, 1, 1)  # Gris claro
             renderer_label.renderer.SetBackground(1, 1, 1)  # Gris claro
 
-            # Configurar bordes negros y deshabilitar interpolación en renderer_var y renderer_label
-
-
-
             # Create a text actor for var_represent
             title_var = vtk.vtkTextActor()
             title_var.SetInput(f"Reconstructed")

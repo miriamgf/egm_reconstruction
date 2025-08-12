@@ -561,6 +561,18 @@ class Preprocess_Dataset:
                         "Simulation_01_210119_001_001",
                         "Simulation_01_210208_001_002",
                     ]
+                    if self.params['discard_classes'] is not None:
+
+                        # Select classes but no stratification
+                        StratifiedSplit_obj = StratifiedSplit(classes_to_oversample=None,
+                                                        discard_classes=self.params["discard_classes"],
+                                                        oversampling=None)
+                        train_models_deterministic=StratifiedSplit_obj.load_process_annotations(deterministic_group=train_models_deterministic)
+                        test_models_deterministic=StratifiedSplit_obj.load_process_annotations(deterministic_group=test_models_deterministic)
+                        val_models_deterministic=StratifiedSplit_obj.load_process_annotations(deterministic_group=val_models_deterministic)
+
+                        print('Selected 2 classes, no stratification')
+
                     
                 elif self.params["cross_validation"]:
                     KFold_obj = KFold_Stratified(k=4)

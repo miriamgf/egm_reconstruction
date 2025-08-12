@@ -245,7 +245,7 @@ class EGM_3D_PLOTTER:
 
 
 
-    def plot_3d_mesh_prediction(self, y_reconstructed, y_label, faces, vertices, normalizar=True):
+    def plot_3d_mesh_prediction(self, y_reconstructed, y_label, faces, vertices, normalize=True, name=None):
         # Crear renderizadores para var_represent y var_represent_original
         renderer_var = EGMRenderer_EGM(faces, vertices, min_val=-1, max_val=1)
         renderer_label = EGMRenderer_EGM(faces, vertices,  min_val=-1, max_val=1)
@@ -254,7 +254,7 @@ class EGM_3D_PLOTTER:
         if y_reconstructed.ndim>2:
             y_reconstructed = y_reconstructed.reshape(-1, y_reconstructed.shape[2]) 
 
-        if normalizar:
+        if normalize:
             y_label_n = np.zeros_like(y_label)
             for nodo in range(y_label.shape[1]):  
                 min_val = np.min(y_label[:, nodo])
@@ -267,9 +267,10 @@ class EGM_3D_PLOTTER:
 
             var_represent = y_reconstructed
             var_represent_original = y_label_n
+            y_label=y_label_n
 
         var_represent=y_reconstructed
-        var_represent_original=y_label_n
+        var_represent_original=y_label
 
         elevation_values_range = [270, 30]
 
@@ -295,7 +296,7 @@ class EGM_3D_PLOTTER:
 
             # Create a text actor for var_represent
             title_var = vtk.vtkTextActor()
-            title_var.SetInput(f"Reconstructed ({self.model_name})")
+            title_var.SetInput(f"DL Reconstruction")
             title_varprop = title_var.GetTextProperty()
             title_varprop.SetFontFamilyToArial()
             title_varprop.SetFontSize(25)
@@ -306,7 +307,7 @@ class EGM_3D_PLOTTER:
 
             # Create a text actor for label
             title_label = vtk.vtkTextActor()
-            title_label.SetInput("Real")
+            title_label.SetInput("Ground truth")
             title_labelprop = title_label.GetTextProperty()
             title_labelprop.SetFontFamilyToArial()
             title_labelprop.SetFontSize(25)
@@ -322,17 +323,18 @@ class EGM_3D_PLOTTER:
             scalar_bar_var.GetLabelTextProperty().SetItalic(False)  # Asegurarse de que no esté en cursiva
             scalar_bar_var.GetLabelTextProperty().SetShadow(False)
             scalar_bar_var.GetLabelTextProperty().SetFontFamilyToArial()  # Fuente Arial
-            scalar_bar_var.GetLabelTextProperty().SetFontSize(10)  # Tamaño de fuente ajustado para las etiquetas
+            scalar_bar_var.GetLabelTextProperty().SetFontSize(20)  # Tamaño de fuente ajustado para las etiquetas
             scalar_bar_var.SetNumberOfLabels(5)
             scalar_bar_var.SetTextPositionToPrecedeScalarBar()
-            scalar_bar_var.SetTitle("mV")  # Título de la barra
+            #scalar_bar_var.SetTitle("mV")  # Título de la barra
+
 
             # Cambiar tamaño del título de la barra lateral
             title_text_property = scalar_bar_var.GetTitleTextProperty()
             title_text_property.SetFontSize(10)  # Tamaño de fuente del título ajustado aquí
             title_text_property.SetColor(0, 0, 0)  # Color negro para el título
             title_text_property.SetFontFamilyToArial()  # Fuente Arial
-            title_text_property.SetBold(True)  # Opcional: poner en negrita
+            #title_text_property.SetBold(True)  # Opcional: poner en negrita
 
 
 
@@ -341,14 +343,14 @@ class EGM_3D_PLOTTER:
             scalar_bar_label.SetLookupTable(renderer_label.mapper.GetLookupTable())
             scalar_bar_label.GetLabelTextProperty().SetColor(0, 0, 0)  # Color de la fuente a negro
             scalar_bar_label.SetNumberOfLabels(5)
-            scalar_bar_label.SetTitle("mV")  # Título de la barra
-            scalar_bar_var.SetPosition(0.8, 0.2)  # Ajustar la posición de la barra de color
-            scalar_bar_var.SetWidth(0.05)  # Ajustar el ancho de la barra
-            scalar_bar_var.SetHeight(0.6)  # Ajustar la altura de la barra
+            #scalar_bar_label.SetTitle("mV")  # Título de la barra
+            scalar_bar_var.SetPosition(0.8, 0.15)  # Ajustar la posición de la barra de color
+            scalar_bar_var.SetWidth(0.08)  # Ajustar el ancho de la barra
+            scalar_bar_var.SetHeight(0.8)  # Ajustar la altura de la barra
 
-            scalar_bar_label.SetPosition(0.8, 0.2)  # Ajustar la posición de la barra de color
-            scalar_bar_label.SetWidth(0.05)  # Ajustar el ancho de la barra
-            scalar_bar_label.SetHeight(0.6)  # Ajustar la altura de la barra
+            scalar_bar_label.SetPosition(0.85, 0.1)  # Ajustar la posición de la barra de color
+            scalar_bar_label.SetWidth(0.08)  # Ajustar el ancho de la barra
+            scalar_bar_label.SetHeight(0.8)  # Ajustar la altura de la barra
             # Cambiar tamaño del título de la barra lateral
             title_text_property_label = scalar_bar_label.GetTitleTextProperty()
             title_text_property_label.SetFontSize(5)  # Tamaño de fuente del título ajustado aquí
@@ -356,7 +358,7 @@ class EGM_3D_PLOTTER:
             title_text_property_label.SetFontFamilyToArial()  # Fuente Arial
             title_text_property_label.SetBold(True)  # Opcional: poner en negrita
             # Para var_represent
-            scalar_bar_var.SetTitle("mV")
+            #scalar_bar_var.SetTitle("  ")
             title_text_property = scalar_bar_var.GetTitleTextProperty()
             title_text_property.SetFontSize(5)  # Tamaño de fuente del título
             title_text_property.SetColor(0, 0, 0)  # Color negro
@@ -364,12 +366,15 @@ class EGM_3D_PLOTTER:
             title_text_property.SetBold(False)  # No en negrita
 
             # Para var_represent_original
-            scalar_bar_label.SetTitle("mV")
+            #scalar_bar_label.SetTitle("mV")
             title_text_property_label = scalar_bar_label.GetTitleTextProperty()
             title_text_property_label.SetFontSize(5)  # Tamaño de fuente del título
             title_text_property_label.SetColor(0, 0, 0)  # Color negro
             title_text_property_label.SetFontFamilyToArial()  # Fuente Arial
             title_text_property_label.SetBold(False)  # No en negrita
+            scalar_bar_var.SetTitleRatio(0.3)
+            scalar_bar_label.SetTitleRatio(0.3)
+
 
             renderer_var.renderer.AddActor2D(scalar_bar_var)
             renderer_label.renderer.AddActor2D(scalar_bar_label)
@@ -413,15 +418,21 @@ class EGM_3D_PLOTTER:
                 view = "front"
             elif elevation_value == 30:
                 view = "back"
-            if self.tikhonov:
-                output_video = os.path.join(self.output_directory, f"egm_rec_tikhonov_{view}2.gif")
+            if name is None:
+                if self.tikhonov:
+                    output_video = os.path.join(self.output_directory, f"egm_rec_tikhonov_{view}2_new.gif")
+                else:
+                    output_video = os.path.join(self.output_directory, f"egm_rec_DL_{view}2_new.gif")
             else:
-                output_video = os.path.join(self.output_directory, f"egm_rec_DL_{view}2.gif")
+                output_video = os.path.join(self.output_directory, f"{name}.gif")
+
             
             if self.all_egms:
-                output_video = os.path.join(self.output_directory, f"{self.model_name}.gif")
+                output_video = os.path.join(self.output_directory, f"{self.model_name}_new.gif")
 
             fps = 10  # Frames por segundo
+            if name=="activation_times_DL":
+                self.duration = 1
 
             array_frames=[]
             # Iterar sobre instantes y generar frames
@@ -436,8 +447,6 @@ class EGM_3D_PLOTTER:
                 renderer_var.mesh.Modified()
                 renderer_label.mesh.Modified()
 
-                
-
                 # Renderizar la ventana con subplots
                 render_window.Render()
 
@@ -445,7 +454,7 @@ class EGM_3D_PLOTTER:
                 window_to_image_filter.Modified()
                 window_to_image_filter.Update()
 
-                output_file = os.path.join(self.output_directory, f"frame_{instant:04d}.png")
+                output_file = os.path.join(self.output_directory, f"frame_{instant:04d}_new.png")
                 writer = vtk.vtkPNGWriter()
                 writer.SetFileName(output_file)
                 writer.SetInputData(window_to_image_filter.GetOutput())
@@ -462,12 +471,217 @@ class EGM_3D_PLOTTER:
                 os.remove(output_file)
 
             # Liberar el objeto VideoWriter
+
             imageio.mimsave(output_video, array_frames,format='GIF', fps=10)
+            print(f"Video guardado en {output_video}")   
             print(f"Video guardado en {output_video}")
 
-
-
+    def plot_3d_AT(self, AT_list, y_label, faces, vertices, normalize=True, name=None):
+        # Crear renderizadores para var_represent y var_represent_original
+        renderer_var = EGMRenderer_EGM(faces, vertices, min_val=-1, max_val=1)
+        renderer_label = EGMRenderer_EGM(faces, vertices,  min_val=-1, max_val=1)
     
+
+        if normalize:
+            min_val = min(AT_list)
+            max_val = max(AT_list)
+            AT_list= [(x - min_val) / (max_val - min_val) for x in AT_list]
+
+        var_represent=AT_list
+        var_represent_original=y_label
+
+        elevation_values_range = [270, 30]
+
+        for elevation_value in elevation_values_range:
+            '''
+            if var_represent.shape[1]!=2048:
+                var_represent=var_represent[0][0]
+                var_represent_original=var_represent_original[0][0]
+            '''
+            # Configurar renderizadores como subplots
+            renderer_var.renderer.SetViewport(0.0, 0.0, 0.5, 1.0)  # Subplot izquierdo
+            renderer_label.renderer.SetViewport(0.5, 0.0, 1.0, 1.0)  # Subplot derecho
+
+            custom_lut,cmap = self.create_custom_colormap_voltage()
+
+            # Asignar la paleta al mapper de ambos renderizadores
+            renderer_var.mapper.SetLookupTable(custom_lut)
+            renderer_label.mapper.SetLookupTable(custom_lut)
+
+            # Configurar fondo blanco
+            renderer_var.renderer.SetBackground(1, 1, 1)  # Gris claro
+            renderer_label.renderer.SetBackground(1, 1, 1)  # Gris claro
+
+            # Create a text actor for var_represent
+            title_var = vtk.vtkTextActor()
+            title_var.SetInput(f"DL Reconstruction")
+            title_varprop = title_var.GetTextProperty()
+            title_varprop.SetFontFamilyToArial()
+            title_varprop.SetFontSize(25)
+            #title_varprop.BoldOn()
+            title_varprop.SetColor(0, 0, 0)  # Black color
+            title_var.SetPosition(300, 500)  # Adjust position manually as needed
+            renderer_var.renderer.AddActor2D(title_var)
+
+            # Create a text actor for label
+            title_label = vtk.vtkTextActor()
+            title_label.SetInput("Ground truth")
+            title_labelprop = title_label.GetTextProperty()
+            title_labelprop.SetFontFamilyToArial()
+            title_labelprop.SetFontSize(25)
+            #title_labelprop.BoldOn()
+            title_labelprop.SetColor(0, 0, 0)  # Black color
+            title_label.SetPosition(300, 500)  # Adjust position manually as needed
+
+            renderer_label.renderer.AddActor2D(title_label)
+            # Barra de color para var_represent
+            scalar_bar_var = vtk.vtkScalarBarActor()
+            scalar_bar_var.SetLookupTable(renderer_var.mapper.GetLookupTable())
+            scalar_bar_var.GetLabelTextProperty().SetColor(0, 0, 0)  # Color de la fuente a negro
+            scalar_bar_var.GetLabelTextProperty().SetItalic(False)  # Asegurarse de que no esté en cursiva
+            scalar_bar_var.GetLabelTextProperty().SetShadow(False)
+            scalar_bar_var.GetLabelTextProperty().SetFontFamilyToArial()  # Fuente Arial
+            scalar_bar_var.GetLabelTextProperty().SetFontSize(20)  # Tamaño de fuente ajustado para las etiquetas
+            scalar_bar_var.SetNumberOfLabels(5)
+            scalar_bar_var.SetTextPositionToPrecedeScalarBar()
+            #scalar_bar_var.SetTitle("mV")  # Título de la barra
+
+
+            # Cambiar tamaño del título de la barra lateral
+            title_text_property = scalar_bar_var.GetTitleTextProperty()
+            title_text_property.SetFontSize(10)  # Tamaño de fuente del título ajustado aquí
+            title_text_property.SetColor(0, 0, 0)  # Color negro para el título
+            title_text_property.SetFontFamilyToArial()  # Fuente Arial
+            #title_text_property.SetBold(True)  # Opcional: poner en negrita
+
+
+
+            # Barra de color para var_represent_original
+            scalar_bar_label = vtk.vtkScalarBarActor()
+            scalar_bar_label.SetLookupTable(renderer_label.mapper.GetLookupTable())
+            scalar_bar_label.GetLabelTextProperty().SetColor(0, 0, 0)  # Color de la fuente a negro
+            scalar_bar_label.SetNumberOfLabels(5)
+            #scalar_bar_label.SetTitle("mV")  # Título de la barra
+            scalar_bar_var.SetPosition(0.8, 0.15)  # Ajustar la posición de la barra de color
+            scalar_bar_var.SetWidth(0.08)  # Ajustar el ancho de la barra
+            scalar_bar_var.SetHeight(0.8)  # Ajustar la altura de la barra
+
+            scalar_bar_label.SetPosition(0.85, 0.1)  # Ajustar la posición de la barra de color
+            scalar_bar_label.SetWidth(0.08)  # Ajustar el ancho de la barra
+            scalar_bar_label.SetHeight(0.8)  # Ajustar la altura de la barra
+            # Cambiar tamaño del título de la barra lateral
+            title_text_property_label = scalar_bar_label.GetTitleTextProperty()
+            title_text_property_label.SetFontSize(5)  # Tamaño de fuente del título ajustado aquí
+            title_text_property_label.SetColor(0, 0, 0)  # Color negro para el título
+            title_text_property_label.SetFontFamilyToArial()  # Fuente Arial
+            title_text_property_label.SetBold(True)  # Opcional: poner en negrita
+            # Para var_represent
+            #scalar_bar_var.SetTitle("  ")
+            title_text_property = scalar_bar_var.GetTitleTextProperty()
+            title_text_property.SetFontSize(5)  # Tamaño de fuente del título
+            title_text_property.SetColor(0, 0, 0)  # Color negro
+            title_text_property.SetFontFamilyToArial()  # Fuente Arial
+            title_text_property.SetBold(False)  # No en negrita
+
+            # Para var_represent_original
+            #scalar_bar_label.SetTitle("mV")
+            title_text_property_label = scalar_bar_label.GetTitleTextProperty()
+            title_text_property_label.SetFontSize(5)  # Tamaño de fuente del título
+            title_text_property_label.SetColor(0, 0, 0)  # Color negro
+            title_text_property_label.SetFontFamilyToArial()  # Fuente Arial
+            title_text_property_label.SetBold(False)  # No en negrita
+            scalar_bar_var.SetTitleRatio(0.3)
+            scalar_bar_label.SetTitleRatio(0.3)
+
+
+            renderer_var.renderer.AddActor2D(scalar_bar_var)
+            renderer_label.renderer.AddActor2D(scalar_bar_label)
+
+
+            custom_lut.SetNumberOfTableValues(256)
+            custom_lut.Build()
+
+            for i in range(255):
+                r, g, b, _ = cmap(i / 255.0)  # Obtener color del colormap
+                custom_lut.SetTableValue(i, r, g, b, 1.0)  # Asignar color en la tabla de VTK
+
+            mapper = vtk.vtkPolyDataMapper()
+            mapper.SetLookupTable(custom_lut)
+            #mapper.SetScalarRange(-0.6, 0.6)  # Ajustar al rango de valores de tus datos
+
+            mapper.SetScalarRange(min(var_represent), max(var_represent))
+            
+            # Configurar la ventana de renderizado conjunta
+            render_window = vtk.vtkRenderWindow()
+            render_window.SetOffScreenRendering(True)
+
+            render_window.SetSize(1600, 600)  # Tamaño total de la ventana
+            render_window.AddRenderer(renderer_var.renderer)
+            render_window.AddRenderer(renderer_label.renderer)
+
+            # Configurar la cámara para ambos subplots
+            center = renderer_var.mesh.GetCenter()
+            for renderer in [renderer_var, renderer_label]:
+                renderer.camera.SetPosition(center[0], center[1], center[2] + 35)  # Alejar la cámara
+                renderer.camera.SetFocalPoint(center[0], center[1], center[2])  # Enfocar al centro
+                renderer.camera.SetViewUp(1, 0, 0)  # Eje vertical hacia arriba
+                renderer.camera.Elevation(elevation_value)  # Flip de 180 grados sobre el eje horizontal
+                renderer.camera.Azimuth(0)  # Rotar 0 grados en azimut
+                renderer.renderer.ResetCameraClippingRange()
+
+            # Configurar el filtro para capturar imágenes
+            window_to_image_filter = vtk.vtkWindowToImageFilter()
+            window_to_image_filter.SetInput(render_window)
+
+            #configure video
+            if elevation_value == 270:
+                view = "front"
+            elif elevation_value == 30:
+                view = "back"
+            if name is None:
+                if self.tikhonov:
+                    output_video = os.path.join(self.output_directory, f"egm_rec_tikhonov_{view}2_new.gif")
+                else:
+                    output_video = os.path.join(self.output_directory, f"egm_rec_DL_{view}2_new.gif")
+            else:
+                output_video = os.path.join(self.output_directory, f"{name}.gif")
+
+            
+            if self.all_egms:
+                output_video = os.path.join(self.output_directory, f"{self.model_name}_new.gif")
+
+            fps = 10  # Frames por segundo
+            if name=="activation_times_DL":
+                self.duration = 1
+
+            array_frames=[]
+            # Iterar sobre instantes y generar frames
+            # Actualizar los datos escalares de los dos renderizadores
+            vtk_scalars_var = numpy_to_vtk(var_represent[:], deep=True)
+            vtk_scalars_label = numpy_to_vtk(var_represent_original[ :], deep=True)
+
+            renderer_var.mesh.GetPointData().SetScalars(vtk_scalars_var)
+            renderer_label.mesh.GetPointData().SetScalars(vtk_scalars_label)
+
+            renderer_var.mesh.Modified()
+            renderer_label.mesh.Modified()
+
+            # Renderizar la ventana con subplots
+            render_window.Render()
+
+            # Guardar la imagen como PNG
+            window_to_image_filter.Modified()
+            window_to_image_filter.Update()
+
+            output_file = os.path.join(self.output_directory, f"AT_map_{view}.png")
+
+            writer = vtk.vtkPNGWriter()
+            writer.SetFileName(output_file)
+            writer.SetInputData(window_to_image_filter.GetOutput())
+            writer.Write()
+            print(f"Saved AT map at: ", output_file)
+            print(f"Saved AT map at: ", output_file)
+
 
 
     
@@ -529,7 +743,7 @@ class EGM_3D_PLOTTER:
 
             # Create a text actor for label
             title_label = vtk.vtkTextActor()
-            title_label.SetInput("Real")
+            title_label.SetInput("Ground truth")
             title_labelprop = title_label.GetTextProperty()
             title_labelprop.SetFontFamilyToArial()
             title_labelprop.SetFontSize(25)
@@ -547,7 +761,7 @@ class EGM_3D_PLOTTER:
             scalar_bar_var.GetLabelTextProperty().SetItalic(False)  # Ensure text is not italicized
             scalar_bar_var.GetLabelTextProperty().SetShadow(False) 
             scalar_bar_var.GetLabelTextProperty().SetFontFamilyToArial()  # Set font to Arial
-            scalar_bar_var.GetLabelTextProperty().SetFontSize(5) 
+            scalar_bar_var.GetLabelTextProperty().SetFontSize(20) 
             scalar_bar_var.SetNumberOfLabels(5)
 
             scalar_bar_label = vtk.vtkScalarBarActor()
@@ -589,7 +803,7 @@ class EGM_3D_PLOTTER:
 
             array_frames=[]
             # Iterar sobre instantes y generar frames
-            for instant in range(0, self.duration, 1):  # Cada 500 instantes
+            for instant in range(0, self.duration, 100):  # Cada 500 instantes
                 # Actualizar los datos escalares de los dos renderizadores
                 vtk_scalars_var = numpy_to_vtk(var_represent[instant, :], deep=True)
                 vtk_scalars_label = numpy_to_vtk(var_represent_original[instant, :], deep=True)

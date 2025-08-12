@@ -15,7 +15,7 @@ class StratifiedSplit:
         self.classes_to_oversample=classes_to_oversample
         self.classes_to_strat=[0,1,2,3,4,5]
 
-    def load_process_annotations(self, select_classes=None):
+    def load_process_annotations(self, deterministic_group=None, select_classes=None):
         """
         Load annotation from a given path.
         """
@@ -24,6 +24,21 @@ class StratifiedSplit:
 
         #Discard patients from discard_classes
         if len(self.discard_classes)>0:
+            if deterministic_group is not None:
+
+                df_annotation_complexity['Simulation_Name'] = df_annotation_complexity['Simulation_Name'].str.strip()
+                deterministic_group = [x.strip() for x in deterministic_group]
+
+                # Filtrar el DataFrame para obtener solo clase 2 o 4
+                names_to_exclude = df_annotation_complexity[df_annotation_complexity['Complexity'].isin(self.discard_classes)]['Simulation_Name'].tolist()
+
+                # Filtrar la lista original
+                filtered_group = [name for name in deterministic_group if name not in names_to_exclude]
+
+                # Resultado
+                return filtered_group
+
+
             df_annotation_complexity = df_annotation_complexity[~df_annotation_complexity['Complexity'].isin(self.discard_classes)]
         if select_classes is not None:
             df_annotation_complexity = df_annotation_complexity[df_annotation_complexity['Complexity'].isin(select_classes)]
