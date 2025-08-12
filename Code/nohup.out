@@ -1,0 +1,132 @@
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+./simple_launch.sh: línea 7: 165222 Terminado (killed)      nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --optuna false --discard_classes true --filter_EGM false --split_mode 'stratified' --oversampling true > output/logs/OMAMI_VAE_stratified_2_classes.log 2>&1
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+./simple_launch.sh: línea 11: 165543 Terminado (killed)      nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI_VAE' --optuna false --discard_classes true --filter_EGM false --split_mode 'stratified' --oversampling true > output/logs/OMAMI_VAE_stratified_2_classes.log 2>&1
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+./simple_launch.sh: línea 7: 165899 Terminado (killed)      nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --optuna false --discard_classes true --filter_EGM false --split_mode 'stratified' --oversampling true > output/logs/OMAMI_VAE_stratified_2_classes.log 2>&1
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+./simple_launch.sh: línea 11: 166834 Terminado (killed)      nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI_VAE' --optuna false --discard_classes true --filter_EGM false --split_mode 'stratified' --oversampling true > output/logs/OMAMI_VAE_stratified_2_classes.log 2>&1
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+./simple_launch.sh: línea 7: 169003 Terminado (killed)      nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --optuna false --discard_classes true --filter_EGM false --split_mode 'stratified' --oversampling true > output/logs/OMAMI_VAE_stratified_2_classes.log 2>&1
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+./simple_launch.sh: línea 11: 169352 Terminado (killed)      nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI_VAE' --optuna false --discard_classes true --filter_EGM false --split_mode 'stratified' --oversampling true > output/logs/OMAMI_VAE_stratified_2_classes.log 2>&1
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+tee: '': No existe el archivo o el directorio
+Saving training log at: output/logs/OMAMI_VAE_stratified_2_classes.log
+Iniciando monitoreo de CPU y RAM...
+Running OMAMI...
+Running OMAMI_VAE...
+Iniciando monitoreo de CPU y RAM...
+Running OMAMI...
+Running OMAMI_VAE...
+Iniciando monitoreo de CPU y RAM...
+Running OMAMI...
+Running OMAMI_VAE...
+Iniciando monitoreo de CPU y RAM...
+Running OMAMI...
+Running OMAMI_VAE...
+Iniciando monitoreo de CPU y RAM...
+Running OMAMI...
+Running OMAMI_VAE...
+Iniciando monitoreo de CPU y RAM...
+Ejecutando OMAMI...
+Iniciando monitoreo de CPU y RAM...
+Ejecutando OMAMI...
+Ejecutando OMAMI_VAE...
+Todos los experimentos han finalizado.
+./simple_launch.sh: línea 22: 14766 Terminado (killed)      nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --optuna false --discard_classes true --filter_EGM false --split_mode 'stratified' --oversampling true > output/logs/OMAMI_stratified_2_classes.log 2>&1
+Ejecutando OMAMI_VAE...
+./simple_launch.sh: línea 32: 15153 Terminado (killed)      nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI_VAE' --optuna false --discard_classes true --filter_EGM false --split_mode 'stratified' --oversampling true > output/logs/OMAMI_VAE_stratified_2_classes.log 2>&1
+Todos los experimentos han finalizado.
+Iniciando monitoreo de CPU y RAM...
+Ejecutando OMAMI...
+Iniciando monitoreo de CPU y RAM...
+Ejecutando OMAMI...
+Iniciando monitoreo de CPU y RAM...
+Ejecutando OMAMI...
+Iniciando monitoreo de CPU y RAM...
+Ejecutando OMAMI...
+./simple_launch.sh: línea 22: 41211 Terminado (killed)      nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --optuna false --discard_classes true --filter_EGM false --split_mode 'stratified' --oversampling true > output/logs/OMAMI_stratified_2_classes.log 2>&1
+Ejecutando OMAMI_VAE...
+Terminado
+Todos los experimentos han finalizado.
+Iniciando monitoreo de CPU y RAM...
+Ejecutando OMAMI...
+./simple_launch.sh: línea 22: 44685 Terminado (killed)      nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --optuna false --discard_classes true --filter_EGM false --split_mode 'stratified' --oversampling true > output/logs/OMAMI_stratified_2_classes.log 2>&1
+Iniciando monitoreo de CPU y RAM...
+Ejecutando OMAMI...
+./simple_launch.sh: línea 22: 46495 Terminado (killed)      nohup python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --optuna false --discard_classes true --filter_EGM false --split_mode 'stratified' --oversampling true > output/logs/OMAMI_stratified_2_classes.log 2>&1
+Iniciando monitoreo de CPU y RAM con vmstat...
+Ejecutando OMAMI...
+./simple_launch.sh: línea 27: 48775 Terminado (killed)      python -u scripts/train_multioutput_optuna.py --algorithm 'OMAMI' --optuna false --discard_classes true --filter_EGM false --split_mode 'stratified' --oversampling true >> "$PYLOGFILE" 2>&1
+
+=== Revisión de eventos del sistema por OOM (Out Of Memory): ===
+dmesg: fallo al leer el «buffer» del núcleo: Operación no permitida
+Deteniendo monitoreo

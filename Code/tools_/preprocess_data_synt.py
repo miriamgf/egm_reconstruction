@@ -36,7 +36,7 @@ torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
 fs = 500
 
 
-class Preprocess_Dataset:
+class PreprocessSyntDataset:
     """
     The Preprocess_Dataset class preprocess dataset loaded previously. Among the tasks that it performs:
         - Temporal Downsampling
@@ -58,7 +58,7 @@ class Preprocess_Dataset:
         dic_vars,
         Y,
         all_model_names,
-        transfer_matrices,experiment_dir,split_mode, norm_egm=True, inference = False, shuffle_patient=False
+        transfer_matrices,experiment_dir,split_mode="deterministic", norm_egm=True, inference = False, shuffle_patient=False
     ):
         self.params = params
         self.X_1channel = X_1channel
@@ -96,9 +96,6 @@ class Preprocess_Dataset:
 
         print("Preprocessing...")
         print('preprocess_compression')
-
-        del self.transfer_matrices
-        # Remove transfer matrices from memory
         # Downsampling and truncate
         self.X_1channel, self.egm_tensor, self.AF_models, self.class_complexity_list, self.Y_model = (
             self.preprocess_compression(
@@ -134,27 +131,15 @@ class Preprocess_Dataset:
         os.makedirs("output/figures/input_output/", exist_ok=True)
         plt.savefig("output/figures/input_output/norm.png")
 
-        
-
 
         # Train/Test/Val Split
         print("Splitting...")
         (
             x_train,
-            x_test,
-            x_val,
             train_models,
-            test_models,
-            val_models,
             AF_models_train,
-            AF_models_test,
-            AF_models_val,
             class_complexity_list_train,
-            class_complexity_list_test,
-            class_complexity_list_val,
             BSPM_train,
-            BSPM_test,
-            BSPM_val,
         ) = self.train_test_val_split_Autoencoder(
             BSPM_Models=self.X_1channel,
             random_split=True,
@@ -163,25 +148,15 @@ class Preprocess_Dataset:
         )
 
         print("TRAIN SHAPE:", x_train.shape, "models:", train_models)
-        print("TEST SHAPE:", x_test.shape, "models:", test_models)
-        print("VAL SHAPE:", x_val.shape, "models:", val_models)
 
 
-        x_train, x_test, x_val = self.preprocessing_autoencoder_input(
-            x_train, x_test, x_val, self.params["batch_size"]
+        x_train, _, _ = self.preprocessing_autoencoder_input(
+            x_train, x_train, x_train, self.params["batch_size"]
         )
         
-
-        new_items = {"x_train": x_train, "x_test": x_test, "x_val": x_val}
-        self.dic_vars.update(new_items)
-
-        y_train, y_test, y_val, class_complexity_list_train, class_complexity_list_test, class_complexity_list_val = self.preprocessing_y(
+        y_train, class_complexity_list_train= self.preprocessing_y(
             train_models,
-            test_models,
-            val_models,
             class_complexity_list_train,
-            class_complexity_list_test,
-            class_complexity_list_val,
             self.params["batch_size"],
 
         )
@@ -199,23 +174,12 @@ class Preprocess_Dataset:
 
         return (
             x_train,
-            x_test,
-            x_val,
             y_train,
-            y_test,
-            y_val,
             self.dic_vars,
             BSPM_train,
-            BSPM_test,
-            BSPM_val,
             AF_models_train,
-            AF_models_test,
-            AF_models_val,
-            class_complexity_list_train, class_complexity_list_test, class_complexity_list_val,
-            train_models,
-            test_models,
-            val_models,
-
+            class_complexity_list_train,
+            train_models
         )
 
     def preprocess_compression(
@@ -367,11 +331,7 @@ class Preprocess_Dataset:
     def preprocessing_y(
         self,
         train_models,
-        test_models,
-        val_models,
         class_complexity_list_train,
-        class_complexity_list_test,
-        class_complexity_list_val,
         n_batch
     ):
         
@@ -380,8 +340,6 @@ class Preprocess_Dataset:
 
         # Split EGM (Label)
         y_train = egm_tensor_n[np.in1d(self.AF_models, train_models)]
-        y_test = egm_tensor_n[np.in1d(self.AF_models, test_models)]
-        y_val = egm_tensor_n[np.in1d(self.AF_models, val_models)]
 
         
         # %% Subsample EGM nodes
@@ -398,8 +356,6 @@ class Preprocess_Dataset:
             N = 1
 
         y_train_subsample = y_train[:, 0:2048:N]  #:, 0:2048:2] --> 1024
-        y_test_subsample = y_test[:, 0:2048:N]
-        y_val_subsample = y_val[:, 0:2048:N]
 
 
         y_train = reshape(
@@ -410,14 +366,6 @@ class Preprocess_Dataset:
                 y_train_subsample.shape[1],
             ),
         )
-        y_test = reshape(
-            y_test_subsample,
-            (int(len(y_test_subsample) / n_batch), n_batch, y_test_subsample.shape[1]),
-        )
-        y_val = reshape(
-            y_val_subsample,
-            (int(len(y_val_subsample) / n_batch), n_batch, y_val_subsample.shape[1]),
-        )
 
         class_complexity_list_train = reshape(
             class_complexity_list_train,
@@ -425,23 +373,8 @@ class Preprocess_Dataset:
                 int(len(class_complexity_list_train) / n_batch),
                 n_batch
             ))
-        class_complexity_list_test = reshape(
-            class_complexity_list_test,
-            (
-                int(len(class_complexity_list_test) / n_batch),
-                n_batch
-            ))
-        class_complexity_list_val = reshape(
-            class_complexity_list_val,
-            (
-                int(len(class_complexity_list_val) / n_batch),
-                n_batch
-            ))
 
-
-        
-
-        return y_train, y_test, y_val, class_complexity_list_train, class_complexity_list_test, class_complexity_list_val
+        return y_train, class_complexity_list_train
 
     def train_test_val_split_Autoencoder(
         self,
@@ -500,67 +433,9 @@ class Preprocess_Dataset:
             if self.split_mode=="deterministic":
                 if not self.params["cross_validation"]:
                     # Deterministic assignation
-                    train_models_deterministic = [
-                        "RA_RAA_141230",
-                        "Simulation_01_190502_001_003",
-                        "Simulation_01_190502_001_004",
-                        #"Simulation_01_190502_001_006",
-                        "Simulation_01_190619_001_001",
-                        "Simulation_01_190619_001_002",
-                        #"Simulation_01_190619_001_003",
-                        #"Simulation_01_190619_001_004",
-                        #"Simulation_01_190717_001_001",
-                        "Simulation_01_190717_001_002",
-                        #"Simulation_01_190717_001_003",
-                        #"Simulation_01_190717_001_004",
-                        "Simulation_01_191001_001_001",
-                        #"Simulation_01_191001_001_002",
-                        "Simulation_01_191001_001_005",
-                        #"Simulation_01_191001_001_007",
-                        "Simulation_01_200212_001_  1",
-                        "Simulation_01_200212_001_  2",
-                        "Simulation_01_200212_001_  4",
-                        "Simulation_01_200212_001_  6",
-                        "Simulation_01_200212_001_  7",
-                        "Simulation_01_200212_001_  9",
-                        "Simulation_01_200316_001_  1",
-                        "Simulation_01_200316_001_  5",
-                        "Simulation_01_200316_001_  7",
-                        "Simulation_01_200428_001_001",
-                        "Simulation_01_200428_001_002",
-                        "Simulation_01_200428_001_003",
-                        "Simulation_01_200428_001_005",
-                        "Simulation_01_200428_001_006",
-                        "Simulation_01_200428_001_007",
-                        "Simulation_01_200428_001_009",
-                        "Simulation_01_201223_001_002",
-                        "Simulation_01_210209_001_003",
-                        "Simulation_01_210210_001_001",
-                        "TwoRotors_181219",
-                    ]
-
-                    val_models_deterministic = [
-                        "LA_RIPV_150121",
-                        "RA_RAFW_140807",
-                        "Simulation_01_190502_001_005",
-                        "Simulation_01_200212_001_  8",
-                        "Sinusal_150629",
-                    ]
-
-                    test_models_deterministic = [
-                        "LA_PLAW_140711_arm",
-                        "LA_RSPV_CAF_150115",
-                        "Simulation_01_200212_001_  5",
-                        "Simulation_01_200212_001_ 10",
-                        "Simulation_01_200316_001_  3",
-                        "Simulation_01_200316_001_  4",
-                        "Simulation_01_200316_001_  8",
-                        "Simulation_01_200428_001_004",
-                        "Simulation_01_200428_001_008",
-                        "Simulation_01_200428_001_010",
-                        "Simulation_01_210119_001_001",
-                        "Simulation_01_210208_001_002",
-                    ]
+                    train_models_deterministic = self.all_model_names
+                    val_models_deterministic = []
+                    test_models_deterministic = []
                     
                 elif self.params["cross_validation"]:
                     KFold_obj = KFold_Stratified(k=4)
@@ -586,35 +461,7 @@ class Preprocess_Dataset:
                 with open(self.experiment_dir+"train_models.txt", "w") as file:
                     for model in train_models_deterministic:
                         file.write(model + "\n")
-                with open(self.experiment_dir+"test_models.txt", "w") as file:
-                    for model in test_models_deterministic:
-                        file.write(model + "\n")
-                with open(self.experiment_dir+"val_models.txt", "w") as file:
-                    for model in val_models_deterministic:
-                        file.write(model + "\n")
 
-            elif self.split_mode=="random":
-
-                if caution_split:
-                    train_models = random.sample(
-                        list(AF_models_unique),
-                        int(
-                            np.floor(self.AF_models[-1] * train_percentage - len(indx))
-                        ),
-                    )
-                    train_models = train_models + indx
-                else:
-                    train_models = random.sample(
-                        list(AF_models_unique),
-                        int(np.floor(self.AF_models[-1] * train_percentage)),
-                    )
-
-                aux_models = [x for x in AF_models_unique if x not in train_models]
-                test_models = random.sample(
-                    list(aux_models),
-                    int(np.floor(self.AF_models[-1] * test_percentage)),
-                )
-                val_models = [x for x in aux_models if x not in test_models]
             
             elif self.split_mode=="stratified":
                 print("Stratified split...")
@@ -653,63 +500,33 @@ class Preprocess_Dataset:
                 print('Random shuffling of patients applied')
 
                 random.shuffle(train_models)
-                random.shuffle(test_models)
-                random.shuffle(val_models)
 
             x_train = self.X_1channel[np.in1d(self.AF_models, train_models)]
-            x_test = self.X_1channel[np.in1d(self.AF_models, test_models)]
-            x_val = self.X_1channel[np.in1d(self.AF_models, val_models)]
-
-            print("TRAIN MODELS:", train_models)
-            print("TEST MODELS:", test_models)
-            print("VAL MODELS:", val_models)
 
             BSPM_train = BSPM_Models[np.in1d(self.AF_models, train_models)]
-            BSPM_test = BSPM_Models[np.in1d(self.AF_models, test_models)]
-            BSPM_val = BSPM_Models[np.in1d(self.AF_models, val_models)]
+
 
             AF_models_arr = np.array(self.AF_models)
             AF_models_train = AF_models_arr[np.in1d(self.AF_models, train_models)]
-            AF_models_test = AF_models_arr[np.in1d(self.AF_models, test_models)]
-            AF_models_val = AF_models_arr[np.in1d(self.AF_models, val_models)]
 
             class_complexity_list_arr = np.array(self.class_complexity_list)
             class_complexity_list_train = class_complexity_list_arr[np.in1d(self.AF_models, train_models)]
-            class_complexity_list_test = class_complexity_list_arr[np.in1d(self.AF_models, test_models)]
-            class_complexity_list_val = class_complexity_list_arr[np.in1d(self.AF_models, val_models)]
-        else:
 
-            x_train = self.X_1channel[
-                np.where((self.Y_model >= 1) & (self.Y_model <= 200))
-            ]
-            x_test = self.X_1channel[
-                np.where((self.Y_model > 180) & (self.Y_model <= 244))
-            ]
-            x_val = self.X_1channel[
-                np.where((self.Y_model > 244) & (self.Y_model <= 286))
-            ]
+        else:
+            pass
+
+
 
         # Save the model names in train, test and val
-        [self.all_model_names[index] for index in AF_models_test]
-        [self.all_model_names[index] for index in AF_models_val]
+
         [self.all_model_names[index] for index in AF_models_train]
 
         return (
             x_train,
-            x_test,
-            x_val,
             train_models,
-            test_models,
-            val_models,
             AF_models_train,
-            AF_models_test,
-            AF_models_val,
             class_complexity_list_train,
-            class_complexity_list_test,
-            class_complexity_list_val,
             BSPM_train,
-            BSPM_test,
-            BSPM_val,
         )
 
     def preprocess_latent_space(
