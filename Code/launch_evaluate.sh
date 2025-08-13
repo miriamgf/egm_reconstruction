@@ -2,8 +2,8 @@
 
 # Lista de algorithm_IDs
 ALGORITHMS=(
-  #"OMAMI_VAE_no_filt_testing_repeated_no_filt_strat_2_class_overs_augmented" #(E2.1)
-  "OMAMI_VAE_no_filt_testing_repeated_no_filt_strat_2_class_overs_REPLICATE" #(E0.1)
+  "OMAMI_VAE_no_filt_testing_repeated_no_filt_strat_2_class_overs_REPLICATE",
+  "OMAMI_VAE_no_filt_testing_repeated_no_filt_strat_2_class_overs_augmented" 
 )
 
 # Ejecutar cada evaluación secuencialmente

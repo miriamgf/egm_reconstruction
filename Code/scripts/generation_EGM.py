@@ -6,6 +6,7 @@ import argparse
 import datetime
 import os
 import pickle
+import json
 import random
 import time
 
@@ -37,6 +38,7 @@ from models.gen_vae_2d_skip import Gen_VAE_2D_Skip
 from tools_.df_mapping import *
 from tools_.tools import *
 from tools_.tools_1 import normalize_array
+from tools_.signal_gen import SyntheticDataGenerator
 
 
 tf.random.set_seed(42)
@@ -88,17 +90,19 @@ print(type(patches_oclussion))
 params = ParseHiperparams().parse_default_hyperparams()
 params["split_mode"] = "stratified"
 params["oversampling"] = False
+params["discard_classes"] =[1, 2, 3, 5]
 params["classes_to_oversample"]= [0,1, 5]
 params["latent_dim"]=250
 params['early_stopping_patience']=50
 params["beta_warmup_epochs"]= 20
-params["select_classes"]= [3, 4]
+params["select_classes"]= [4]
+params["filter_EGM"]=False
 
 
 try:
     print("parsing")
     parser = argparse.ArgumentParser(description="Noise params")
-    parser.add_argument("--algorithm", type=str, help="experiment name", required=True)
+    parser.add_argument("--algorithm", type=str, help="experiment name", required=False)
     parser.add_argument("--optuna", type=str_to_bool, help="True or False", required=False)
     parser.add_argument("--n_nodes", type=int, help="682, 1024", required=False)
     parser.add_argument("--evaluation", type=str_to_bool, help="evaluation", required=False)
@@ -135,10 +139,11 @@ unfold_code = 1
 experiment_name = algorithm
 
 #experiment_name = f"{experiment_name}_baseline_conv2D_annealing_class_2_3_4"
-experiment_name="OMAMI_VAE_baseline_conv2D_annealing_time_loss/"
+experiment_name="OMAMI_VAE_baseline_conv2D_annealing_time_loss_retrain_c4"
 
 
 params["experiment_name"] = experiment_name
+experiment_name = f"{experiment_name}_c4/"
 #experiment_name='pruebas interpol'
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -148,7 +153,7 @@ figs_dir = "output/figures/"
 models_dir = "output/model/"
 dict_var_dir = "output/variables/"
 dict_results_dir = "output/results/"
-experiment_dir = "output/experiments/synthetic_generation/" + experiment_name + "/"
+experiment_dir = "output/experiments/synthetic_generation/" + experiment_name 
 
 
 if not os.path.exists(experiment_dir):
@@ -283,9 +288,19 @@ evaluation = True
 
 if not evaluation:
     params["n_epochs"] = 90
+
+    #fair_train = False
+
     model, history = TrainModelGen(
         params, y_train, y_test, y_val, y_train, y_test, y_val, models_dir, experiment_dir
     )()
+
+    # Guardar parámetros como JSON en experiment_dir
+    params_path = os.path.join(experiment_dir, "params.json")
+    with open(params_path, "w") as f:
+        json.dump(params, f, indent=4)  # indent=4 para que sea más legible
+
+    print(f"Parámetros guardados en {params_path}")
 
 if evaluation:
     vae = Gen_VAE_2D(
@@ -296,7 +311,7 @@ if evaluation:
         tensorboard_logs=experiment_dir + "tb_logs/"
     )
 
-    model_name="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/synthetic_generation/OMAMI_VAE_baseline_conv2D_annealing_time_loss/"
+    model_name="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/synthetic_generation/OMAMI_VAE_baseline_conv2D_annealing_checkpoint/"
     vae.model.load_weights(model_name + "model_weights.h5")
 
     x_real= y_train[:, :, :]
@@ -310,6 +325,24 @@ if evaluation:
     z, z_mean_train, _ = vae.build_encoder_module(x_real, vae.input_shape_)
     pca = PCA(n_components=2)
     z_proj = pca.fit_transform(z_mean_train)  
+
+    dataset_generator=True
+
+    if dataset_generator:
+        generator = SyntheticDataGenerator(
+            vae_model=vae,                      # modelo VAE 
+            latent_dim=params["latent_dim"],    # Dimensión del espacio latente 
+            save_dir="/home/pdi/miriamgf/tesis/Autoencoders/Data_generated",
+            params=params       
+        )
+
+        best_signals = generator.generate_and_select(
+            real_signals=x_real,                # Tus señales reales 
+            z_mean_train=z_mean_train,          # Los z_mean del set de entrenamiento
+            num_generated=100,                 # Número de señales sintéticas a generar 
+            num_selected=25                    # Cuántas quedarte al final
+        )
+
 
     plt.figure(figsize=(6, 6))
     for class_id in np.unique(batch_classes):
@@ -624,136 +657,110 @@ if evaluation:
             print(experiment_dir + f"manifold_1D_{example}.png")
             plt.close()
 
+    if reconstruction:
 
-        
+            x_sample = y_train[:1]  # Una muestra
+            reconstructed = vae.model.predict(x_sample)
+            x_sample = y_train[:100]  # Una muestra
 
+            # Prediction
+            plt.figure(figsize=(12, 6))
 
-    
-    #if interpollate_latent_space:
+            plt.subplot(1, 2, 1)
+            plt.imshow(x_sample[0], aspect='auto', cmap='viridis')
+            plt.title("Entrada Original")
 
+            plt.subplot(1, 2, 2)
+            plt.imshow(reconstructed[0], aspect='auto', cmap='viridis')
+            plt.title("Reconstrucción")
 
-    '''
-    plt.figure()
-    plt.subplot(2, 1, 1)
-    plt.title("Synthetic signal")
-    plt.plot(synthetic[0:200, 0 ])
-    plt.subplot(2, 1, 2)
-    plt.title("Real signal")
-    plt.plot(y_train[0,0:200, 0 ])
-    plt.savefig(
-        experiment_dir + "synthetic_signal_1D.png", dpi=300, bbox_inches="tight"
-    )
-    plt.close()
-    '''
+            plt.tight_layout()
+            plt.savefig(
+                experiment_dir + "prediction.png", dpi=300, bbox_inches="tight"
+            )
+            plt.close()
 
-    x_sample = y_train[:1]  # Una muestra
-    reconstructed = vae.model.predict(x_sample)
-    x_sample = y_train[:100]  # Una muestra
+            plt.figure()
+            plt.subplot(2, 1, 1)
+            plt.title("Synthetic signal")
+            plt.plot(reconstructed[0, 0:400, 0 ])
+            plt.subplot(2, 1, 2)
+            plt.title("Real signal")
+            plt.plot(y_train[0,0:400, 0 ])
+            plt.savefig(
+                experiment_dir + f"reconstruction_1D_{example}.png", dpi=300, bbox_inches="tight"
+            )
+            print(experiment_dir + f"reconstruction_1D_{example}.png")
+            plt.close()
+            
 
-    # Prediction
-    plt.figure(figsize=(12, 6))
+            #Plot multiple inputs samples
+            plt.figure(figsize=(12, 6))
 
-    plt.subplot(1, 2, 1)
-    plt.imshow(x_sample[0], aspect='auto', cmap='viridis')
-    plt.title("Entrada Original")
+            plt.subplot(2, 5, 1)
+            plt.imshow(x_sample[0], aspect='auto', cmap='viridis')
+            plt.title("Entrada Original")
 
-    plt.subplot(1, 2, 2)
-    plt.imshow(reconstructed[0], aspect='auto', cmap='viridis')
-    plt.title("Reconstrucción")
+            plt.subplot(2, 5, 2)
+            plt.imshow(x_sample[1], aspect='auto', cmap='viridis')
+            plt.title("Entrada Original")
 
-    plt.tight_layout()
-    plt.savefig(
-        experiment_dir + "prediction.png", dpi=300, bbox_inches="tight"
-    )
-    plt.close()
+            plt.subplot(2, 5, 3)
+            plt.imshow(x_sample[2], aspect='auto', cmap='viridis')
+            plt.title("Entrada Original")
 
-    plt.figure()
-    plt.subplot(2, 1, 1)
-    plt.title("Synthetic signal")
-    plt.plot(reconstructed[0, 0:400, 0 ])
-    plt.subplot(2, 1, 2)
-    plt.title("Real signal")
-    plt.plot(y_train[0,0:400, 0 ])
-    plt.savefig(
-        experiment_dir + f"reconstruction_1D_{example}.png", dpi=300, bbox_inches="tight"
-    )
-    print(experiment_dir + f"reconstruction_1D_{example}.png")
-    plt.close()
-    
+            plt.subplot(2, 5, 4)
+            plt.imshow(x_sample[3], aspect='auto', cmap='viridis')
+            plt.title("Entrada Original")
+            
+            plt.subplot(2, 5, 5)
+            plt.imshow(x_sample[4], aspect='auto', cmap='viridis')
+            plt.title("Entrada Original")
 
-    #Plot multiple inputs samples
-    plt.figure(figsize=(12, 6))
+            plt.subplot(2, 5, 6)
+            plt.imshow(x_sample[5], aspect='auto', cmap='viridis')
+            plt.title("Entrada Original")
 
-    plt.subplot(2, 5, 1)
-    plt.imshow(x_sample[0], aspect='auto', cmap='viridis')
-    plt.title("Entrada Original")
+            plt.tight_layout()
+            plt.savefig(
+                experiment_dir + "examples_train.png", dpi=300, bbox_inches="tight"
+            )
+            plt.close()
 
-    plt.subplot(2, 5, 2)
-    plt.imshow(x_sample[1], aspect='auto', cmap='viridis')
-    plt.title("Entrada Original")
+            # Interpolación en el espacio latente
+            z_1 = tf.random.normal((1, vae.latent_dim))
+            z_2 = tf.random.normal((1, vae.latent_dim))
 
-    plt.subplot(2, 5, 3)
-    plt.imshow(x_sample[2], aspect='auto', cmap='viridis')
-    plt.title("Entrada Original")
+            alphas = np.linspace(0, 1, 10)
+            interpolations = [(1 - alpha) * z_1 + alpha * z_2 for alpha in alphas]
+            generated = [vae.decode_from_latent(z) for z in interpolations]
 
-    plt.subplot(2, 5, 4)
-    plt.imshow(x_sample[3], aspect='auto', cmap='viridis')
-    plt.title("Entrada Original")
-    
-    plt.subplot(2, 5, 5)
-    plt.imshow(x_sample[4], aspect='auto', cmap='viridis')
-    plt.title("Entrada Original")
+            plt.figure()
+            # Visualiza
+            for i, sample in enumerate(generated):
+                plt.imshow(sample[0], aspect='auto')
+                plt.title(f"Alpha {alphas[i]:.2f}")
+                plt.savefig(
+                experiment_dir + f"interpolations_{i}.png", dpi=300, bbox_inches="tight"
+            )
+                plt.show()
 
-    plt.subplot(2, 5, 6)
-    plt.imshow(x_sample[5], aspect='auto', cmap='viridis')
-    plt.title("Entrada Original")
+            #Evaluation
+            reconstructed = vae.model.predict(y_test)
+            mse = tf.reduce_mean(tf.keras.losses.mean_squared_error(y_test, reconstructed)).numpy()
+            print("Mean Squared Error (MSE):", mse)
 
-    plt.tight_layout()
-    plt.savefig(
-        experiment_dir + "examples_train.png", dpi=300, bbox_inches="tight"
-    )
-    plt.close()
+            # Encode test set
+            z, z_mean_train, z_log_var = vae.build_encoder_module(y_test, vae.input_shape_)
 
+            # Clip log var for numerical stability
+            logvar = tf.clip_by_value(z_log_var, -10.0, 10.0)
 
-    # Si tienes etiquetas (por ejemplo, para clases), puedes colorear por clase
+            # Compute KL loss per sample
+            kl_loss_per_sample = -0.5 * tf.reduce_sum(1 + logvar - tf.square(z_mean_train) - tf.exp(logvar), axis=1)
 
+            # Mean KL over all samples
+            kl_loss_mean = tf.reduce_mean(kl_loss_per_sample).numpy()
 
+            print(f"KL loss (test set): {kl_loss_mean:.6f}")
 
-
-
-    # Interpolación en el espacio latente
-    z_1 = tf.random.normal((1, vae.latent_dim))
-    z_2 = tf.random.normal((1, vae.latent_dim))
-
-    alphas = np.linspace(0, 1, 10)
-    interpolations = [(1 - alpha) * z_1 + alpha * z_2 for alpha in alphas]
-    generated = [vae.decode_from_latent(z) for z in interpolations]
-
-    plt.figure()
-    # Visualiza
-    for i, sample in enumerate(generated):
-        plt.imshow(sample[0], aspect='auto')
-        plt.title(f"Alpha {alphas[i]:.2f}")
-        plt.savefig(
-        experiment_dir + f"interpolations_{i}.png", dpi=300, bbox_inches="tight"
-    )
-        plt.show()
-
-    #Evaluation
-    reconstructed = vae.model.predict(y_test)
-    mse = tf.reduce_mean(tf.keras.losses.mean_squared_error(y_test, reconstructed)).numpy()
-    print("Mean Squared Error (MSE):", mse)
-
-    # Encode test set
-    z, z_mean_train, z_log_var = vae.build_encoder_module(y_test, vae.input_shape_)
-
-    # Clip log var for numerical stability
-    logvar = tf.clip_by_value(z_log_var, -10.0, 10.0)
-
-    # Compute KL loss per sample
-    kl_loss_per_sample = -0.5 * tf.reduce_sum(1 + logvar - tf.square(z_mean_train) - tf.exp(logvar), axis=1)
-
-    # Mean KL over all samples
-    kl_loss_mean = tf.reduce_mean(kl_loss_per_sample).numpy()
-
-    print(f"KL loss (test set): {kl_loss_mean:.6f}")

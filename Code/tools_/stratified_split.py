@@ -6,9 +6,9 @@ from collections import Counter
 
 
 class StratifiedSplit:
-    def __init__(self,classes_to_oversample=[], discard_classes=[], oversampling=True):
+    def __init__(self,classes_to_oversample=[], discard_classes=[], oversampling=True, annotation_dir="/home/profes/miriamgf/tesis/Autoencoders/Data/annotations.csv"):
 
-        self.annotation_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/annotations.csv"
+        self.annotation_dir = annotation_dir
         self.discard_classes = discard_classes
         self.oversampling=oversampling
         self.oversampling_rate=10
