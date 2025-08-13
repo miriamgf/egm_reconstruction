@@ -6,6 +6,7 @@ import argparse
 import datetime
 import os
 import pickle
+import json
 import random
 import time
 
@@ -89,17 +90,19 @@ print(type(patches_oclussion))
 params = ParseHiperparams().parse_default_hyperparams()
 params["split_mode"] = "stratified"
 params["oversampling"] = False
+params["discard_classes"] =[1, 2, 3, 5]
 params["classes_to_oversample"]= [0,1, 5]
 params["latent_dim"]=250
 params['early_stopping_patience']=50
 params["beta_warmup_epochs"]= 20
 params["select_classes"]= [4]
+params["filter_EGM"]=False
 
 
 try:
     print("parsing")
     parser = argparse.ArgumentParser(description="Noise params")
-    parser.add_argument("--algorithm", type=str, help="experiment name", required=True)
+    parser.add_argument("--algorithm", type=str, help="experiment name", required=False)
     parser.add_argument("--optuna", type=str_to_bool, help="True or False", required=False)
     parser.add_argument("--n_nodes", type=int, help="682, 1024", required=False)
     parser.add_argument("--evaluation", type=str_to_bool, help="evaluation", required=False)
@@ -136,7 +139,7 @@ unfold_code = 1
 experiment_name = algorithm
 
 #experiment_name = f"{experiment_name}_baseline_conv2D_annealing_class_2_3_4"
-experiment_name="OMAMI_VAE_baseline_conv2D_annealing_time_loss"
+experiment_name="OMAMI_VAE_baseline_conv2D_annealing_time_loss_retrain_c4"
 
 
 params["experiment_name"] = experiment_name
@@ -150,7 +153,7 @@ figs_dir = "output/figures/"
 models_dir = "output/model/"
 dict_var_dir = "output/variables/"
 dict_results_dir = "output/results/"
-experiment_dir = "output/experiments/synthetic_generation/" + experiment_name + "/"
+experiment_dir = "output/experiments/synthetic_generation/" + experiment_name 
 
 
 if not os.path.exists(experiment_dir):
@@ -286,11 +289,18 @@ evaluation = True
 if not evaluation:
     params["n_epochs"] = 90
 
-    fair_train = False
+    #fair_train = False
 
     model, history = TrainModelGen(
         params, y_train, y_test, y_val, y_train, y_test, y_val, models_dir, experiment_dir
     )()
+
+    # Guardar parámetros como JSON en experiment_dir
+    params_path = os.path.join(experiment_dir, "params.json")
+    with open(params_path, "w") as f:
+        json.dump(params, f, indent=4)  # indent=4 para que sea más legible
+
+    print(f"Parámetros guardados en {params_path}")
 
 if evaluation:
     vae = Gen_VAE_2D(
@@ -301,7 +311,7 @@ if evaluation:
         tensorboard_logs=experiment_dir + "tb_logs/"
     )
 
-    model_name="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/synthetic_generation/OMAMI_VAE_baseline_conv2D_annealing_time_loss_c4/"
+    model_name="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/synthetic_generation/OMAMI_VAE_baseline_conv2D_annealing_checkpoint/"
     vae.model.load_weights(model_name + "model_weights.h5")
 
     x_real= y_train[:, :, :]
@@ -315,6 +325,24 @@ if evaluation:
     z, z_mean_train, _ = vae.build_encoder_module(x_real, vae.input_shape_)
     pca = PCA(n_components=2)
     z_proj = pca.fit_transform(z_mean_train)  
+
+    dataset_generator=True
+
+    if dataset_generator:
+        generator = SyntheticDataGenerator(
+            vae_model=vae,                      # modelo VAE 
+            latent_dim=params["latent_dim"],    # Dimensión del espacio latente 
+            save_dir="/home/pdi/miriamgf/tesis/Autoencoders/Data_generated",
+            params=params       
+        )
+
+        best_signals = generator.generate_and_select(
+            real_signals=x_real,                # Tus señales reales 
+            z_mean_train=z_mean_train,          # Los z_mean del set de entrenamiento
+            num_generated=100,                 # Número de señales sintéticas a generar 
+            num_selected=25                    # Cuántas quedarte al final
+        )
+
 
     plt.figure(figsize=(6, 6))
     for class_id in np.unique(batch_classes):
@@ -336,11 +364,11 @@ if evaluation:
     plt.close()
 
     # Samplear del espacio latente
-    random_sampling = False
-    guided_sampling = False
-    reconstruction = False
-    interpol = False
-    manifold = False
+    random_sampling = True
+    guided_sampling = True
+    reconstruction = True
+    interpol = True
+    manifold = True
 
     if random_sampling: 
 
@@ -736,19 +764,3 @@ if evaluation:
 
             print(f"KL loss (test set): {kl_loss_mean:.6f}")
 
-    dataset_generator=True
-
-    if dataset_generator:
-        generator = SyntheticDataGenerator(
-            vae_model=vae,                      # Tu modelo VAE ya cargado
-            latent_dim=params["latent_dim"],    # Dimensión del espacio latente (ej: 250)
-            save_dir="/home/pdi/miriamgf/tesis/Autoencoders/Data_generated",
-            params=params       
-        )
-
-        best_signals = generator.generate_and_select(
-            real_signals=x_real,                # Tus señales reales (ej: y_train)
-            z_mean_train=z_mean_train,          # Los z_mean del set de entrenamiento
-            num_generated=10,                 # Número de señales sintéticas a generar (puedes aumentar si quieres)
-            num_selected=5                    # Cuántas quedarte al final
-        )

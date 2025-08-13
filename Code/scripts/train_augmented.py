@@ -81,7 +81,7 @@ if params["algorithm"]=='OMAMI':
 
 elif params["algorithm"]=='OMAMI_VAE':
     
-    algorithm_ID_copy_config= "OMAMI_VAE_no_filt_testing_repeated"
+    algorithm_ID_copy_config= "OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_2_class_overs"
     path_best_params=f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/experiments_VAE/{algorithm_ID_copy_config}/hyperparams.json"
     params=ParseHiperparams().load_best_hyperparams(path_best_params)
     params['optuna_optimization']=False
@@ -231,13 +231,15 @@ except SystemExit as e:
     pass
 
 #CONFIGURE ---------------------------------------------------
-params["split_mode"] = "stratified"
+'''params["split_mode"] = "stratified"
 params["discard_classes"] = True
 params["attention_layer"]=True
 #params["SNR_white_noise"]=20
 params["discard_classes"]=[0, 1, 3, 5]
 params["classes_to_oversample"]= [4]
 params["oversampling"] = True
+params['n_epochs']=2'''
+params["data_augmentation"]=True
 #-------------------------------------------------------------
 
 experiment_name = algorithm_ID_copy_config
@@ -259,7 +261,6 @@ else:
 if params["optuna_optimization"]:
     experiment_name = f"{experiment_name}_Optuna"
 
-params["n_epochs"]=3
 print(params)
 
 #Regularization experiments
@@ -272,10 +273,6 @@ try:
 except:
     params["time_masking"]=False
 
-experiment_name = experiment_name + "_l2"
-params["l2_reg"]=0.001
-
-
 if params["shuffle_patient"]:
     experiment_name= experiment_name + "_shuffle_patient"
 if params["time_masking"]:
@@ -287,15 +284,17 @@ if params["attention_layer"]:
     print("Attention layer added")
     experiment_name= experiment_name + "_attention"
 
-params["early_stopping_patience"] = 40
-params["discard_classes"] = [1, 3, 5]
+#params["early_stopping_patience"] = 40
+#params["discard_classes"] = [1, 3, 5]
 if len(params["discard_classes"])>0:
     experiment_name= experiment_name + "_strat_2_class_overs"
 else:
     experiment_name= experiment_name + "_strat_5_class_overs"
 
-experiment_name=experiment_name + "_augmented"
 
+if params["data_augmentation"]:
+    experiment_name=experiment_name + "_augmented"
+#experiment_name = experiment_name + "_REPLICATE"
 print(params)
 print('Experiment name: ', experiment_name)
 
@@ -303,7 +302,6 @@ print('Experiment name: ', experiment_name)
 #experiment_name="TOY"
 print('Experiment name: ', experiment_name)
 params["experiment_name"]=experiment_name
-
 
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -367,36 +365,36 @@ if params["fs"] == params["fs_sub"]:
 Transfer_model = False  # Transfer learning from sinusoids
 sinusoids = False
 
+if params["data_augmentation"]:
 
-
-# Load data
-(
-    synt_X_1channel,
-    synt_Y,
-    synt_Y_model,
-    synt_egm_tensor,
-    synt_length_list,
-    synt_AF_models,
-    synt_all_model_names,
-    synt_transfer_matrices,
-    synt_y_list, 
-    synt_class_complexity_list
-) = LoadSyntheticDataset(
-    params,
-    directory=data_gen_dir,
-    data_type="1channelTensor",
-    n_classes=params["n_classes"],
-    downsampling=False, #deprecated
-    fs=params["fs"],
-    norm=False,
-    SR=True,
-    n_batch=params["batch_size"],
-    SNR_em_noise=SNR_em_noise,
-    SNR_white_noise=SNR_white_noise,
-    patches_oclussion=patches_oclussion,
-    unfold_code=unfold_code,
-    inference=False,
-)()
+    # Load data
+    (
+        synt_X_1channel,
+        synt_Y,
+        synt_Y_model,
+        synt_egm_tensor,
+        synt_length_list,
+        synt_AF_models,
+        synt_all_model_names,
+        synt_transfer_matrices,
+        synt_y_list, 
+        synt_class_complexity_list
+    ) = LoadSyntheticDataset(
+        params,
+        directory=data_gen_dir,
+        data_type="1channelTensor",
+        n_classes=params["n_classes"],
+        downsampling=False, #deprecated
+        fs=params["fs"],
+        norm=False,
+        SR=True,
+        n_batch=params["batch_size"],
+        SNR_em_noise=SNR_em_noise,
+        SNR_white_noise=SNR_white_noise,
+        patches_oclussion=patches_oclussion,
+        unfold_code=unfold_code,
+        inference=False,
+    )()
 
 
 # Load data
@@ -522,40 +520,40 @@ plt.savefig('output/figures/input_output/before_norm.png')
     inference=False,
 )()
 
+if params["data_augmentation"]:
+    # Preprocess data
+    (
+        synt_x_train,
+        synt_y_train,
+        dic_vars,
+        synt_BSPM_train,
+        synt_AF_models_train,
+        synt_class_complexity_list_train,
+        synt_train_models,
+    ) = PreprocessSyntDataset(
+        params,
+        synt_X_1channel,
+        synt_egm_tensor,
+        synt_AF_models,
+        synt_class_complexity_list,
+        synt_Y_model,
+        dic_vars,
+        synt_Y,
+        synt_all_model_names,
+        transfer_matrices,
+        experiment_dir,
+        split_mode="deterministic",
+        norm_egm=True,
+        shuffle_patient= params["shuffle_patient"], 
+        inference=False,
+    )()
 
-# Preprocess data
-(
-    synt_x_train,
-    synt_y_train,
-    dic_vars,
-    synt_BSPM_train,
-    synt_AF_models_train,
-    synt_class_complexity_list_train,
-    synt_train_models,
-) = PreprocessSyntDataset(
-    params,
-    synt_X_1channel,
-    synt_egm_tensor,
-    synt_AF_models,
-    synt_class_complexity_list,
-    synt_Y_model,
-    dic_vars,
-    synt_Y,
-    synt_all_model_names,
-    transfer_matrices,
-    experiment_dir,
-    split_mode="deterministic",
-    norm_egm=True,
-    shuffle_patient= params["shuffle_patient"], 
-    inference=False,
-)()
-
-#Add augmented data to training set
-x_train = tf.concat([x_train, synt_x_train], axis=0)
-y_train = tf.concat([y_train, synt_y_train], axis=0)
-BSPM_train = tf.concat([BSPM_train, synt_BSPM_train], axis=0)
-AF_models_train = tf.concat([AF_models_train, synt_AF_models_train], axis=0)
-class_complexity_list_train = tf.concat([class_complexity_list_train, synt_class_complexity_list_train], axis=0)
+    #Add augmented data to training set
+    x_train = tf.concat([x_train, synt_x_train], axis=0)
+    y_train = tf.concat([y_train, synt_y_train], axis=0)
+    BSPM_train = tf.concat([BSPM_train, synt_BSPM_train], axis=0)
+    AF_models_train = tf.concat([AF_models_train, synt_AF_models_train], axis=0)
+    class_complexity_list_train = tf.concat([class_complexity_list_train, synt_class_complexity_list_train], axis=0)
 
 
 for name in [
@@ -911,10 +909,6 @@ train_model_name = [all_model_names[index] for index in AF_models_train]
 
 mdic = {"reconstruction": test_estimation, "label": label}
 
-dic_by_models = array_to_dic_by_models(
-    mdic, test_models, AF_models_test, all_model_names
-)
-
 
 variables = {
     "RMSEmean": rmse_mean,
@@ -932,10 +926,6 @@ variables = {
 }
 
 
-savemat(
-    experiment_dir + "/reconstructions_by_model_" + experiment_name + ".mat",
-    dic_by_models,
-)
 dic_latent_space_test = {"Latent_space_test": pred_test_autoencoder}
 savemat(experiment_dir + "/autoencoder.mat", dic_latent_space_test)
 

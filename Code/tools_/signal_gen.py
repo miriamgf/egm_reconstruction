@@ -18,7 +18,6 @@ class SyntheticDataGenerator:
 
     def sample_latent_vectors(self, num_samples, mu, sigma, z_mean_train, sampling="random"):
         """Genera muestras latentes desde una distribución normal guiada por mu y sigma."""
-        num_samples=10
         if sampling=="random":
             mu=0
             sigma=1

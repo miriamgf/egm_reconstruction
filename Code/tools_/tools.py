@@ -1445,8 +1445,10 @@ def correlation_by_AFModels(AF_models_test, estimate_egms_n, y_test_subsample, n
         plt.subplot(2, 1, 2)
         plt.plot(y_array[0:500, 0], label='egm gt')
         plt.legend()
-        plt.savefig("/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/evaluation_trash/"+'preprocessed_signals_feat_opt_original.png')
-        print('saved image at ', "/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/evaluation_trash/"+'preprocessed_signals_feat_opt_original.png')
+        folder=f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/figures/evaluation_trash_{model}/"
+        os.makedirs(folder, exist_ok=True)  # exist_ok=True evita error si ya existe
+        plt.savefig(folder+'preprocessed_signals_feat_opt_original.png')
+        print('saved image at ', folder +'preprocessed_signals_feat_opt_original.png')
         plt.close()
         
         correlation_pearson_nodes = corr_spearman_cols(estimation_array, y_array)

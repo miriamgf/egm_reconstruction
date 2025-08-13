@@ -444,7 +444,7 @@ class TrainModel:
 
         callbacks_list = [early_stopping_callback, tensorboard_callback, lr_scheduler ]
         print(callbacks_list)
-        #ssh -L 6006:localhost:6006 miriamgf@10.110.100.78 en terminal LOCAL
+        #.u en terminal LOCAL
         #tensorboard --logdir=output/tensorboard/logs/ en terminal REMOTO
 
         if self.trial is not None:

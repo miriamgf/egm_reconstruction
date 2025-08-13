@@ -78,7 +78,7 @@ class LoadSyntheticDataset:
         self.unfold_code = unfold_code
         self.inference = inference
         self.all_classes = all_classes
-        self.synt_dataset_name = "synt_OMAMI_VAE_baseline_conv2D_annealing_time_loss"
+        self.synt_dataset_name = "synt_OMAMI_VAE_baseline_conv2D_annealing_time_loss_retrain_c4"
 
         self.synthetic_egms = np.load(self.directory + self.synt_dataset_name + ".npy")
 

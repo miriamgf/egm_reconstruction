@@ -2,20 +2,9 @@
 
 # Lista de algorithm_IDs
 ALGORITHMS=(
-  "OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_5_class_overs" #(E2.1)
-  "OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_2_class_overs" #(E0.1)
-  "OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_tm_strat_2_class_overs_det" #(E1.2)
-  "OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_tm_strat_2_class_overs" #(E2.3)
-  "OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_5_class_overs"
-  "OMAMI_no_filt_testing2_repeated_no_filt_l2_strat_2_class_overs"
-  "OMAMI_no_filt_testing2_repeated_no_filt_l2_tm_strat_2_class_overs_det"
-  "OMAMI_no_filt_testing2_repeated_no_filt_l2_tm_strat_2_class_overs"
+  "OMAMI_VAE_no_filt_testing_repeated_no_filt_strat_2_class_overs_REPLICATE",
+  "OMAMI_VAE_no_filt_testing_repeated_no_filt_strat_2_class_overs_augmented" 
 )
-
-#OMAMI_VAE_strat_6clases
-#OMAMI_VAE_stratified_2clases
-#OMAMI_VAE_deterministic_2clases_reg
-#OMAMI_VAE_stratified_2clases_reg
 
 # Ejecutar cada evaluación secuencialmente
 for ALG_ID in "${ALGORITHMS[@]}"; do
@@ -27,7 +16,7 @@ for ALG_ID in "${ALGORITHMS[@]}"; do
     --algorithm_ID "$ALG_ID" \
     --ev_DL true \
     --stratified_split true \
-    --ev_TIK true \
+    --ev_TIK false \
     | tee "$LOG_FILE"
 done
 

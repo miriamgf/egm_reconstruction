@@ -458,7 +458,7 @@ class PreprocessSyntDataset:
                         val_models.append(self.all_model_names.index(elemento))
                 
                 #Save to dic
-                with open(self.experiment_dir+"train_models.txt", "w") as file:
+                with open(self.experiment_dir+"train_models_synt.txt", "w") as file:
                     for model in train_models_deterministic:
                         file.write(model + "\n")
 
@@ -484,13 +484,13 @@ class PreprocessSyntDataset:
                         val_models.append(self.all_model_names.index(elemento))
                 
                 #Save to dic
-                with open(self.experiment_dir+"train_models.txt", "w") as file:
+                with open(self.experiment_dir+"train_models_synt.txt", "w") as file:
                     for model in train_models_strat:
                         file.write(model + "\n")
-                with open(self.experiment_dir+"test_models.txt", "w") as file:
+                with open(self.experiment_dir+"test_models_synt.txt", "w") as file:
                     for model in test_models_strat:
                         file.write(model + "\n")
-                with open(self.experiment_dir+"val_models.txt", "w") as file:
+                with open(self.experiment_dir+"val_models_synt.txt", "w") as file:
                     for model in val_models_strat:
                         file.write(model + "\n")
 
