@@ -611,7 +611,8 @@ if __name__ == "__main__":
                     "OMAMI_no_filt_testing2_repeated_no_filt_l2_tm_strat_2_class_overs",
                     ]'''
     
-    algorithm_list= ["OMAMI_VAE_no_filt_testing_repeated_no_filt_l2_strat_2_class_overs"]
+    algorithm_list= ["OMAMI_VAE_no_filt_testing_repeated_no_filt_strat_2_class_overs_REPLICATE", 
+       "OMAMI_VAE_no_filt_testing_repeated_no_filt_strat_2_class_overs_augmented"]
 
     
     for algorithm in algorithm_list:
