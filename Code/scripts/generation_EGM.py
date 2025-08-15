@@ -143,8 +143,8 @@ experiment_name="OMAMI_VAE_baseline_conv2D_annealing_time_loss_retrain_c4"
 
 
 params["experiment_name"] = experiment_name
-experiment_name = f"{experiment_name}_c4/"
-#experiment_name='pruebas interpol'
+#experiment_name = f"{experiment_name}_c4/"
+experiment_name='pruebas_'
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
@@ -284,10 +284,10 @@ if params["algorithm"] == "gen_VAE_3D":
     y_val=y_val.reshape(y_val.shape[0], y_val.shape[1], 32, 64)
     y_test=y_test.reshape(y_test.shape[0], y_test.shape[1], 32, 64)
 
-evaluation = True
+evaluation = False
 
 if not evaluation:
-    params["n_epochs"] = 90
+    params["n_epochs"] = 1
 
     #fair_train = False
 
@@ -298,7 +298,7 @@ if not evaluation:
     # Guardar parámetros como JSON en experiment_dir
     params_path = os.path.join(experiment_dir, "params.json")
     with open(params_path, "w") as f:
-        json.dump(params, f, indent=4)  # indent=4 para que sea más legible
+        json.dump(params, f, indent=4)  
 
     print(f"Parámetros guardados en {params_path}")
 
