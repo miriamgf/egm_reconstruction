@@ -1,4 +1,4 @@
 #!/bin/bash
 
 echo "Saving training log at: output/logs/Generation_replicate.log" | tee -a "$log_file"
-nohup python -u scripts/generation_EGM.py --optuna false --filter_EGM false --evaluation false > output/logs/Generation_replicate.log 2>&1  &
+nohup python -u scripts/generation_EGM.py --optuna false --filter_EGM false --evaluation true > output/logs/Generation_replicate.log 2>&1  &

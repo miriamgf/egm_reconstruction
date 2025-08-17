@@ -33,7 +33,7 @@ import tools_.tools
 from models.gen_vae import Gen_VAE
 from models.gen_vae_2d import Gen_VAE_2D
 from models.gen_vae_2d_skip import Gen_VAE_2D_Skip
-
+from models.gen_vae_2d_v2 import Gen_VAE_2D_v2
 
 from tools_.df_mapping import *
 from tools_.tools import *
@@ -90,8 +90,8 @@ print(type(patches_oclussion))
 params = ParseHiperparams().parse_default_hyperparams()
 params["split_mode"] = "stratified"
 params["oversampling"] = False
-params["discard_classes"] =[1, 2, 3, 5]
-params["classes_to_oversample"]= [0,1, 5]
+params["discard_classes"] =[0,1, 2, 3, 5]
+params["classes_to_oversample"]= []
 params["latent_dim"]=250
 params['early_stopping_patience']=50
 params["beta_warmup_epochs"]= 20
@@ -139,7 +139,7 @@ unfold_code = 1
 experiment_name = algorithm
 
 #experiment_name = f"{experiment_name}_baseline_conv2D_annealing_class_2_3_4"
-experiment_name="OMAMI_VAE_baseline_conv2D_annealing_time_loss_retrain_c4"
+experiment_name="OMAMI_VAE_baseline_conv2D_v2_develop"
 
 
 params["experiment_name"] = experiment_name
@@ -275,7 +275,7 @@ class_complexity_list_test=class_complexity_list_test[:, 0]
 class_complexity_list_val=class_complexity_list_val[:, 0]
 
 
-params["algorithm"] = "gen_VAE_2D_warmup"
+params["algorithm"] = "gen_VAE_2D_v2"
 print("Algorithm selected:", params["algorithm"])
 
 if params["algorithm"] == "gen_VAE_3D":
@@ -284,10 +284,9 @@ if params["algorithm"] == "gen_VAE_3D":
     y_val=y_val.reshape(y_val.shape[0], y_val.shape[1], 32, 64)
     y_test=y_test.reshape(y_test.shape[0], y_test.shape[1], 32, 64)
 
-evaluation = True
-
+evaluation=True
 if not evaluation:
-    params["n_epochs"] = 90
+    params["n_epochs"] = 20
 
     #fair_train = False
 
@@ -302,6 +301,8 @@ if not evaluation:
 
     print(f"Parámetros guardados en {params_path}")
 
+
+
 if evaluation:
     vae = Gen_VAE_2D(
         params=params,
@@ -311,8 +312,14 @@ if evaluation:
         tensorboard_logs=experiment_dir + "tb_logs/"
     )
 
-    model_name="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/synthetic_generation/OMAMI_VAE_baseline_conv2D_annealing_checkpoint/"
-    vae.model.load_weights(model_name + "model_weights.h5")
+    model_name="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/synthetic_generation/OMAMI_VAE_baseline_conv2D_v2_develop_c4/"
+    try:
+        vae.model.load_weights(model_name + "model_weights.h5")
+    except:
+        vae = Gen_VAE_2D_v2(params, y_train.shape[1:], n_nodes=2048,
+                      tensorboard_logs=experiment_dir + "tb_logs/", latent_dim=params["latent_dim"])
+        vae.build(input_shape=(None,) + y_train.shape[1:])   # create variables
+        vae.load_weights(experiment_dir + "/model_weights.h5")
 
     x_real= y_train[:, :, :]
     batch_classes=class_complexity_list_train.astype(np.int32)
@@ -322,11 +329,16 @@ if evaluation:
     3: "AF"}
 
     # Latent exploration 
-    z, z_mean_train, _ = vae.build_encoder_module(x_real, vae.input_shape_)
+    try:
+        z, z_mean_train, _ = vae.build_encoder_module(x_real, vae.input_shape_)
+    except:
+        z, z_mean_train, z_log_var = vae.encoder(x_real, training=False)
+
+
     pca = PCA(n_components=2)
     z_proj = pca.fit_transform(z_mean_train)  
 
-    dataset_generator=True
+    dataset_generator=False
 
     if dataset_generator:
         generator = SyntheticDataGenerator(
@@ -373,8 +385,10 @@ if evaluation:
     if random_sampling: 
 
         z = tf.random.normal((1, vae.latent_dim))  # 1 muestras aleatorias
-
-        synthetic = vae.decode_from_latent(z)
+        try:
+            synthetic = vae.decode_from_latent(z)
+        except:
+            synthetic = vae.decoder(z, training=False)
 
         synthetic=np.array(synthetic)
         synthetic = synthetic.squeeze()
@@ -422,14 +436,20 @@ if evaluation:
 
     if guided_sampling:
 
-        z, z_mean_train, _ = vae.build_encoder_module(x_real, vae.input_shape_)
+        try:
+            z, z_mean_train, _ = vae.build_encoder_module(x_real, vae.input_shape_)
+        except:
+            z, z_mean_train, z_log_var = vae.encoder(x_real, training=False)
 
         mu = np.mean(z_mean_train, axis=0)
         sigma = np.std(z_mean_train, axis=0)
 
         z = np.random.normal(loc=mu, scale=sigma, size=(10, params["latent_dim"]))
 
-        synthetica = vae.decode_from_latent(z)
+        try:
+            synthetica = vae.decode_from_latent(z)
+        except:
+            synthetica = vae.decoder(z, training=False)
 
         for example in range(0,10):
             one_synthetic = synthetica[example, :, :]
@@ -506,10 +526,14 @@ if evaluation:
 
         x_real_one_batch= np.expand_dims(x_real[0, :, :], axis=0)
 
-        z, z_mean_train, _= vae.build_encoder_module(x_real_one_batch, vae.input_shape_)
-
-        synthetic = vae.decode_from_latent(z_mean_train)
-
+        try:
+            z, z_mean_train, _ = vae.build_encoder_module(x_real, vae.input_shape_)
+        except:
+            z, z_mean_train, _ = vae.encoder(x_real, training=False)
+        try:
+            synthetic = vae.decode_from_latent(z)
+        except:
+            synthetic = vae.decoder(z, training=False)
         synthetic=np.array(synthetic)
         synthetic = synthetic.squeeze()
         synthetic_norm = np.zeros(synthetic.shape)
@@ -564,15 +588,23 @@ if evaluation:
         x_real_1= np.expand_dims(x_real[0, :, :], axis=0)
         x_real_2= np.expand_dims(x_real[9, :, :], axis=0)
 
-        z1, z_mean_train1, _ = vae.build_encoder_module(x_real_1, vae.input_shape_)
-        z2, z_mean_train2, _ = vae.build_encoder_module(x_real_2, vae.input_shape_)
+        try:
+            z1, z_mean_train1, _ = vae.build_encoder_module(x_real_1, vae.input_shape_)
+            z2, z_mean_train2, _ = vae.build_encoder_module(x_real_2, vae.input_shape_)
 
+        except:
+            z1, z_mean_train1, _ = vae.encoder(x_real_1, training=False)
+            z2, z_mean_train2, _ = vae.encoder(x_real_2, training=False)
+        
         alpha=0.1
 
         z_interp = (1-alpha) * z1 + alpha * z2
 
 
-        synthetic = vae.decode_from_latent(z_interp)
+        try:
+            synthetic = vae.decode_from_latent(z_interp)
+        except:
+            synthetic = vae.decoder(z_interp, training=False)
 
         synthetic=np.array(synthetic)
         synthetic = synthetic.squeeze()
@@ -609,15 +641,20 @@ if evaluation:
     
     if manifold:
 
-        z, z_mean_train, _ = vae.build_encoder_module(x_real, vae.input_shape_)
+        try:
+            z, z_mean_train, _ = vae.build_encoder_module(x_real, vae.input_shape_)
+        except:
+            z, z_mean_train, _ = vae.encoder(x_real, training=False)
 
         idx = np.random.choice(len(z_mean_train), size=10)
         z_mean_train = np.array(z_mean_train)
         z_base = z_mean_train[idx]
         z_sample = z_base + np.random.normal(scale=0.01, size=z_base.shape)
 
-        synthetica = vae.decode_from_latent(z_sample)
-
+        try:
+            synthetica = vae.decode_from_latent(z_sample)
+        except:
+            synthetica = vae.decoder(z_sample, training=False)
         for example in range(0,10):
 
             one_synthetic = synthetica[example, :, :]
@@ -660,8 +697,8 @@ if evaluation:
     if reconstruction:
 
             x_sample = y_train[:1]  # Una muestra
-            reconstructed = vae.model.predict(x_sample)
-            x_sample = y_train[:100]  # Una muestra
+            _, z_mean, _ = vae.encoder(x_sample, training=False)
+            reconstructed = vae.decoder(z_mean, training=False).numpy()
 
             # Prediction
             plt.figure(figsize=(12, 6))
@@ -733,7 +770,7 @@ if evaluation:
 
             alphas = np.linspace(0, 1, 10)
             interpolations = [(1 - alpha) * z_1 + alpha * z_2 for alpha in alphas]
-            generated = [vae.decode_from_latent(z) for z in interpolations]
+            generated = [vae.decoder(z) for z in interpolations]
 
             plt.figure()
             # Visualiza
@@ -751,7 +788,10 @@ if evaluation:
             print("Mean Squared Error (MSE):", mse)
 
             # Encode test set
-            z, z_mean_train, z_log_var = vae.build_encoder_module(y_test, vae.input_shape_)
+            try:
+                z, z_mean_train, _ = vae.build_encoder_module(x_real, vae.input_shape_)
+            except:
+                z, z_mean_train, _ = vae.encoder(x_real, training=False)
 
             # Clip log var for numerical stability
             logvar = tf.clip_by_value(z_log_var, -10.0, 10.0)
