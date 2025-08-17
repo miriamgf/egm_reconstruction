@@ -143,8 +143,8 @@ experiment_name="OMAMI_VAE_baseline_conv2D_v2_develop"
 
 
 params["experiment_name"] = experiment_name
-experiment_name = f"{experiment_name}_c4/"
-#experiment_name='pruebas interpol'
+#experiment_name = f"{experiment_name}_c4/"
+experiment_name='pruebas_'
 root_logdir = "output/logs/"
 log_dir = root_logdir + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 data_dir = "/home/profes/miriamgf/tesis/Autoencoders/Data/"
@@ -297,7 +297,7 @@ if not evaluation:
     # Guardar parámetros como JSON en experiment_dir
     params_path = os.path.join(experiment_dir, "params.json")
     with open(params_path, "w") as f:
-        json.dump(params, f, indent=4)  # indent=4 para que sea más legible
+        json.dump(params, f, indent=4)  
 
     print(f"Parámetros guardados en {params_path}")
 

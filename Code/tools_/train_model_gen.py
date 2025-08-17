@@ -282,6 +282,23 @@ class TrainModelGen:
 
             # Compile the model
             model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
+        if self.params["algorithm"] == "gen_condVAE":
+
+            condition_dim=len(self.params["n_clases"])
+
+            model = Gen_CondVAE_2D(
+                params={"l2_reg": 1e-5},
+                input_shape_=(400, 2048),
+                n_nodes=None,
+                latent_dim=128,
+                condition_dim=condition_dim,
+                tensorboard_logs="./logs_cvae"
+            )
+
+            print(model.model.summary())
+
+            # Compile the model
+            model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
 
 
         if self.params["algorithm"] == "gen_VAE_2D_skip":
@@ -299,6 +316,8 @@ class TrainModelGen:
 
             # Compile the model
             model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
+        
+
         
 
 

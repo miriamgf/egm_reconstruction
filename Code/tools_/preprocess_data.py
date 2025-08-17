@@ -566,7 +566,9 @@ class Preprocess_Dataset:
                         # Select classes but no stratification
                         StratifiedSplit_obj = StratifiedSplit(classes_to_oversample=None,
                                                         discard_classes=self.params["discard_classes"],
-                                                        oversampling=None)
+                                                        oversampling=None
+                                                        )
+                        
                         train_models_deterministic=StratifiedSplit_obj.load_process_annotations(deterministic_group=train_models_deterministic)
                         test_models_deterministic=StratifiedSplit_obj.load_process_annotations(deterministic_group=test_models_deterministic)
                         val_models_deterministic=StratifiedSplit_obj.load_process_annotations(deterministic_group=val_models_deterministic)
@@ -627,12 +629,36 @@ class Preprocess_Dataset:
                     int(np.floor(self.AF_models[-1] * test_percentage)),
                 )
                 val_models = [x for x in aux_models if x not in test_models]
+
+
+                train_models_random, test_models_random, val_models_random = [], [], []
+                for elemento in train_models:
+                    train_models_random.append(self.all_model_names[elemento])
+
+                for elemento in test_models:
+                    test_models_random.append(self.all_model_names[elemento])
+
+                for elemento in val_models:
+                    val_models_random.append(self.all_model_names[elemento])
+
+    
+                with open(self.experiment_dir+"train_models.txt", "w") as file:
+                    for model in train_models_random:
+                        file.write(model + "\n")
+                with open(self.experiment_dir+"test_models.txt", "w") as file:
+                    for model in test_models_random:
+                        file.write(model + "\n")
+                with open(self.experiment_dir+"val_models.txt", "w") as file:
+                    for model in val_models_random:
+                        file.write(model + "\n")
             
             elif self.split_mode=="stratified":
                 print("Stratified split...")
                 StratifiedSplit_obj = StratifiedSplit(classes_to_oversample=self.params["classes_to_oversample"],
                                                       discard_classes=self.params["discard_classes"],
-                                                       oversampling=self.params["oversampling"])
+                                                       oversampling=self.params["oversampling"], 
+                                                       val_source=self.params["val_source"], 
+                                                       test_source=self.params["test_source"])
                 train_models_strat, test_models_strat, val_models_strat=StratifiedSplit_obj()
 
                 train_models, test_models, val_models = [], [], []

@@ -35,6 +35,7 @@ from config import ParseHiperparams, GetMetadata
 from src.training.optuna_opt import OptunaOpt
 from config import str_to_bool
 from tools_.data_augmentation import DataAugmentation
+from tools_.concatenate_synthetic import ConcatSynthetic
 from tools_.load_dataset import LoadDataset
 from tools_.preprocess_data_synt import PreprocessSyntDataset
 from tools_.preprocess_data import Preprocess_Dataset
@@ -100,6 +101,8 @@ try:
     parser.add_argument("--shuffle_patient", type=str_to_bool, help="True or False", required=False)
     parser.add_argument("--time_masking", type=str_to_bool, help="True or False", required=False)
     parser.add_argument("--attention", type=str_to_bool, help="True or False", required=False)
+    parser.add_argument("--data_augmentation", type=str_to_bool, help="True or False", required=False)
+
 
     # Stratified split
     parser.add_argument("--split_mode", type=str, help="stratified or random", required=False)
@@ -128,6 +131,7 @@ try:
     split_mode=args.split_mode
     oversampling=args.oversampling
     discard_classes=args.discard_classes
+    data_augmentation=args.data_augmentation
     
 
     params["algorithm"]=algorithm
@@ -153,8 +157,11 @@ try:
 
     # Data Augmentation
 
+    if data_augmentation is not None:
+        params["data_augmentation"]=data_augmentation
+    else:
+        params["data_augmentation"]=False
 
-    
     if shuffle_patient is not None:
         params["shuffle_patient"]=shuffle_patient
     else:
@@ -224,8 +231,14 @@ except SystemExit as e:
 
     algorithm = params["algorithm"]
     SNR_white_noise = 100
-    params['SNR_white_noise']=20
+    params['SNR_white_noise']=100
     params['attention_layer']=False
+    params['discard_classes']=[0, 1, 3, 5]
+    params["oversampling"] = True
+    params["classes_to_oversample"]= [4]
+    params["split_mode"] = "stratified"
+    params['data_augmentation']=False
+    
 
     print('Failed in parsing bash params :( ')
     pass
@@ -239,10 +252,21 @@ params["discard_classes"]=[0, 1, 3, 5]
 params["classes_to_oversample"]= [4]
 params["oversampling"] = True
 params['n_epochs']=2'''
-params["data_augmentation"]=True
+
+#params["data_augmentation"]=True
+params["data_augmentation_concat_mode"]="alternan"
+params["test_source"]=None
+
+'''["Simulation_01_200316_001_  5",
+                    "Simulation_01_200212_001_  7",
+                    'Simulation_01_210205_001_003',
+                    'Simulation_01_200428_001_009',
+                    'Simulation_01_210209_001_003']'''
+params["val_source"]=None
 #-------------------------------------------------------------
 
 experiment_name = algorithm_ID_copy_config
+
 
 if params["cross_validation"]:
     experiment_name = f"{experiment_name}_fold_{params['fold']}"
@@ -291,10 +315,15 @@ if len(params["discard_classes"])>0:
 else:
     experiment_name= experiment_name + "_strat_5_class_overs"
 
-
 if params["data_augmentation"]:
-    experiment_name=experiment_name + "_augmented"
-#experiment_name = experiment_name + "_REPLICATE"
+    experiment_name=f"{experiment_name}_augmented_{params['data_augmentation_concat_mode']}" 
+
+if params["test_source"]:
+    experiment_name=f"{experiment_name}_test_source" 
+    
+experiment_name = experiment_name + "_develop"
+#params["n_epochs"]=1
+
 print(params)
 print('Experiment name: ', experiment_name)
 
@@ -548,13 +577,32 @@ if params["data_augmentation"]:
         inference=False,
     )()
 
-    #Add augmented data to training set
-    x_train = tf.concat([x_train, synt_x_train], axis=0)
-    y_train = tf.concat([y_train, synt_y_train], axis=0)
-    BSPM_train = tf.concat([BSPM_train, synt_BSPM_train], axis=0)
-    AF_models_train = tf.concat([AF_models_train, synt_AF_models_train], axis=0)
-    class_complexity_list_train = tf.concat([class_complexity_list_train, synt_class_complexity_list_train], axis=0)
+    if params["data_augmentation"]:
 
+        concat_mode = "alternan"   # o "final"
+        
+        cs = ConcatSynthetic(seed=params.get("seed", 42))
+        res = cs.fit_transform(
+            x_train, y_train, BSPM_train,
+            AF_models_train, class_complexity_list_train,
+            synt_x_train, synt_y_train, synt_BSPM_train,
+            synt_AF_models_train, synt_class_complexity_list_train,
+            concat="alternan",                 # o "final"
+            reindex_synthetics=True,           # si quieres offset para sintéticos
+            all_model_names=all_model_names,   # nombres reales
+            synt_all_model_names=synt_all_model_names  # nombres sintéticos
+        )
+
+        x_train  = res['x_train']
+        y_train  = res['y_train']
+        BSPM_train = res['BSPM_train']
+        AF_models_train = res['AF_models_train']
+        class_complexity_list_train = res['class_complexity_list_train']
+        #all_model_names=res['patient_order_names']
+
+        if concat_mode == "alternan":
+            print("Orden de pacientes únicos:", res['patient_order'])
+            print("Orden Nombres:", res['patient_order_names'])
 
 for name in [
     "synt_X_1channel","X_1channel","synt_Y",
@@ -902,28 +950,6 @@ new_correlation_array = interpolate_fun(
 new_rmse_array = interpolate_fun(rmse_array, len(rmse_array), y_train.shape[2])
 
 # %%
-# Save the model names in train, test and val
-test_model_name = [all_model_names[index] for index in AF_models_test]
-val_model_name = [all_model_names[index] for index in AF_models_val]
-train_model_name = [all_model_names[index] for index in AF_models_train]
-
-mdic = {"reconstruction": test_estimation, "label": label}
-
-
-variables = {
-    "RMSEmean": rmse_mean,
-    "RMSEstd": rmse_std,
-    "Corrmean": corr_mean,
-    "corrstd": corr_std,
-    "test_corr_models": test_models_corr,
-    "dtwmean": dtw_mean,
-    "dtwstd": dtw_std,
-    "corrbynodes": new_correlation_array,
-    "rmsenodes": new_rmse_array,
-    "test_model_name": np.unique(test_model_name),
-    "train_model_name": np.unique(train_model_name),
-    "val_model_name": np.unique(val_model_name),
-}
 
 
 dic_latent_space_test = {"Latent_space_test": pred_test_autoencoder}
@@ -932,11 +958,6 @@ savemat(experiment_dir + "/autoencoder.mat", dic_latent_space_test)
 
 # Write dictionary string representation to text file
 file_path = experiment_dir + "metrics.txt"
-
-with open(file_path, "w") as f:
-    for key, value in variables.items():
-        f.write(f"{key}: {value}\n")
-
 
 # Crear un archivo para guardar el summary
 
