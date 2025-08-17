@@ -105,7 +105,7 @@ class Gen_VAE_2D_v2(tf.keras.Model):
         # Pérdida: 1 - correlación promedio sobre canales y batch
         return 1.0 - tf.reduce_mean(corr)
 
-    def compute_loss_VAE(self, y_pred, y_true, z_mean, z_log_var):
+    def compute_loss_VAE(self, y_pred, y_true, z_mean, z_log_var, free_bits=0.5):
         tf.debugging.assert_all_finite(y_pred, "y_pred bad pre-loss")
         tf.debugging.assert_all_finite(y_true, "y_true bad pre-loss")
 
@@ -118,8 +118,8 @@ class Gen_VAE_2D_v2(tf.keras.Model):
 
         # KL with clip
         z_log_var_clipped = tf.clip_by_value(z_log_var, -10.0, 10.0)
-        kl = tf.reduce_mean(tf.reduce_sum(
-            -0.5 * (1.0 + z_log_var_clipped - tf.square(z_mean) - tf.exp(z_log_var_clipped)), axis=1))
+        kl = tf.maximum(tf.reduce_mean(tf.reduce_sum(
+            -0.5 * (1.0 + z_log_var_clipped - tf.square(z_mean) - tf.exp(z_log_var_clipped)), axis=1)), free_bits)
         tf.debugging.assert_all_finite(kl, "kl NaN/Inf")
 
         total = mse + self.beta * kl + 0.5 * corr
@@ -136,8 +136,8 @@ class Gen_VAE_2D_v2(tf.keras.Model):
 
         # β warmup
         step = int(self.optimizer.iterations)
-        warm_steps = self.params.get("beta_warmup_steps", 200_000)  # longer warmup helps
-        beta_max = float(self.params.get("beta_max", 1.0))          # start with <=1.0
+        warm_steps = self.params.get("beta_warmup_steps", 3330)  # longer warmup helps
+        beta_max = float(self.params.get("beta_max", 3.0))          # start with <=1.0
         frac = min(step / max(1, warm_steps), 1.0)
         self.beta.assign(frac * beta_max)
 

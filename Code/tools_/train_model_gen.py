@@ -167,7 +167,7 @@ class TrainModelGen:
             early_stopping_callback = tf.keras.callbacks.EarlyStopping(
                 monitor="val_total_loss", patience=self.params["early_stopping_patience"]
             )
-        tensorboard_callback = TensorBoard(log_dir='output/tensorboard/logs/'+self.params['algorithm'], histogram_freq=1)
+        tensorboard_callback = TensorBoard(log_dir='output/tensorboard/logs/'+self.params['experiment_name'], histogram_freq=1)
         #ssh -L 6006:localhost:6006 miriamgf@10.110.100.78 en terminal LOCAL
         #tensorboard --logdir=output/tensorboard/logs/
 
@@ -213,8 +213,8 @@ class TrainModelGen:
             print(model.summary())
 
 
-            self.params["beta_max"] = 8.0
-            self.params["warmup_epochs"] = 20
+            self.params["beta_max"] = 4.0
+            self.params["warmup_epochs"] = 10
 
             beta_cb = BetaWarmupEpoch(model)
         
@@ -428,24 +428,30 @@ class TrainModelGen:
             plt.show()
         
         except:
-            plt.figure()
-            plt.plot(history.history["val_total_loss"], label="Global loss (Validation)")
-            plt.plot(
-                history.history["val_loss_autoencoder"],
-                label="Autoencoder loss (Validation)",
-            )
-            plt.plot(history.history["total_loss"], label="Global loss (Train)")
-            plt.plot(
-                history.history["loss_autoencoder"],
-                label="Autoencoder loss (Train)",
-            )
+            try:
+                plt.figure()
+                plt.plot(history.history["val_total_loss"], label="Global loss (Validation)")
+                plt.plot(
+                    history.history["val_mse_autoencoder"],
+                    label="Autoencoder loss (Validation)",
+                )
+                plt.plot(history.history["total_loss"], label="Global loss (Train)")
+                plt.plot(
+                    history.history["mse_autoencoder"],
+                    label="Autoencoder loss (Train)",
+                )
+                
+                plt.legend(loc="upper left")
+                plt.title("Model Loss During Training and Validation")
+                plt.ylabel("Mean Squared Error (MSE)")
+                plt.xlabel("Epoch")
+                plt.savefig(self.experiment_dir + "Learning_curves.png")
+                plt.show()
             
-            plt.legend(loc="upper left")
-            plt.title("Model Loss During Training and Validation")
-            plt.ylabel("Mean Squared Error (MSE)")
-            plt.xlabel("Epoch")
-            plt.savefig(self.experiment_dir + "Learning_curves.png")
-            plt.show()
+            except:
+                print('Could not print loss curves')
+                pass
+
 
     
         return model, history
