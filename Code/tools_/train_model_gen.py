@@ -10,10 +10,12 @@ from tensorflow import keras
 from keras.optimizers import Adam
 
 from models.gen_vae_2d import Gen_VAE_2D
+from models.gen_vae_2d_v2 import Gen_VAE_2D_v2
 from models.gen_vae_2d_skip import Gen_VAE_2D_Skip
 from models.gen_vae_3d import Gen_VAE_3D
 from models.gen_cvae_2d import Gen_CondVAE_2D
 from models.gen_vae import Gen_VAE
+
 from keras.callbacks import TensorBoard
 from keras.callbacks import TensorBoard, EarlyStopping, ReduceLROnPlateau
 from optuna.integration import TFKerasPruningCallback
@@ -190,6 +192,28 @@ class TrainModelGen:
             # Compile the model
             model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
         
+        if self.params["algorithm"] == "Gen_VAE_2D_v2":
+
+    
+            model = Gen_VAE_2D_v2(
+                self.params,
+                input_shape_=y_train.shape[1:],
+                n_nodes=2048,
+                tensorboard_logs=self.experiment_dir + "tb_logs/",
+                latent_dim=self.params["latent_dim"]
+            )
+
+            print(model.model.summary())
+
+            # Compile the model
+            model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
+
+            self.params["beta_max"] = 8.0
+            self.params["warmup_epochs"] = 20
+
+            beta_cb = BetaWarmupEpoch(
+            model)
+        
         if self.params["algorithm"] == "gen_VAE_3D":
 
             # Create an instance of your model
@@ -318,6 +342,14 @@ class TrainModelGen:
                     epochs=1,
                     callbacks=[early_stopping_callback, cp_callback, tensorboard_callback, lr_decay],
                 )
+        elif self.params["algorithm"] == "Gen_VAE_2D_v2":
+            history = model.fit(
+                train_dataset,
+                validation_data=val_dataset,
+                epochs=self.params["n_epochs"],
+                callbacks=[beta_cb, early_stopping_callback, cp_callback, tensorboard_callback, lr_decay],
+            )
+
         else:
             
             # Train the model
@@ -440,7 +472,6 @@ class TrainModelGen:
         
         return callbacks_list, optimizer
     
-
     def __call__(self, verbose=False, all=False):
         """
         Executes the model training pipeline when the instance is called.
@@ -467,3 +498,17 @@ class TrainModelGen:
             y_test=self.y_test,
             y_val=self.y_val,
         )
+
+class BetaWarmupEpoch(tf.keras.callbacks.Callback):
+    def __init__(self, model, beta_max=4.0, warmup_epochs=5):
+        super().__init__()
+        self.model_ref = model
+        self.beta_max = float(beta_max)
+        self.warmup_epochs = max(1, int(warmup_epochs))
+
+    def on_epoch_begin(self, epoch, logs=None):
+        # epoch empieza en 0; usamos (epoch+1) para que en la 1ª época β > 0
+        frac = min((epoch + 1) / self.warmup_epochs, 1.0)
+        beta_t = frac * self.beta_max
+        self.model_ref.beta.assign(beta_t)
+        tf.print("[Epoch", epoch + 1, "] β =", self.model_ref.beta)

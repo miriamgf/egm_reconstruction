@@ -39,6 +39,7 @@ from tools_.concatenate_synthetic import ConcatSynthetic
 from tools_.load_dataset import LoadDataset
 from tools_.preprocess_data_synt import PreprocessSyntDataset
 from tools_.preprocess_data import Preprocess_Dataset
+from tools_.compare_distrib import compare_real_vs_synth_gridtime
 from evaluate_function import evaluate_function_multioutput, evaluate_function_multioutput
 from tools_.preprocessing_compression import *
 import tools_.tools
@@ -71,6 +72,7 @@ params['optuna_optimization']=False
 print('Params to train: ', params)
 params["algorithm"]="OMAMI" #default
 
+
 #["algorithm"]='OMAMI_VAE'
 if params["algorithm"]=='OMAMI':
 
@@ -102,6 +104,7 @@ try:
     parser.add_argument("--time_masking", type=str_to_bool, help="True or False", required=False)
     parser.add_argument("--attention", type=str_to_bool, help="True or False", required=False)
     parser.add_argument("--data_augmentation", type=str_to_bool, help="True or False", required=False)
+    parser.add_argument("--perc_augmentation", type=int, help="True or False", required=False)
 
 
     # Stratified split
@@ -132,6 +135,7 @@ try:
     oversampling=args.oversampling
     discard_classes=args.discard_classes
     data_augmentation=args.data_augmentation
+    perc_augmentation=args.perc_augmentation
     
 
     params["algorithm"]=algorithm
@@ -156,6 +160,11 @@ try:
     params["n_nodes_regression"]=n_nodes
 
     # Data Augmentation
+
+    if perc_augmentation is not None:
+        params['perc_augmentation']=perc_augmentation
+    else:
+        params['perc_augmentation']=25
 
     if data_augmentation is not None:
         params["data_augmentation"]=data_augmentation
@@ -237,8 +246,8 @@ except SystemExit as e:
     params["oversampling"] = True
     params["classes_to_oversample"]= [4]
     params["split_mode"] = "stratified"
-    params['data_augmentation']=False
-    
+    params['data_augmentation']=True
+    params["perc_augmentation"]=50
 
     print('Failed in parsing bash params :( ')
     pass
@@ -255,14 +264,18 @@ params['n_epochs']=2'''
 
 #params["data_augmentation"]=True
 params["data_augmentation_concat_mode"]="alternan"
-params["test_source"]=None
-
-'''["Simulation_01_200316_001_  5",
+params["test_source"]=["Simulation_01_200316_001_  5",
                     "Simulation_01_200212_001_  7",
                     'Simulation_01_210205_001_003',
                     'Simulation_01_200428_001_009',
-                    'Simulation_01_210209_001_003']'''
+                    'Simulation_01_210209_001_003']
 params["val_source"]=None
+params['n_epochs']=30
+params['loss_weight_1']=params['loss_weight_2']
+#params['learning_rate']=0.0001
+params["early_stopping_patience"]=20
+#params["perc_augmentation"]=25
+
 #-------------------------------------------------------------
 
 experiment_name = algorithm_ID_copy_config
@@ -320,8 +333,10 @@ if params["data_augmentation"]:
 
 if params["test_source"]:
     experiment_name=f"{experiment_name}_test_source" 
+
+
     
-experiment_name = experiment_name + "_develop"
+experiment_name = f"{experiment_name}_val_10_{params['perc_augmentation']}_DSv2_1"
 #params["n_epochs"]=1
 
 print(params)
@@ -422,7 +437,8 @@ if params["data_augmentation"]:
         SNR_white_noise=SNR_white_noise,
         patches_oclussion=patches_oclussion,
         unfold_code=unfold_code,
-        inference=False,
+        inference=False
+
     )()
 
 
@@ -460,16 +476,8 @@ X_1channel = X_1channel.astype(np.float32)
 egm_tensor = egm_tensor.astype(np.float32)
 Y_model = Y_model.astype(np.int32)
 
-'''plt.figure(figsize=(20, 10))
-plt.subplot(2, 1, 1)
-plt.plot(egm_tensor[0:500, 0], label='egm')
-plt.legend()
-plt.subplot(2, 1, 2)
-plt.plot(X_1channel[0:500, 0, 0], label='bspm')
-plt.legend()
-plt.savefig(experiment_dir+'loaded_signals_feat_opt.png')
-print('saved image at ', experiment_dir+'loaded_signals_feat_opt.png')
-plt.close()'''
+
+
 
 try:
     assert egm_tensor[:, 0].max() == 1, "No cumple egm_tensor[:, 0].max()==1"
@@ -578,6 +586,57 @@ if params["data_augmentation"]:
     )()
 
     if params["data_augmentation"]:
+
+        #Analysis distributions
+        try:
+
+            plt.figure(tight_layout=True)
+            plt.subplot(2, 1, 1)
+            plt.plot(x_train[0,:, 0, 0, 0], label='Real 1')
+            plt.plot(x_train[1,:, 0, 0, 0], label='Real 1')
+            plt.legend()
+            plt.subplot(2, 1, 2)
+            plt.plot(synt_x_train[0,:, 0, 0, 0], label='Synt 1')
+            plt.plot(synt_x_train[1,:, 0, 0, 0], label='Synt 1')
+            plt.legend()
+            plt.savefig(f"{experiment_dir}/example_synt_vs_real_bspm.png")
+            plt.close()
+
+            plt.figure(tight_layout=True)
+            plt.subplot(2, 1, 1)
+            plt.plot(y_train[0,:, 0], label='Real 1')
+            plt.plot(y_train[1,:, 0], label='Real 1')
+            plt.legend()
+            plt.subplot(2, 1, 2)
+            plt.plot(synt_y_train[0,:, 0], label='Synt 1')
+            plt.plot(synt_y_train[1,:, 0], label='Synt 1')
+            plt.legend()
+            plt.savefig(f"{experiment_dir}/example_synt_vs_real_egm.png")
+            plt.close()
+
+
+            new_shape = (-1, *synt_x_train.shape[2:])
+
+            synt_x_train_comp = synt_x_train.reshape(new_shape)
+            x_train_comp = x_train.reshape(new_shape)
+
+            # Quita la última dimensión de tamaño 1
+            synt_x_train_comp = np.squeeze(synt_x_train_comp, axis=-1)
+
+            x_train_comp = np.squeeze(x_train_comp, axis=-1)
+
+            compare_real_vs_synth_gridtime(
+                    X_real=x_train_comp,
+                    X_synth=synt_x_train_comp,
+                    fs=params["fs_sub"],                # Hz
+                    outdir=experiment_dir,
+                    bands=((0,5),(5,15),(15,40)),  # ajusta a tu fisiología
+                    nperseg=None,                  # por defecto min(256, T)
+                    n_spatial_samples=64           # nº de instantes para FFT2 espacial
+                )
+        except:
+            pass
+
 
         concat_mode = "alternan"   # o "final"
         
