@@ -13,7 +13,7 @@ from models.gen_vae_2d import Gen_VAE_2D
 from models.gen_vae_2d_v2 import Gen_VAE_2D_v2
 from models.gen_vae_2d_skip import Gen_VAE_2D_Skip
 from models.gen_vae_3d import Gen_VAE_3D
-from models.gen_cvae_2d import Gen_CondVAE_2D
+#from models.gen_cvae_2d import Gen_CondVAE_2D
 from models.gen_vae import Gen_VAE
 
 from keras.callbacks import TensorBoard
@@ -167,7 +167,7 @@ class TrainModelGen:
             early_stopping_callback = tf.keras.callbacks.EarlyStopping(
                 monitor="val_total_loss", patience=self.params["early_stopping_patience"]
             )
-        tensorboard_callback = TensorBoard(log_dir='output/tensorboard/logs/'+self.params['algorithm'], histogram_freq=1)
+        tensorboard_callback = TensorBoard(log_dir='output/tensorboard/logs/'+self.params['experiment_name'], histogram_freq=1)
         #ssh -L 6006:localhost:6006 miriamgf@10.110.100.78 en terminal LOCAL
         #tensorboard --logdir=output/tensorboard/logs/
 
@@ -192,7 +192,8 @@ class TrainModelGen:
             # Compile the model
             model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
         
-        if self.params["algorithm"] == "Gen_VAE_2D_v2":
+        if self.params["algorithm"] == "gen_VAE_2D_v2":
+            print('gen_VAE_2D_v2')
 
     
             model = Gen_VAE_2D_v2(
@@ -203,16 +204,19 @@ class TrainModelGen:
                 latent_dim=self.params["latent_dim"]
             )
 
-            print(model.model.summary())
 
             # Compile the model
             model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
 
-            self.params["beta_max"] = 8.0
-            self.params["warmup_epochs"] = 20
+            model.build(input_shape=(None,) + y_train.shape[1:])
 
-            beta_cb = BetaWarmupEpoch(
-            model)
+            print(model.summary())
+
+
+            self.params["beta_max"] = 4.0
+            self.params["warmup_epochs"] = 10
+
+            beta_cb = BetaWarmupEpoch(model)
         
         if self.params["algorithm"] == "gen_VAE_3D":
 
@@ -278,6 +282,23 @@ class TrainModelGen:
 
             # Compile the model
             model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
+        if self.params["algorithm"] == "gen_condVAE":
+
+            condition_dim=len(self.params["n_clases"])
+
+            model = Gen_CondVAE_2D(
+                params={"l2_reg": 1e-5},
+                input_shape_=(400, 2048),
+                n_nodes=None,
+                latent_dim=128,
+                condition_dim=condition_dim,
+                tensorboard_logs="./logs_cvae"
+            )
+
+            print(model.model.summary())
+
+            # Compile the model
+            model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
 
 
         if self.params["algorithm"] == "gen_VAE_2D_skip":
@@ -295,6 +316,8 @@ class TrainModelGen:
 
             # Compile the model
             model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
+        
+
         
 
 
@@ -373,7 +396,8 @@ class TrainModelGen:
             
             except:
 
-                model.model.save(self.experiment_dir+"/model_weights.h5")
+                model.save_weights(self.experiment_dir + "/model_weights.h5")
+
                 
         # Plot and save training and validation curves
         try:
@@ -404,24 +428,30 @@ class TrainModelGen:
             plt.show()
         
         except:
-            plt.figure()
-            plt.plot(history.history["val_total_loss"], label="Global loss (Validation)")
-            plt.plot(
-                history.history["val_loss_autoencoder"],
-                label="Autoencoder loss (Validation)",
-            )
-            plt.plot(history.history["total_loss"], label="Global loss (Train)")
-            plt.plot(
-                history.history["loss_autoencoder"],
-                label="Autoencoder loss (Train)",
-            )
+            try:
+                plt.figure()
+                plt.plot(history.history["val_total_loss"], label="Global loss (Validation)")
+                plt.plot(
+                    history.history["val_mse_autoencoder"],
+                    label="Autoencoder loss (Validation)",
+                )
+                plt.plot(history.history["total_loss"], label="Global loss (Train)")
+                plt.plot(
+                    history.history["mse_autoencoder"],
+                    label="Autoencoder loss (Train)",
+                )
+                
+                plt.legend(loc="upper left")
+                plt.title("Model Loss During Training and Validation")
+                plt.ylabel("Mean Squared Error (MSE)")
+                plt.xlabel("Epoch")
+                plt.savefig(self.experiment_dir + "Learning_curves.png")
+                plt.show()
             
-            plt.legend(loc="upper left")
-            plt.title("Model Loss During Training and Validation")
-            plt.ylabel("Mean Squared Error (MSE)")
-            plt.xlabel("Epoch")
-            plt.savefig(self.experiment_dir + "Learning_curves.png")
-            plt.show()
+            except:
+                print('Could not print loss curves')
+                pass
+
 
     
         return model, history
