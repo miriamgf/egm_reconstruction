@@ -1,9 +1,13 @@
 import numpy as np
 from tqdm import tqdm
 import os
+import matplotlib.pyplot as plt
+
+from tools_.tools_1 import normalize_array
+
 
 class SyntheticDataGenerator:
-    def __init__(self, vae_model, latent_dim, save_dir, params, rng_seed=42):
+    def __init__(self, vae_model, latent_dim, save_dir, params, rng_seed=42, sampling="guided"):
         """
         Parameters:
         - vae_model: instancia del VAE ya cargado (con pesos).
@@ -20,6 +24,7 @@ class SyntheticDataGenerator:
         self.model_name = params.get('experiment_name', 'experiment')
         self.params = params
         self.rng = np.random.default_rng(rng_seed)
+        self.sampling=sampling
 
     # ---------------------------- Helpers API ----------------------------
     @staticmethod
@@ -43,22 +48,24 @@ class SyntheticDataGenerator:
         return self._to_np(x)
 
     # ---------------------------- Sampling ------------------------------
-    def sample_latent_vectors(self, num_samples, mu=None, sigma=None, z_mean_train=None, sampling="random"):
+    def sample_latent_vectors(self, num_samples, mu=None, sigma=None, z_mean_train=None):
         """
         Genera vectores latentes según el modo:
         - 'random': z ~ N(0, I)
         - 'guided': z ~ N(mu, sigma) con mu,sigma provistos (típico: estimados de z_mean_train)
         - 'interpolated': interpola linealmente entre dos z_mean reales
         """
-        if sampling == "random":
+                
+
+        if self.sampling == "random":
             return self.rng.normal(loc=0.0, scale=1.0, size=(num_samples, self.latent_dim))
 
-        elif sampling == "guided":
+        elif self.sampling == "guided":
             if mu is None or sigma is None:
                 raise ValueError("Para 'guided' debes pasar mu y sigma.")
             return self.rng.normal(loc=mu, scale=sigma, size=(num_samples, self.latent_dim))
 
-        elif sampling == "interpolated":
+        elif self.sampling == "interpolated":
             if z_mean_train is None or len(z_mean_train) < 2:
                 raise ValueError("Para 'interpolated' necesitas z_mean_train con al menos 2 elementos.")
             idx1, idx2 = self.rng.choice(z_mean_train.shape[0], size=2, replace=False)
@@ -66,9 +73,12 @@ class SyntheticDataGenerator:
             z2 = z_mean_train[idx2]
             alphas = np.linspace(0, 1, num_samples)
             return np.stack([(1 - a) * z1 + a * z2 for a in alphas], axis=0)
+        
+        
 
         else:
-            raise ValueError(f"sampling desconocido: {sampling}")
+            raise ValueError(f"sampling desconocido: {self.sampling}")
+
 
     # ---------------------------- Decoding ------------------------------
     def decode_latent_vectors(self, z_samples, batch_size=64, squeeze=True):
@@ -135,7 +145,7 @@ class SyntheticDataGenerator:
         np.save(save_path, signals)
         print(f"Saved {signals.shape[0]} synthetic signals at {save_path}")
     
-    def plot_examples(self, signals, real_signals=None, num_examples=5, max_nodes=5, prefix="synthetic"):
+    def plot_examples(self, signals, experiment_dir,real_signals=None, num_examples=5, max_nodes=5, prefix="synthetic"):
         """
         Guarda figuras de ejemplo de las señales generadas.
 
@@ -151,22 +161,23 @@ class SyntheticDataGenerator:
 
         for i in range(n):
             sig = signals[i]
+            sig_norm=normalize_array(sig, high=1, low=-1)
 
             # ----- Heatmap -----
             plt.figure(figsize=(8, 4))
-            plt.imshow(sig, aspect="auto", cmap="viridis")
+            plt.imshow(sig_norm, aspect="auto", cmap="viridis")
             plt.colorbar(label="Amplitude")
             plt.title(f"{prefix} example {i} (heatmap)")
             plt.xlabel("Nodes")
             plt.ylabel("Time")
-            fpath = os.path.join(self.save_dir, f"{prefix}_heatmap_{i}.png")
+            fpath = os.path.join(experiment_dir, f"{prefix}_heatmap_{i}.png")
             plt.savefig(fpath, dpi=150, bbox_inches="tight")
             plt.close()
 
             # ----- Comparación 1D -----
             plt.figure(figsize=(10, 6))
             for node in range(min(max_nodes, sig.shape[1])):
-                plt.plot(sig[:, node], label=f"Synth node {node}", alpha=0.7)
+                plt.plot(sig_norm[:, node], label=f"Synth node {node}", alpha=0.7)
 
                 if real_signals is not None:
                     plt.plot(real_signals[0, :, node], "--", alpha=0.5, label=f"Real node {node}")
@@ -175,11 +186,11 @@ class SyntheticDataGenerator:
             plt.xlabel("Time samples")
             plt.ylabel("Amplitude")
             plt.legend(loc="upper right", fontsize="x-small")
-            fpath = os.path.join(self.save_dir, f"{prefix}_1D_{i}.png")
+            fpath = os.path.join(experiment_dir, f"{prefix}_1D_{i}_norm_.png")
             plt.savefig(fpath, dpi=150, bbox_inches="tight")
             plt.close()
 
-        print(f"[INFO] Guardadas {n} figuras de ejemplos en {self.save_dir}")
+        print(f"[INFO] Guardadas {n} figuras de ejemplos en {experiment_dir}")
 
     # ---------------------------- Pipeline ------------------------------
     def generate_and_select(self,
@@ -187,7 +198,6 @@ class SyntheticDataGenerator:
                             z_mean_train,
                             num_generated=10,
                             num_selected=5,
-                            sampling='random',
                             decode_batch_size=64,
                             rmse_chunk_size=16,
                             save_name=None):
@@ -213,7 +223,7 @@ class SyntheticDataGenerator:
 
         # 1) Muestreo latente
         z_samples = self.sample_latent_vectors(
-            num_generated, mu=mu, sigma=sigma, z_mean_train=z_mean_train, sampling=sampling
+            num_generated, mu=mu, sigma=sigma, z_mean_train=z_mean_train, 
         )
 
         # 2) Decodificación
@@ -225,7 +235,7 @@ class SyntheticDataGenerator:
 
         # 4) Guardado
         if save_name is None:
-            save_name = f"synt_{self.model_name}_{sampling}.npy"
+            save_name = f"synt_{self.model_name}_{self.sampling}.npy"
         self.save_signals(best_synthetic_signals, save_name)
 
         return best_synthetic_signals

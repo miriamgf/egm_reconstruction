@@ -103,6 +103,49 @@ class EvaluateGen:
             return np.array(x)
 
     # ----------------------------- Métricas (globales antiguas) ----------------------------------
+    # ----------------------------- Métricas (globales antiguas) ----------------------------------
+    @staticmethod
+    def _mmd_rbf(X, Y, sigma=None, use_biased=True, eps=1e-12):
+        """
+        MMD^2 con kernel RBF entre dos conjuntos de embeddings.
+        X, Y: arrays (n_x, d) y (n_y, d).
+        sigma: ancho del kernel. Si None -> heurística de la mediana.
+        use_biased: True -> estimador sesgado (habitual). False -> no sesgado.
+        Devuelve: (mmd2, sigma_usado)
+        """
+        X = np.asarray(X); Y = np.asarray(Y)
+        nx, ny = len(X), len(Y)
+        if nx == 0 or ny == 0:
+            return float("nan"), float(1.0)
+
+        Z = np.vstack([X, Y])
+        D = pairwise_distances(Z, Z, metric="euclidean")
+        D2 = D * D
+
+        if sigma is None:
+            iu = np.triu_indices_from(D, k=1)
+            d_nonzero = D[iu]
+            d_nonzero = d_nonzero[d_nonzero > 0]
+            sigma = np.median(d_nonzero) if d_nonzero.size else 1.0
+
+        gamma = 1.0 / (2.0 * sigma * sigma + eps)
+        K = np.exp(-gamma * D2)
+
+        Kxx = K[:nx, :nx]
+        Kyy = K[nx:, nx:]
+        Kxy = K[:nx, nx:]
+
+        if use_biased:
+            mmd2 = Kxx.mean() + Kyy.mean() - 2.0 * Kxy.mean()
+        else:
+            kxx = (Kxx.sum() - np.trace(Kxx)) / (nx * (nx - 1) + eps) if nx > 1 else 0.0
+            kyy = (Kyy.sum() - np.trace(Kyy)) / (ny * (ny - 1) + eps) if ny > 1 else 0.0
+            kxy = Kxy.mean()
+            mmd2 = kxx + kyy - 2.0 * kxy
+
+        return float(mmd2), float(sigma)
+
+
     @staticmethod
     def _mse_per_sample(X, Xr):
         """MSE global (promedio en tiempo y nodos) por muestra -> (B,)"""
@@ -138,44 +181,57 @@ class EvaluateGen:
 
     # ----------------------------- Métricas nodo a nodo (nuevas) ---------------------------------
     @staticmethod
+    def _frechet_distance(mu1, cov1, mu2, cov2, eps=1e-6):
+        diff = mu1 - mu2
+        covmean, _ = linalg.sqrtm(
+            (cov1 + np.eye(cov1.shape[0]) * eps) @ (cov2 + np.eye(cov2.shape[0]) * eps),
+            disp=False
+        )
+        if np.iscomplexobj(covmean):
+            covmean = covmean.real
+        return float(diff.dot(diff) + np.trace(cov1 + cov2 - 2 * covmean))
+    
+    @staticmethod
     def _mse_per_sample_per_node(X, Xr):
         """
-        X, Xr: (B, T, N)
-        Devuelve: (B, N) MSE por nodo (promediando en el eje tiempo).
+        X, Xr: (B, T, N)  ->  (B, N) MSE por nodo (promediando en el eje tiempo).
         """
+        X = np.asarray(X); Xr = np.asarray(Xr)
         return np.mean((X - Xr) ** 2, axis=1)  # (B, N)
 
     @staticmethod
     def _corr_per_sample_per_node(X, Xr, eps=1e-8):
         """
-        Correlación de Pearson por nodo y por muestra.
-        X, Xr: (B, T, N)
-        Devuelve: (B, N) correlación por nodo.
+        Correlación Pearson por muestra y por nodo.
+        X, Xr: (B, T, N)  ->  (B, N)
         """
-        # centrar por tiempo
-        Xc = X - X.mean(axis=1, keepdims=True)     # (B, T, N)
-        Yc = Xr - Xr.mean(axis=1, keepdims=True)   # (B, T, N)
-
-        num = np.sum(Xc * Yc, axis=1)              # (B, N)
-        den = np.sqrt(np.sum(Xc**2, axis=1) * np.sum(Yc**2, axis=1)) + eps  # (B, N)
-        corr = num / den
-        # estabilidad
-        corr = np.clip(corr, -1.0, 1.0)
-        return corr  # (B, N)
+        X = np.asarray(X); Xr = np.asarray(Xr)
+        # centrar en el eje tiempo
+        Xc  = X  - X.mean(axis=1, keepdims=True)
+        Xrc = Xr - Xr.mean(axis=1, keepdims=True)
+        num = (Xc * Xrc).sum(axis=1)                             # (B, N)
+        den = np.sqrt((Xc**2).sum(axis=1) * (Xrc**2).sum(axis=1)) + eps  # (B, N)
+        return num / den
 
     @staticmethod
     def _lsd_per_sample_per_node(X, Xr, eps=1e-8):
         """
-        Log-Spectral Distance por nodo y por muestra.
-        X, Xr: (B, T, N)
-        Devuelve: (B, N) LSD por nodo (promedio sobre frecuencias).
+        Log-Spectral Distance por muestra y por nodo.
+        X, Xr: (B, T, N)  ->  (B, N)
+        RFFT a lo largo del eje tiempo, luego promedio en frecuencias por nodo.
         """
+        X = np.asarray(X); Xr = np.asarray(Xr)
         # RFFT en eje tiempo -> (B, F, N)
-        FX = np.abs(rfft(X, axis=1)) + eps
-        FY = np.abs(rfft(Xr, axis=1)) + eps
-        # LSD por nodo = sqrt( mean_f (log(FX) - log(FY))^2 )
-        lsd_bn = np.sqrt(np.mean((np.log(FX) - np.log(FY))**2, axis=1))  # (B, N)
+        FX  = np.abs(rfft(X,  axis=1)) + eps
+        FXr = np.abs(rfft(Xr, axis=1)) + eps
+        # LSD por nodo para cada muestra: sqrt(mean_f (log(FX)-log(FXr))^2)
+        lsd_bn = np.sqrt(((np.log(FX) - np.log(FXr)) ** 2).mean(axis=1))  # (B, N)
         return lsd_bn
+
+    @staticmethod
+    def _grid_coverage(Pxy, bins=20):
+        H, _, _ = np.histogram2d(Pxy[:, 0], Pxy[:, 1], bins=bins)
+        return float((H > 0).mean())
 
     # ----------------------------- Bloques -----------------------------------
     def reconstruction_metrics(self, X):
@@ -209,13 +265,7 @@ class EvaluateGen:
 
         # Para JSON: convertir arrays a listas
         return {
-            # nodo a nodo
-            "mse_node_mean":  mse_node_mean.tolist(),
-            "mse_node_std":   mse_node_std.tolist(),
-            "corr_node_mean": corr_node_mean.tolist(),
-            "corr_node_std":  corr_node_std.tolist(),
-            "lsd_node_mean":  lsd_node_mean.tolist(),
-            "lsd_node_std":   lsd_node_std.tolist(),
+
             # globales opcionales
             "mse_global_mean":  mse_global_mean,
             "mse_global_std":   mse_global_std,
@@ -224,6 +274,8 @@ class EvaluateGen:
             "lsd_global_mean":  lsd_global_mean,
             "lsd_global_std":   lsd_global_std,
         }
+    
+    
 
     def generative_metrics(self, X, num_generated=None):
         """

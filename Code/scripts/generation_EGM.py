@@ -63,12 +63,12 @@ tf.compat.v1.reset_default_graph()
 params = ParseHiperparams().parse_default_hyperparams()
 params["split_mode"] = "stratified"
 params["oversampling"] = False
-params["discard_classes"] =[0,1, 2, 3, 5]
+params["discard_classes"] =[0,1, 3, 5]
 params["classes_to_oversample"]= []
-params["latent_dim"]=250
+params["latent_dim"]=50
 params['early_stopping_patience']=30
 params["beta_warmup_epochs"]= 20
-params["select_classes"]= [4]
+params["select_classes"]= [2,4]
 params["filter_EGM"]=False
 
 try:
@@ -87,7 +87,7 @@ try:
 
     # Normaliza booleanos
     optuna = bool(args.optuna) if args.optuna is not None else False
-    evaluation = bool(args.evaluation) if args.evaluation is not None else False
+    evaluation = bool(args.evaluation) if args.evaluation is not None else True
 
     # Mensaje de evaluación
     if evaluation:
@@ -104,7 +104,10 @@ except Exception as e:
     # Manejo limpio del error y valores de reserva
     print(f"Error al parsear argumentos: {e}")
     algorithm = params.get("algorithm")
-    evaluation = True  # modo evaluación forzado en caso de error
+
+evaluation = True  
+dataset_generator=False
+train=True
 
 
 print('Params to train: ', params)
@@ -115,11 +118,10 @@ patches_oclussion = "PT"
 experiment_number = 0
 unfold_code = 1
 experiment_name = algorithm
-dataset_generator=False
 
 experiment_name="Gen_VAE_2D_v2"
 
-experiment_name=experiment_name+'_betasteps'
+experiment_name=experiment_name+'_develop_cond'
 params["experiment_name"] = experiment_name
 
 root_logdir = "output/logs/"
@@ -252,7 +254,8 @@ class_complexity_list_test=class_complexity_list_test[:, 0]
 class_complexity_list_val=class_complexity_list_val[:, 0]
 
 
-params["algorithm"] = "gen_VAE_2D_v2"
+params["algorithm"] = "gen_VAE_2D_v2_cond"
+
 print("Algorithm selected:", params["algorithm"])
 
 if params["algorithm"] == "gen_VAE_3D":
@@ -261,7 +264,7 @@ if params["algorithm"] == "gen_VAE_3D":
     y_val=y_val.reshape(y_val.shape[0], y_val.shape[1], 32, 64)
     y_test=y_test.reshape(y_test.shape[0], y_test.shape[1], 32, 64)
 
-train=False
+
 if train:
     
     print('Starting training...')
@@ -272,9 +275,17 @@ if train:
     with open(params_path, "w") as f:
         json.dump(params, f, indent=4)  
 
-    model, history = TrainModelGen(
-        params, y_train, y_test, y_val, y_train, y_test, y_val, models_dir, experiment_dir
-    )()
+    if params['algorithm']=="Gen_VAE_2D_v2_Cond":
+        model, history = TrainModelGen(
+            params, y_train, y_test, y_val, y_train, y_test, y_val, models_dir, experiment_dir, 
+            c_train=class_complexity_list_train,   
+            c_val=class_complexity_list_val
+        )()
+    
+    else:
+        model, history = TrainModelGen(
+            params, y_train, y_test, y_val, y_train, y_test, y_val, models_dir, experiment_dir
+        )()
 
     print(f"Parámetros guardados en {params_path}")
 
@@ -286,15 +297,19 @@ if evaluation:
         latent_dim=params["latent_dim"],
         tensorboard_logs=experiment_dir + "tb_logs/"
     )
-
-    model_name="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/synthetic_generation/pruebas_/"
+    if train:
+        model_name=f"/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/synthetic_generation/{experiment_name}/"
+        experiment_dir=model_name
+    else:
+        model_name="/home/pdi/miriamgf/tesis/Autoencoders/code/egm_reconstruction/Code/output/experiments/synthetic_generation/Gen_VAE_2D_v2_betasteps_latent_50_loss_hf_antial/"
+        experiment_dir=model_name
     try:
         vae.model.load_weights(model_name + "model_weights.h5")
     except:
         vae = Gen_VAE_2D_v2(params, y_train.shape[1:], n_nodes=2048,
                       tensorboard_logs=experiment_dir + "tb_logs/", latent_dim=params["latent_dim"])
         vae.build(input_shape=(None,) + y_train.shape[1:])   # create variables
-        vae.load_weights(experiment_dir + "/model_weights.h5")
+        vae.load_weights(model_name + "model_weights.h5")
 
     x_real= y_train[:, :, :]
     batch_classes=class_complexity_list_train.astype(np.int32)
@@ -326,20 +341,26 @@ if evaluation:
     print("=== Resultados de Evaluación ===")
     for k, v in results.items():
         print(k, "->", v)
-    
+
+    save_dir="/home/pdi/miriamgf/tesis/Autoencoders/Data_generated"
     if dataset_generator:
-        generator = SyntheticDataGenerator(vae, params["latent_dim"], save_dir, params)
+        generator = SyntheticDataGenerator(vae,
+                                        params["latent_dim"],
+                                          save_dir, params,             
+                                           sampling='guided', # 'random' | 'guided' | 'interpolated'
+                    )
+        
         best = generator.generate_and_select(
             real_signals=y_train,
             z_mean_train=z_mean_train,
             num_generated=200,
             num_selected=25,
-            sampling='guided',              # 'random' | 'guided' | 'interpolated'
             decode_batch_size=64,
             rmse_chunk_size=16
         )
     
-        generator.plot_examples(best_signals, real_signals=y_train, num_examples=3, max_nodes=3, prefix="guided")
+        generator.plot_examples(best, experiment_dir=experiment_dir,
+                                 real_signals=y_train, num_examples=3, max_nodes=3)
 
 
     plt.figure(figsize=(6, 6))
