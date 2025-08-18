@@ -78,7 +78,7 @@ class LoadSyntheticDataset:
         self.unfold_code = unfold_code
         self.inference = inference
         self.all_classes = all_classes
-        self.synt_dataset_name = "synt_OMAMI_VAE_baseline_conv2D_annealing_time_loss_retrain_c4"
+        self.synt_dataset_name = "synt_Gen_VAE_2D_v2_betasteps_latent_50_loss_guided" #synt_Gen_VAE_2D_v2_betasteps_latent_50_loss_hf_antial_random
 
         self.synthetic_egms = np.load(self.directory + self.synt_dataset_name + ".npy")
 
@@ -156,7 +156,11 @@ class LoadSyntheticDataset:
         AF_model_i = 0
 
         all_model_names = [f"{self.synt_dataset_name}_{i}" for i in range(self.synthetic_egms.shape[0])]
-        all_model_classes = [10 for _ in range(self.synthetic_egms.shape[0])] 
+
+        #modulate number of loaded patients
+        if self.params["perc_augmentation"]: 
+            all_model_names=all_model_names[:self.params["perc_augmentation"]]
+        all_model_classes = [10 for _ in range(len(all_model_names))] 
 
         cont = 0
         for model_name, model_class in zip(all_model_names, all_model_classes): 

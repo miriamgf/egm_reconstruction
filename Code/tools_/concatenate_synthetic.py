@@ -154,5 +154,5 @@ class ConcatSynthetic:
             'patient_order': self.patient_order_,
             'patient_order_real': self.patient_order_real_,
             'patient_order_synt': self.patient_order_synt_,
-            'patient_order_names': patient_order_names,   # ✅ nombres reales + sintéticos
+            'patient_order_names': patient_order_names,   
         }

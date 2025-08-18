@@ -79,8 +79,8 @@ class StratifiedSplit:
             fixed_val: Set[str],
             fixed_test: Set[str],
             random_state: int = 42,
-            train_frac: float = 0.70,
-            val_frac: float = 0.15,
+            train_frac: float = 0.75,
+            val_frac: float = 0.10,
             test_frac: float = 0.15,
         ):
         """
