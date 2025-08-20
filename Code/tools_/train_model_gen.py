@@ -112,12 +112,6 @@ class TrainModelGen:
         self.experiment_dir = experiment_dir
         self.trial=None
         # Etiquetas de clase (2 ó 4). Si no se pasan, por defecto todo clase 2
-        if c_train is None:
-            c_train = np.full((len(y_train),), 2, dtype=np.int32)
-        if c_val is None:
-            c_val = np.full((len(y_val),), 2, dtype=np.int32)
-        if c_test is None and y_test is not None:
-            c_test = np.full((len(y_test),), 2, dtype=np.int32)
         self.c_train = np.asarray(c_train).astype(np.int32)
         self.c_val   = np.asarray(c_val).astype(np.int32)
         self.c_test  = None if c_test is None else np.asarray(c_test).astype(np.int32)
