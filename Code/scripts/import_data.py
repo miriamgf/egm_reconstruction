@@ -20,7 +20,7 @@ from tools import addwhitenoise
 directory = "../../Data_short/"
 #data_short_dir = "/home/alumnos/mburgosc/tfg/egm_reconstruction/Data_short"
 data_short_dir = "/home/alumnos/mburgosc/tfg/egm_reconstruction/DATA_USE"
-data_short_dir = "/home/alumnos/mburgosc/tfg/egm_reconstruction/Data"
+#data_short_dir = "/home/alumnos/mburgosc/tfg/egm_reconstruction/Data"
 
 
 egms_all_models = load_egms_df(data_short_dir)

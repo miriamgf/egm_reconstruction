@@ -55,6 +55,7 @@ current = os.path.dirname(os.path.realpath(__file__))
 torsos_dir = "../../../Labeled_torsos/"
 #directory = "../../Data_short/"
 directory = "../../DATA_USE/"
+#directory = "../../Data/"
 #torsos_dir = "/home/profes/miriamgf/tesis/Autoencoders/Labeled_torsos/"
 torsos_dir = "../../Labeled_torsos/"
 

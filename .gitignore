@@ -154,3 +154,283 @@ datos_EGM_reconstruction/Data/TwoRotors_181219/labels_video.mp4
 datos_EGM_reconstruction/Labeled_torsos_tik/Torso1_mod.mat
 datos_EGM_reconstruction/Real_data/EDGAR_2014/ECGs.mat
 datos_EGM_reconstruction/Real_data/EDGAR_2014/EGMs.mat
+Data/LA_LIPV_150119/labels_video.mp4
+Data/torso_electrodes.mat
+Data/LA_LIPV_150119/BSPs.mat
+Data/LA_LIPV_150119/driver_position.mat
+Data/LA_LIPV_150119/EGMs.mat
+Data/LA_LSPV_150113/BSPs.mat
+Data/LA_LSPV_150113/driver_position.mat
+Data/LA_LSPV_150113/EGMs.mat
+Data/LA_LSPV_150113/labels_video.mp4
+Data/LA_LSPV_150203/BSPs.mat
+Data/LA_LSPV_150203/driver_position.mat
+Data/LA_LSPV_150203/labels_video.mp4
+Data/LA_LSPV_150203/EGMs.mat
+DATA_USE/Sinusal_150629/labels_video.mp4
+DATA_USE/Sinusal_150629/EGMs.mat
+DATA_USE/Sinusal_150629/driver_position.mat
+DATA_USE/Sinusal_150629/BSPs.mat
+DATA_USE/Simulation_01_210209_001_003/EGMs.mat
+DATA_USE/Simulation_01_210205_001_003/EGMs.mat
+DATA_USE/Simulation_01_200428_001_009/EGMs.mat
+DATA_USE/Simulation_01_200428_001_007/EGMs.mat
+DATA_USE/Simulation_01_200428_001_005/EGMs.mat
+DATA_USE/Simulation_01_200428_001_003/EGMs.mat
+DATA_USE/Simulation_01_200428_001_001/EGMs.mat
+DATA_USE/Simulation_01_200316_001_  9/EGMs.mat
+DATA_USE/Simulation_01_200316_001_  5/EGMs.mat
+DATA_USE/Simulation_01_200316_001_  3/EGMs.mat
+DATA_USE/Simulation_01_200316_001_  1/EGMs.mat
+DATA_USE/Simulation_01_200212_001_  9/EGMs.mat
+DATA_USE/Simulation_01_200212_001_  7/EGMs.mat
+DATA_USE/Simulation_01_200212_001_  5/EGMs.mat
+DATA_USE/Simulation_01_200212_001_  1/EGMs.mat
+DATA_USE/RA_RAFW_140807/labels_video.mp4
+DATA_USE/RA_RAFW_140807/EGMs.mat
+DATA_USE/RA_RAFW_140807/driver_position.mat
+DATA_USE/RA_RAFW_140807/BSPs.mat
+DATA_USE/RA_RAA_141230/labels_video.mp4
+DATA_USE/RA_RAA_141230/EGMs.mat
+DATA_USE/RA_RAA_141230/driver_position.mat
+DATA_USE/RA_RAA_141230/BSPs.mat
+.gitignore
+DATA_USE/LA_RSPV_CAF_150115/labels_video.mp4
+DATA_USE/LA_RSPV_CAF_150115/EGMs.mat
+DATA_USE/LA_RSPV_CAF_150115/driver_position.mat
+DATA_USE/LA_RSPV_CAF_150115/BSPs.mat
+DATA_USE/LA_RSPV_150113/labels_video.mp4
+DATA_USE/LA_RSPV_150113/EGMs.mat
+DATA_USE/LA_RSPV_150113/driver_position.mat
+DATA_USE/LA_RSPV_150113/BSPs.mat
+DATA_USE/LA_RIPV_150121/labels_video.mp4
+DATA_USE/LA_RIPV_150121/EGMs.mat
+DATA_USE/LA_RIPV_150121/driver_position.mat
+DATA_USE/LA_RIPV_150121/BSPs.mat
+DATA_USE/LA_RIPV_150121/.gitignore
+DATA_USE/LA_LSPV_150203/labels_video.mp4
+DATA_USE/LA_LSPV_150203/EGMs.mat
+DATA_USE/LA_LSPV_150203/driver_position.mat
+DATA_USE/LA_LSPV_150203/BSPs.mat
+DATA_USE/LA_LSPV_150113/labels_video.mp4
+DATA_USE/LA_LSPV_150113/EGMs.mat
+DATA_USE/LA_LSPV_150113/driver_position.mat
+DATA_USE/LA_LSPV_150113/BSPs.mat
+DATA_USE/LA_LIPV_150119/labels_video.mp4
+DATA_USE/LA_LIPV_150119/EGMs.mat
+DATA_USE/LA_LIPV_150119/driver_position.mat
+DATA_USE/LA_LIPV_150119/BSPs.mat
+Data_all/TwoRotors_181219/labels_video.mp4
+Data_all/TwoRotors_181219/EGMs.mat
+Data_all/TwoRotors_181219/driver_position.mat
+Data_all/TwoRotors_181219/driver_position_2.mat
+Data_all/TwoRotors_181219/BSPs.mat
+Data_all/Sinusal_150629/labels_video.mp4
+Data_all/Sinusal_150629/EGMs.mat
+Data_all/Sinusal_150629/driver_position.mat
+Data_all/Sinusal_150629/BSPs.mat
+Data_all/Simulation_01_210210_001_001/EGMs.mat
+Data_all/Simulation_01_210209_001_003/EGMs.mat
+Data_all/Simulation_01_210209_001_002/EGMs.mat
+Data_all/Simulation_01_210209_001_001/EGMs.mat
+Data_all/Simulation_01_210208_001_002/EGMs.mat
+Data_all/Simulation_01_210205_001_003/EGMs.mat
+Data_all/Simulation_01_210205_001_002/EGMs.mat
+Data_all/Simulation_01_210119_001_001/EGMs.mat
+Data_all/Simulation_01_201223_001_002/EGMs.mat
+Data_all/Simulation_01_200428_001_010/EGMs.mat
+Data_all/Simulation_01_200428_001_009/EGMs.mat
+Data_all/Simulation_01_200428_001_008/EGMs.mat
+Data_all/Simulation_01_200428_001_007/EGMs.mat
+Data_all/Simulation_01_200428_001_006/EGMs.mat
+Data_all/Simulation_01_200428_001_005/EGMs.mat
+Data_all/Simulation_01_200428_001_004/EGMs.mat
+Data_all/Simulation_01_200428_001_003/EGMs.mat
+Data_all/Simulation_01_200428_001_002/EGMs.mat
+Data_all/Simulation_01_200428_001_001/EGMs.mat
+Data_all/Simulation_01_200316_001_ 10/EGMs.mat
+Data_all/Simulation_01_200316_001_  9/EGMs.mat
+Data_all/Simulation_01_200316_001_  8/EGMs.mat
+Data_all/Simulation_01_200316_001_  7/EGMs.mat
+Data_all/Simulation_01_200316_001_  6/EGMs.mat
+Data_all/Simulation_01_200316_001_  5/EGMs.mat
+Data_all/Simulation_01_200316_001_  4/EGMs.mat
+Data_all/Simulation_01_200316_001_  3/EGMs.mat
+Data_all/Simulation_01_200316_001_  2/EGMs.mat
+Data_all/Simulation_01_200316_001_  1/EGMs.mat
+Data_all/Simulation_01_200212_001_ 10/EGMs.mat
+Data_all/Simulation_01_200212_001_  9/EGMs.mat
+Data_all/Simulation_01_200212_001_  8/EGMs.mat
+Data_all/Simulation_01_200212_001_  7/EGMs.mat
+Data_all/Simulation_01_200212_001_  6/EGMs.mat
+Data_all/Simulation_01_200212_001_  5/EGMs.mat
+Data_all/Simulation_01_200212_001_  4/EGMs.mat
+Data_all/Simulation_01_200212_001_  2/EGMs.mat
+Data_all/Simulation_01_200212_001_  1/EGMs.mat
+Data_all/Simulation_01_191001_001_007/EGMs.mat
+Data_all/Simulation_01_191001_001_005/EGMs.mat
+Data_all/Simulation_01_191001_001_002/EGMs.mat
+Data_all/Simulation_01_191001_001_001/EGMs.mat
+Data_all/Simulation_01_190717_001_004/EGMs.mat
+Data_all/Simulation_01_190717_001_003/EGMs.mat
+Data_all/Simulation_01_190717_001_002/EGMs.mat
+Data_all/Simulation_01_190717_001_001/EGMs.mat
+Data_all/Simulation_01_190619_001_004/EGMs.mat
+.gitignore
+Data_all/Simulation_01_190619_001_003/EGMs.mat
+Data_all/Simulation_01_190619_001_002/EGMs.mat
+Data_all/Simulation_01_190619_001_001/EGMs.mat
+Data_all/Simulation_01_190502_001_006/EGMs.mat
+Data_all/Simulation_01_190502_001_005/EGMs.mat
+Data_all/Simulation_01_190502_001_004/EGMs.mat
+Data_all/Simulation_01_190502_001_003/EGMs.mat
+Data_all/RA_RAFW_SAF_140730/labels_video.mp4
+Data_all/RA_RAFW_SAF_140730/EGMs.mat
+Data_all/RA_RAFW_SAF_140730/driver_position.mat
+Data_all/RA_RAFW_SAF_140730/BSPs.mat
+Data_all/RA_RAFW_140807/labels_video.mp4
+Data_all/RA_RAFW_140807/EGMs.mat
+Data_all/RA_RAFW_140807/driver_position.mat
+Data_all/RA_RAFW_140807/BSPs.mat
+Data_all/RA_RAA_141230/labels_video.mp4
+Data_all/RA_RAA_141230/EGMs.mat
+Data_all/RA_RAA_141230/driver_position.mat
+Data_all/RA_RAA_141230/BSPs.mat
+Data_all/RA_RAA_141216/labels_video.mp4
+Data_all/RA_RAA_141216/EGMs.mat
+Data_all/RA_RAA_141216/driver_position.mat
+Data_all/RA_RAA_141216/BSPs.mat
+Data_all/LA_RSPV_CAF_150115/labels_video.mp4
+Data_all/LA_RSPV_CAF_150115/EGMs.mat
+Data_all/LA_RSPV_CAF_150115/driver_position.mat
+.gitignore
+Data_all/LA_RSPV_CAF_150115/BSPs.mat
+Data_all/LA_RSPV_150113/labels_video.mp4
+Data_all/LA_RSPV_150113/EGMs.mat
+Data_all/LA_RSPV_150113/driver_position.mat
+Data_all/LA_RSPV_150113/BSPs.mat
+Data_all/LA_RIPV_150121/labels_video.mp4
+Data_all/LA_RIPV_150121/EGMs.mat
+Data_all/LA_RIPV_150121/driver_position.mat
+Data_all/LA_RIPV_150121/BSPs.mat
+Data_all/LA_PLAW_140711_arm/labels_video.mp4
+Data_all/LA_PLAW_140711_arm/EGMs.mat
+Data_all/LA_PLAW_140711_arm/driver_position.mat
+Data_all/LA_PLAW_140711_arm/BSPs.mat
+Data_all/LA_PLAW_140612/labels_video.mp4
+Data_all/LA_PLAW_140612/EGMs.mat
+Data_all/LA_PLAW_140612/driver_position.mat
+Data_all/LA_PLAW_140612/BSPs.mat
+Data_all/LA_LSPV_150203/labels_video.mp4
+Data_all/LA_LSPV_150203/EGMs.mat
+Data_all/LA_LSPV_150203/driver_position.mat
+Data_all/LA_LSPV_150203/BSPs.mat
+Data_all/LA_LSPV_150113/labels_video.mp4
+Data_all/LA_LSPV_150113/EGMs.mat
+Data_all/LA_LSPV_150113/driver_position.mat
+Data_all/LA_LSPV_150113/BSPs.mat
+Data_all/LA_LIPV_150119/labels_video.mp4
+.gitignore
+Data_all/LA_LIPV_150119/EGMs.mat
+Data_all/LA_LIPV_150119/driver_position.mat
+Data_all/LA_LIPV_150119/BSPs.mat
+Data_all/torso_electrodes.mat
+Data/TwoRotors_181219/labels_video.mp4
+Data/TwoRotors_181219/EGMs.mat
+Data/TwoRotors_181219/driver_position.mat
+Data/TwoRotors_181219/driver_position_2.mat
+Data/TwoRotors_181219/BSPs.mat
+Data/Sinusal_150629/labels_video.mp4
+Data/Sinusal_150629/EGMs.mat
+Data/Sinusal_150629/driver_position.mat
+Data/Sinusal_150629/BSPs.mat
+Data/Simulation_01_210210_001_001/EGMs.mat
+Data/Simulation_01_210209_001_003/EGMs.mat
+Data/Simulation_01_210209_001_001/EGMs.mat
+Data/Simulation_01_210208_001_002/EGMs.mat
+Data/Simulation_01_210205_001_003/EGMs.mat
+Data/Simulation_01_210119_001_001/EGMs.mat
+Data/Simulation_01_201223_001_002/EGMs.mat
+Data/Simulation_01_200428_001_010/EGMs.mat
+Data/Simulation_01_200428_001_009/EGMs.mat
+Data/Simulation_01_200428_001_008/EGMs.mat
+Data/Simulation_01_200428_001_007/EGMs.mat
+Data/Simulation_01_200428_001_006/EGMs.mat
+Data/Simulation_01_200428_001_005/EGMs.mat
+Data/Simulation_01_200428_001_004/EGMs.mat
+.gitignore
+Data/Simulation_01_200428_001_003/EGMs.mat
+Data/Simulation_01_200428_001_002/EGMs.mat
+Data/Simulation_01_200428_001_001/EGMs.mat
+Data/Simulation_01_200316_001_ 10/EGMs.mat
+Data/Simulation_01_200316_001_  9/EGMs.mat
+Data/Simulation_01_200316_001_  8/EGMs.mat
+Data/Simulation_01_200316_001_  6/EGMs.mat
+Data/Simulation_01_200316_001_  5/EGMs.mat
+Data/Simulation_01_200316_001_  4/EGMs.mat
+Data/Simulation_01_200316_001_  3/EGMs.mat
+Data/Simulation_01_200316_001_  2/EGMs.mat
+Data/Simulation_01_200316_001_  1/EGMs.mat
+Data/Simulation_01_200212_001_ 10/EGMs.mat
+Data/Simulation_01_200212_001_  9/EGMs.mat
+Data/Simulation_01_200212_001_  8/EGMs.mat
+Data/Simulation_01_200212_001_  7/EGMs.mat
+Data/Simulation_01_200212_001_  6/EGMs.mat
+Data/Simulation_01_200212_001_  5/EGMs.mat
+Data/Simulation_01_200212_001_  4/EGMs.mat
+Data/Simulation_01_200212_001_  1/EGMs.mat
+Data/Simulation_01_191001_001_005/EGMs.mat
+Data/Simulation_01_191001_001_007/EGMs.mat
+Data/Simulation_01_191001_001_002/EGMs.mat
+Data/Simulation_01_191001_001_001/EGMs.mat
+Data/Simulation_01_190717_001_004/EGMs.mat
+Data/Simulation_01_190717_001_003/EGMs.mat
+Data/Simulation_01_190717_001_002/EGMs.mat
+.gitignore
+Data/Simulation_01_190717_001_001/EGMs.mat
+Data/Simulation_01_190619_001_004/EGMs.mat
+Data/Simulation_01_190619_001_003/EGMs.mat
+Data/Simulation_01_190619_001_002/EGMs.mat
+Data/Simulation_01_190619_001_001/EGMs.mat
+Data/Simulation_01_190502_001_006/EGMs.mat
+Data/Simulation_01_190502_001_005/EGMs.mat
+Data/Simulation_01_190502_001_004/EGMs.mat
+Data/Simulation_01_190502_001_003/EGMs.mat
+Data/RA_RAFW_SAF_140730/labels_video.mp4
+Data/RA_RAFW_SAF_140730/EGMs.mat
+Data/RA_RAFW_SAF_140730/driver_position.mat
+Data/RA_RAFW_SAF_140730/BSPs.mat
+Data/RA_RAFW_140807/labels_video.mp4
+Data/RA_RAFW_140807/EGMs.mat
+Data/RA_RAFW_140807/driver_position.mat
+Data/RA_RAFW_140807/BSPs.mat
+Data/RA_RAA_141230/labels_video.mp4
+Data/RA_RAA_141230/EGMs.mat
+Data/RA_RAA_141230/driver_position.mat
+Data/RA_RAA_141230/BSPs.mat
+Data/RA_RAA_141216/labels_video.mp4
+Data/RA_RAA_141216/EGMs.mat
+Data/RA_RAA_141216/driver_position.mat
+Data/RA_RAA_141216/BSPs.mat
+Data/LA_RSPV_CAF_150115/labels_video.mp4
+Data/LA_RSPV_CAF_150115/EGMs.mat
+.gitignore
+Data/LA_RSPV_CAF_150115/driver_position.mat
+Data/LA_RSPV_CAF_150115/BSPs.mat
+Data/LA_RSPV_150113/labels_video.mp4
+Data/LA_RSPV_150113/EGMs.mat
+Data/LA_RSPV_150113/driver_position.mat
+Data/LA_RSPV_150113/BSPs.mat
+Data/LA_RIPV_150121/labels_video.mp4
+Data/LA_RIPV_150121/EGMs.mat
+Data/LA_RIPV_150121/driver_position.mat
+.gitignore
+Data/LA_RIPV_150121/BSPs.mat
+Data/LA_PLAW_140711_arm/labels_video.mp4
+Data/LA_PLAW_140711_arm/EGMs.mat
+Data/LA_PLAW_140711_arm/driver_position.mat
+Data/LA_PLAW_140711_arm/BSPs.mat
+Data/LA_PLAW_140612/labels_video.mp4
+Data/LA_PLAW_140612/EGMs.mat
+Data/LA_PLAW_140612/driver_position.mat
+Data/LA_PLAW_140612/BSPs.mat
