@@ -13,7 +13,7 @@ from models.gen_vae_2d import Gen_VAE_2D
 from models.gen_vae_2d_v2 import Gen_VAE_2D_v2
 from models.gen_vae_2d_skip import Gen_VAE_2D_Skip
 from models.gen_vae_3d import Gen_VAE_3D
-#from models.gen_cvae_2d import Gen_CondVAE_2D
+from models.gen_vae_2d_v2_cond import Gen_VAE_2D_v2_Cond
 from models.gen_vae import Gen_VAE
 
 from keras.callbacks import TensorBoard
@@ -74,6 +74,7 @@ class TrainModelGen:
         y_val,
         models_dir,
         experiment_dir,
+         c_train=None, c_val=None, c_test=None   # <--- NUEVO
     ):
         """
         Initializes the TrainModel class with the necessary data and configuration.
@@ -110,6 +111,10 @@ class TrainModelGen:
         self.models_dir = models_dir
         self.experiment_dir = experiment_dir
         self.trial=None
+        # Etiquetas de clase (2 ó 4). Si no se pasan, por defecto todo clase 2
+        self.c_train = np.asarray(c_train).astype(np.int32)
+        self.c_val   = np.asarray(c_val).astype(np.int32)
+        self.c_test  = None if c_test is None else np.asarray(c_test).astype(np.int32)
 
     @tf.function(jit_compile=False)
     def train_main(self, x_train, x_test, x_val, y_train, y_test, y_val):
@@ -265,40 +270,25 @@ class TrainModelGen:
             # Compile the model
             model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
 
-        if self.params["algorithm"] == "gen_condVAE":
+        if self.params["algorithm"] == "gen_VAE_2D_v2_cond":
+            print('gen_VAE_2D_v2_cond')
 
-            condition_dim=len(self.params["n_clases"])
-
-            model = Gen_CondVAE_2D(
-                params={"l2_reg": 1e-5},
-                input_shape_=(400, 2048),
-                n_nodes=None,
-                latent_dim=128,
-                condition_dim=condition_dim,
-                tensorboard_logs="./logs_cvae"
+            model = Gen_VAE_2D_v2_Cond(
+                self.params,
+                input_shape_=y_train.shape[1:],   # (400, 2048)
+                n_nodes=2048,
+                tensorboard_logs=self.experiment_dir + "tb_logs/",
+                latent_dim=self.params["latent_dim"],
+                num_classes=2
             )
 
-            print(model.model.summary())
-
-            # Compile the model
             model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
-        if self.params["algorithm"] == "gen_condVAE":
+            model.build(input_shape=[(None,) + y_train.shape[1:], (None, 2)])  # (x, one-hot)
+            print(model.summary())
 
-            condition_dim=len(self.params["n_clases"])
-
-            model = Gen_CondVAE_2D(
-                params={"l2_reg": 1e-5},
-                input_shape_=(400, 2048),
-                n_nodes=None,
-                latent_dim=128,
-                condition_dim=condition_dim,
-                tensorboard_logs="./logs_cvae"
-            )
-
-            print(model.model.summary())
-
-            # Compile the model
-            model.compile(optimizer=tf.keras.optimizers.Adam(clipvalue=1.0))
+            self.params["beta_max"] = 4.0
+            self.params["warmup_epochs"] = 10
+            beta_cb = BetaWarmupEpoch(model)
 
 
         if self.params["algorithm"] == "gen_VAE_2D_skip":
@@ -326,38 +316,82 @@ class TrainModelGen:
         except:
             print(model.summary())
         
-        def train_generator():
-            for x in y_train:
-                x_batch = np.expand_dims(x, axis=0)  # (1, 400, 2048)
-                yield x_batch, x_batch  # input = output
+        # Dimensiones de un sample
+        T, N = y_train.shape[1], y_train.shape[2]
 
-        def val_generator():
-            for x in y_train:
-                x_batch = np.expand_dims(x, axis=0)  # (1, 400, 2048)
-                yield x_batch, x_batch  # input = output
+        if self.params["algorithm"] == "gen_VAE_2D_v2_cond":
+            # ====== GENERADORES CONDICIONALES (emiten ( (x, c), y ) ) ======
+            def train_generator():
+                for i, x in enumerate(self.y_train):
+                    x_batch = np.expand_dims(x, axis=0)          # (1, T, N)
+                    c = int(self.c_train[i])                     # 2 o 4
+                    yield ( (x_batch.astype(np.float32),
+                             np.int32(c)),                        # etiqueta por sample (o por batch si repites)
+                           x_batch.astype(np.float32) )
 
-        train_dataset = tf.data.Dataset.from_generator(
-            train_generator,
+            def val_generator():
+                for i, x in enumerate(self.y_val):
+                    x_batch = np.expand_dims(x, axis=0)          # (1, T, N)
+                    c = int(self.c_val[i])                       # 2 o 4
+                    yield ( (x_batch.astype(np.float32),
+                             np.int32(c)),
+                           x_batch.astype(np.float32) )
+
+            train_dataset = tf.data.Dataset.from_generator(
+                train_generator,
                 output_signature=(
-                    tf.TensorSpec(shape=(1, self.params["batch_size"], 2048), dtype=tf.float32),
-                    tf.TensorSpec(shape=(1, self.params["batch_size"], 2048), dtype=tf.float32)
+                    (
+                        tf.TensorSpec(shape=(1, T, N), dtype=tf.float32),  # x
+                        tf.TensorSpec(shape=(),       dtype=tf.int32),     # c (2/4)
+                    ),
+                    tf.TensorSpec(shape=(1, T, N), dtype=tf.float32)       # y = x
                 )
             )
 
-        val_dataset = tf.data.Dataset.from_generator(
-            val_generator,
-            output_signature=(
-                tf.TensorSpec(shape=(1, self.params["batch_size"], 2048), dtype=tf.float32),
-                tf.TensorSpec(shape=(1, self.params["batch_size"], 2048), dtype=tf.float32)
+            val_dataset = tf.data.Dataset.from_generator(
+                val_generator,
+                output_signature=(
+                    (
+                        tf.TensorSpec(shape=(1, T, N), dtype=tf.float32),  # x
+                        tf.TensorSpec(shape=(),       dtype=tf.int32),     # c (2/4)
+                    ),
+                    tf.TensorSpec(shape=(1, T, N), dtype=tf.float32)       # y = x
+                )
             )
-        )
+        else:
+            # ====== GENERADORES NO CONDICIONALES (compatibles con tus modelos previos) ======
+            def train_generator():
+                for x in self.y_train:
+                    x_batch = np.expand_dims(x, axis=0)  # (1, T, N)
+                    yield x_batch.astype(np.float32), x_batch.astype(np.float32)
+
+            def val_generator():
+                for x in self.y_val:
+                    x_batch = np.expand_dims(x, axis=0)  # (1, T, N)
+                    yield x_batch.astype(np.float32), x_batch.astype(np.float32)
+
+            train_dataset = tf.data.Dataset.from_generator(
+                train_generator,
+                output_signature=(
+                    tf.TensorSpec(shape=(1, T, N), dtype=tf.float32),
+                    tf.TensorSpec(shape=(1, T, N), dtype=tf.float32)
+                )
+            )
+
+            val_dataset = tf.data.Dataset.from_generator(
+                val_generator,
+                output_signature=(
+                    tf.TensorSpec(shape=(1, T, N), dtype=tf.float32),
+                    tf.TensorSpec(shape=(1, T, N), dtype=tf.float32)
+                )
+            )
+
 
         if self.params["algorithm"] == "OMAMI_gen_VAE_warmup":
             for epoch in range(1, self.params["n_epochs"] + 1):
-                new_beta = min(epoch / self.params["beta_warmup_epochs"], 1.0)  # crecimiento lineal
+                new_beta = min(epoch / self.params["beta_warmup_epochs"], 1.0)
                 model.beta.assign(new_beta)
                 print(f"[Epoch {epoch}] β = {model.beta.numpy():.3f}")
-                
                 history = model.fit(
                     train_dataset,
                     validation_data=val_dataset,
@@ -365,6 +399,13 @@ class TrainModelGen:
                     epochs=1,
                     callbacks=[early_stopping_callback, cp_callback, tensorboard_callback, lr_decay],
                 )
+        elif self.params["algorithm"] == "gen_VAE_2D_v2_cond":
+            history = model.fit(
+                train_dataset,
+                validation_data=val_dataset,
+                epochs=self.params["n_epochs"],
+                callbacks=[beta_cb, early_stopping_callback, cp_callback, tensorboard_callback, lr_decay],
+            )
         elif self.params["algorithm"] == "Gen_VAE_2D_v2":
             history = model.fit(
                 train_dataset,
@@ -372,10 +413,7 @@ class TrainModelGen:
                 epochs=self.params["n_epochs"],
                 callbacks=[beta_cb, early_stopping_callback, cp_callback, tensorboard_callback, lr_decay],
             )
-
         else:
-            
-            # Train the model
             history = model.fit(
                 train_dataset,
                 validation_data=val_dataset,
@@ -383,6 +421,7 @@ class TrainModelGen:
                 epochs=self.params["n_epochs"],
                 callbacks=[early_stopping_callback, cp_callback, tensorboard_callback, lr_decay],
             )
+
 
         try:
             print('saving model')

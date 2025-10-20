@@ -48,3 +48,13 @@ Code/models/__pycache__/__init__.cpython-310.pyc
 Code/tools_/__pycache__/__init__.cpython-310.pyc
 Code/simple_launch.sh
 Code/tools_/__pycache__/__init__.cpython-310.pyc
+Code/synthetic_out/Gen_VAE_2D_v2_develop_cond_class2_4_concat.npy
+Code/synthetic_out/Gen_VAE_2D_v2_develop_cond_class2_4_vae_cond.npy
+Code/synthetic_out/Gen_VAE_2D_v2_develop_cond_class2_4_vae_cond.npy.tmp.npy
+Code/synthetic_out/Gen_VAE_2D_v2_develop_cond_class2_4_vae_guided.npy
+Code/synthetic_out/Gen_VAE_2D_v2_develop_cond_class2_vae_cond_guided.npy
+Code/synthetic_out/Gen_VAE_2D_v2_develop_cond_class2_vae_cond.npy
+Code/synthetic_out/Gen_VAE_2D_v2_develop_cond_class4_vae_cond_guided.npy
+Code/synthetic_out/Gen_VAE_2D_v2_develop_cond_class4_vae_cond.npy
+Code/synthetic_out/synthetic_class2_vae_cond.npy
+Code/synthetic_out/synthetic_class4_vae_cond.npy
