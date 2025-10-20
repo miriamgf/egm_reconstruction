@@ -59,6 +59,7 @@ class LoadSyntheticDataset:
         unfold_code=1,
         inference=True,
         all_classes=True,
+        synt_dataset_name="synt_Gen_VAE_2D_v2_betasteps_latent_50_loss_guided"
     ):
         self.params = params
         self.data_type = data_type
@@ -78,7 +79,7 @@ class LoadSyntheticDataset:
         self.unfold_code = unfold_code
         self.inference = inference
         self.all_classes = all_classes
-        self.synt_dataset_name = "synt_Gen_VAE_2D_v2_betasteps_latent_50_loss_guided" #synt_Gen_VAE_2D_v2_betasteps_latent_50_loss_hf_antial_random
+        self.synt_dataset_name = synt_dataset_name #synt_Gen_VAE_2D_v2_betasteps_latent_50_loss_hf_antial_random
 
         self.synthetic_egms = np.load(self.directory + self.synt_dataset_name + ".npy")
 
@@ -159,7 +160,13 @@ class LoadSyntheticDataset:
 
         #modulate number of loaded patients
         if self.params["perc_augmentation"]: 
-            all_model_names=all_model_names[:self.params["perc_augmentation"]]
+            if len(all_model_names)==50:
+                #parche porque para CVAE he concatenado los generados con c=2 (25 señales) y c=4 (25 señales)
+                all_model_names_2=all_model_names[0:self.params["perc_augmentation"]]
+                all_model_names_4=all_model_names[25:25+self.params["perc_augmentation"]]
+                all_model_names = np.concatenate([all_model_names_2, all_model_names_4]).tolist()
+            else:
+                all_model_names=all_model_names[:self.params["perc_augmentation"]]
         all_model_classes = [10 for _ in range(len(all_model_names))] 
 
         cont = 0

@@ -272,9 +272,10 @@ params["test_source"]=["Simulation_01_200316_001_  5",
 params["val_source"]=None
 params['n_epochs']=30
 params['loss_weight_1']=params['loss_weight_2']
+#params['perc_augmentation']=None
 #params['learning_rate']=0.0001
 params["early_stopping_patience"]=20
-#params["perc_augmentation"]=25
+
 
 #-------------------------------------------------------------
 
@@ -336,7 +337,7 @@ if params["test_source"]:
 
 
     
-experiment_name = f"{experiment_name}_val_10_{params['perc_augmentation']}_DSv2_1"
+experiment_name = f"{experiment_name}_vae_cond_guided_4_{params['perc_augmentation']}"
 #params["n_epochs"]=1
 
 print(params)
@@ -409,6 +410,9 @@ if params["fs"] == params["fs_sub"]:
 Transfer_model = False  # Transfer learning from sinusoids
 sinusoids = False
 
+params["synt_dataset"]="Gen_VAE_2D_v2_develop_cond_class4_vae_cond"
+
+
 if params["data_augmentation"]:
 
     # Load data
@@ -437,7 +441,8 @@ if params["data_augmentation"]:
         SNR_white_noise=SNR_white_noise,
         patches_oclussion=patches_oclussion,
         unfold_code=unfold_code,
-        inference=False
+        inference=False, 
+        synt_dataset_name=params["synt_dataset"]
 
     )()
 
@@ -475,9 +480,6 @@ if params["data_augmentation"]:
 X_1channel = X_1channel.astype(np.float32)
 egm_tensor = egm_tensor.astype(np.float32)
 Y_model = Y_model.astype(np.int32)
-
-
-
 
 try:
     assert egm_tensor[:, 0].max() == 1, "No cumple egm_tensor[:, 0].max()==1"
@@ -625,16 +627,12 @@ if params["data_augmentation"]:
 
             x_train_comp = np.squeeze(x_train_comp, axis=-1)
 
-            compare_real_vs_synth_gridtime(
-                    X_real=x_train_comp,
-                    X_synth=synt_x_train_comp,
-                    fs=params["fs_sub"],                # Hz
-                    outdir=experiment_dir,
-                    bands=((0,5),(5,15),(15,40)),  # ajusta a tu fisiología
-                    nperseg=None,                  # por defecto min(256, T)
-                    n_spatial_samples=64           # nº de instantes para FFT2 espacial
-                )
+            res = compare_real_vs_synth_gridtime(x_train_comp, synt_x_train_comp, fs, mmd_n_boot=200, bootstrap_seed=42, outdir=experiment_dir)
+
+
+
         except:
+
             pass
 
 
